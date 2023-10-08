@@ -1,0 +1,64 @@
+body {
+    margin: 0;
+    padding: 0;
+}
+
+.mainApp {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.topBar {
+    background-color: #333;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 10px;
+}
+
+.title {
+    font-size: 20px;
+}
+
+.titleBarBtns {
+    display: flex;
+    gap: 10px;
+}
+
+.topBtn {
+    width: 20px;
+    height: 20px;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.minimizeBtn {
+    background-color: #33cc33;
+}
+
+.maximizeBtn {
+    background-color: #ffcc33;
+}
+
+.closeBtn {
+    background-color: #ff6666;
+}
+
+.contentArea {
+    flex-grow: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+.leftMenu {
+    background-color: #555;
+    width: 250px;
+}
+
+.contentPages {
+    flex-grow: 1;
+    background-color: #eee;
+}
