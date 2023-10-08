@@ -4,3 +4,4 @@
 *.exe
 *.lik
 *.lib
+node_modules/
