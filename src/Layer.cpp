@@ -9,11 +9,11 @@ void Layer::loadFrames(pugi::xml_node& layerNode) {
 }
 Layer::Layer(pugi::xml_node& layerNode) {
 	this->root = layerNode;
-	this->color = layerNode.attribute("color").value();
-	this->layerType = layerNode.attribute("layerType").value();
-	this->locked = layerNode.attribute("locked").as_bool();
-	this->name = layerNode.attribute("name").value();
-	this->parentLayer = layerNode.attribute("parentLayer").value();
+	this->setColor(layerNode.attribute("color").empty() ? "#000000" : layerNode.attribute("color").value());
+	this->setLayerType(layerNode.attribute("layerType").empty() ? "normal" : layerNode.attribute("layerType").value());
+	this->setLocked(layerNode.attribute("locked").as_bool());
+	this->setName(layerNode.attribute("name").empty() ? "layer" : layerNode.attribute("name").value());
+	this->setParentLayerIndex((layerNode.attribute("parentLayerIndex").empty()) ? std::nullopt : std::optional<unsigned int>(layerNode.attribute("parentLayerIndex").as_uint()));
 	loadFrames(this->root);
 }
 Layer::~Layer() {
@@ -30,6 +30,7 @@ bool Layer::insertKeyframe(unsigned int frameIndex, bool isBlank) {
 	frame = this->getFrame(frameIndex);
 	if (frameIndex == frame->getStartFrame()) return false;
 	auto newFrame = std::make_unique<Frame>(*frame, isBlank);
+	newFrame->setName("");
 	unsigned int index = this->getKeyframeIndex(frameIndex);
 	newFrame->setDuration(frame->getDuration() + frame->getStartFrame() - frameIndex);
 	frame->setDuration(frameIndex - frame->getStartFrame());
@@ -84,6 +85,7 @@ std::string Layer::getColor() const {
 	return this->color;
 }
 void Layer::setColor(const std::string& color) {
+	if (this->root.attribute("color").empty()) this->root.append_attribute("color");
 	this->root.attribute("color").set_value(color.c_str());
 	this->color = color;
 }
@@ -91,32 +93,46 @@ std::string Layer::getLayerType() const {
 	return this->layerType;
 }
 void Layer::setLayerType(const std::string& layerType) {
-	if(layerType.empty()) this->root.remove_attribute("layerType");
-	else this->root.attribute("layerType").set_value(layerType.c_str());
+	if (std::find(ACCEPTABLE_LAYER_TYPES.begin(), ACCEPTABLE_LAYER_TYPES.end(), layerType) == ACCEPTABLE_LAYER_TYPES.end()) {
+		throw std::invalid_argument("Invalid layer type specified: " + layerType);
+	}
+	// normal doesn't show up in the xml
+	if (layerType.find("normal") != std::string::npos) this->root.remove_attribute("layerType");
+	else {
+		if (this->root.attribute("layerType").empty()) this->root.append_attribute("layerType");
+		this->root.attribute("layerType").set_value(layerType.c_str());
+	}
 	this->layerType = layerType;
 }
 bool Layer::isLocked() const {
 	return this->locked;
 }
 void Layer::setLocked(bool locked) {
-	if(!locked) this->root.remove_attribute("locked");
-	else this->root.attribute("locked").set_value(locked);
+	if (!locked) this->root.remove_attribute("locked");
+	else {
+		if (this->root.attribute("locked").empty()) this->root.append_attribute("locked");
+		this->root.attribute("locked").set_value(locked);
+	}
 	this->locked = locked;
 }
 std::string Layer::getName() const {
 	return this->name;
 }
 void Layer::setName(const std::string& name) {
+	if (this->root.attribute("name").empty()) this->root.append_attribute("name");
 	this->root.attribute("name").set_value(name.c_str());
 	this->name = name;
 }
-std::string Layer::getParentLayer() const {
-	return this->parentLayer;
+std::optional<unsigned int> Layer::getParentLayerIndex() const {
+	return this->parentLayerIndex;
 }
-void Layer::setParentLayer(const std::string& parentLayer) {
-	if(parentLayer.empty()) this->root.remove_attribute("parentLayer");
-	else this->root.attribute("parentLayer").set_value(parentLayer.c_str());
-	this->parentLayer = parentLayer;
+void Layer::setParentLayerIndex(std::optional<unsigned int> parentLayerIndex) {
+	if (!parentLayerIndex.has_value()) this->root.remove_attribute("parentLayerIndex");
+	else {
+		if (this->root.attribute("parentLayerIndex").empty()) this->root.append_attribute("parentLayerIndex");
+		this->root.attribute("parentLayerIndex").set_value(parentLayerIndex.value());
+	}
+	this->parentLayerIndex = parentLayerIndex;
 }
 
 unsigned int Layer::getFrameCount() {

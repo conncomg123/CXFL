@@ -24,14 +24,20 @@ double Point::getX() const {
 }
 void Point::setX(double x) {
 	if (std::abs(x) < std::numeric_limits<double>::epsilon()) this->root.remove_attribute("x");
-	else this->root.attribute("x").set_value(x);
+	else {
+		if (this->root.attribute("x").empty()) this->root.append_attribute("x");
+		this->root.attribute("x").set_value(x);
+	}
 }
 double Point::getY() const {
 	return this->y;
 }
 void Point::setY(double y) {
 	if (std::abs(y) < std::numeric_limits<double>::epsilon()) this->root.remove_attribute("y");
-	else this->root.attribute("y").set_value(y);
+	else {
+		if (this->root.attribute("y").empty()) this->root.append_attribute("y");
+		this->root.attribute("y").set_value(y);
+	}
 }
 pugi::xml_node& Point::getRoot() {
 	return this->root;
