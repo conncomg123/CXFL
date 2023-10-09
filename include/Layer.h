@@ -5,13 +5,15 @@
 #include <vector>
 #include <memory>
 class Layer {
+	friend class Timeline;
 private:
 	pugi::xml_node root;
 	void loadFrames(pugi::xml_node& layerNode);
 	bool insertKeyframe(unsigned int frameIndex, bool isBlank);
 	std::vector<std::unique_ptr<Frame>> frames;
 	std::string color;
-	std::string layerType, parentLayer;
+	std::string layerType;
+	std::optional<unsigned int> parentLayerIndex;
 	bool locked;
 	std::string name;
 public:
@@ -30,9 +32,10 @@ public:
 	void setLocked(bool locked);
 	std::string getName() const;
 	void setName(const std::string& name);
-	std::string getParentLayer() const;
-	void setParentLayer(const std::string& parentLayer);
+	std::optional<unsigned int> getParentLayerIndex() const;
+	void setParentLayerIndex(std::optional<unsigned int> parentLayer);
 	unsigned int getFrameCount();
 	pugi::xml_node& getRoot();
 };
+const std::vector<std::string_view> ACCEPTABLE_LAYER_TYPES = { "normal", "guide", "guided", "mask", "masked", "folder" };
 #endif // LAYER_H
