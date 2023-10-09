@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Electron App</title>
+    <!-- Include Ant Design styles (assuming you've set up the CSS as mentioned earlier) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/antd/dist/antd.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/antd/4.16.8/antd.min.js"></script>
+</head>
+<body>
+    <div style="display: flex; flex-direction: column; height: 100vh;">
+        <!-- Control Panels -->
+        <div style="display: flex; justify-content: space-between; padding: 20px;">
+            <div>
+                <p>Layer Name:</p>
+                <Input placeholder="Enter Layer Name" />
+            </div>
+            <div>
+                <p>Timelines:</p>
+                <Input placeholder="Enter Timeline" />
+            </div>
+        </div>
+        <!-- Viewer Panels -->
+        <div style="flex: 1; display: flex;">
+            <!-- Layer Viewer Panel -->
+            <div style="flex: 1; border: 1px solid #ccc; padding: 10px;">
+                <h3>Layer Viewer Panel</h3>
+                <ul id="layerList"></ul>
+            </div>
+            <!-- Timeline Viewer Panel -->
+            <div style="flex: 1; border: 1px solid #ccc; padding: 10px;">
+                <h3>Timeline Viewer Panel</h3>
+                <ul id="timelineList"></ul>
+            </div>
+        </div>
+    </div>
+    <!-- JavaScript to replicate entries -->
+    <script>
+        const layerList = document.getElementById('layerList');
+        const timelineList = document.getElementById('timelineList');
+        
+        const input = document.querySelector('input[placeholder="Enter Layer Name"]');
+        
+        input.addEventListener('change', () => {
+            const layerName = input.value;
+            const timelineName = document.querySelector('input[placeholder="Enter Timeline"]').value;
+            
+            // Create and append a new list item to both lists
+            const listItem = document.createElement('li');
+            listItem.textContent = layerName;
+            
+            layerList.appendChild(listItem.cloneNode(true));
+            timelineList.appendChild(listItem);
+        });
+    </script>
+</body>
+</html>
