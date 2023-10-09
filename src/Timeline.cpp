@@ -13,6 +13,60 @@ Timeline::Timeline(pugi::xml_node& timelineNode) {
 Timeline::~Timeline() {
 
 }
+unsigned int Timeline::getFrameCount() {
+	unsigned int max = 0;
+	for (auto& layer : this->layers) {
+		if (layer->getFrameCount() > max) max = layer->getFrameCount();
+	}
+	return max;
+}
+unsigned int Timeline::getLayerCount() {
+	return this->layers.size();
+}
+unsigned int Timeline::addNewLayer(const std::string& name, const std::string& layerType) {
+	// create the layer
+	auto newChild = this->root.child("layers").append_child("DOMLayer");
+	// if it's not a folder, insert one blank keyframe
+	auto newLayer = std::make_unique<Layer>(newChild);
+	newLayer->setName(name);
+	newLayer->setLayerType(layerType);
+	// add the layer to the vector
+	if (layerType != "folder") {
+		auto newFrameChild = newChild.append_child("frames").append_child("DOMFrame");
+		newFrameChild.append_attribute("index").set_value(0);
+		newFrameChild.append_attribute("duration").set_value(this->getFrameCount());
+		newFrameChild.append_child("elements");
+		auto newFrame = std::make_unique<Frame>(newFrameChild, true);
+		this->layers.push_back(std::move(newLayer));
+		this->layers.back()->frames.push_back(std::move(newFrame));
+	}
+	else this->layers.push_back(std::move(newLayer));
+	return this->layers.size() - 1;
+}
+void Timeline::deleteLayer(unsigned int index) {
+	if (index >= this->layers.size()) {
+		throw std::out_of_range("Layer index out of range");
+	}
+	Layer* curLayer = this->layers[index].get();
+	// if it's a folder, need a recursive delete since folders can contain other folders and layers
+	if (curLayer->getLayerType() == "folder") {
+		// delete all layers in the folder, we can determine if it's in the folder using the parentLayerIndex
+		for (unsigned int i = index + 1; i < this->layers.size(); i++) {
+			if (this->layers[i]->getParentLayerIndex().has_value() && this->layers[i]->getParentLayerIndex() == index) {
+				this->deleteLayer(i);
+				i--;
+			}
+		}
+	}
+	curLayer->getRoot().parent().remove_child(curLayer->getRoot());
+	this->layers.erase(this->layers.begin() + index);
+	// for each layer after index, update the parentLayerIndex
+	for (unsigned int i = index; i < this->layers.size(); i++) {
+		if (this->layers[i]->getParentLayerIndex().has_value() && this->layers[i]->getParentLayerIndex() > index) {
+			this->layers[i]->setParentLayerIndex(this->layers[i]->getParentLayerIndex().value() - 1);
+		}
+	}
+}
 Layer* Timeline::getLayer(unsigned int index) {
 	if (index > this->layers.size()) {
 		throw std::out_of_range("Layer index out of range");
@@ -23,6 +77,7 @@ std::string Timeline::getName() {
 	return this->name;
 }
 void Timeline::setName(const std::string& name) {
+	if (this->root.attribute("name").empty()) this->root.append_attribute("name");
 	this->root.attribute("name").set_value(name.c_str());
 	this->name = name;
 }

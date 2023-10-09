@@ -13,6 +13,10 @@ private:
 public:
 	Timeline(pugi::xml_node& timelineNode);
 	~Timeline();
+	unsigned int getFrameCount();
+	unsigned int getLayerCount();
+	unsigned int addNewLayer(const std::string& name, const std::string& layerType = "normal");
+	void deleteLayer(unsigned int index);
 	Layer* getLayer(unsigned int index);
 	std::string getName();
 	void setName(const std::string& name);

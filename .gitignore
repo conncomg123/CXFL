@@ -2,6 +2,7 @@
 *.pdb
 .vs/*
 *.exe
-*.lik
+*.ilk
 *.lib
+test/*
 node_modules/
