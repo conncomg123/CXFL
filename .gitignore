@@ -5,3 +5,4 @@
 *.ilk
 *.lib
 test/*
+node_modules/

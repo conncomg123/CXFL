@@ -1,0 +1,21 @@
+{
+  "name": "cxfl",
+  "version": "1.0.0",
+  "description": "C++ implementation of JavaScript Flash (JSFL) for the XFL format",
+  "main": "ui/main.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^26.3.0"
+  },
+  "dependencies": {
+    "antd": "^5.9.4"
+  }
+}
