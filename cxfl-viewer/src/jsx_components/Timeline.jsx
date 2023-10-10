@@ -18,7 +18,7 @@ function Frame({ type }) {
   return <div className={frameClass}></div>;
 }
 
-function Timeline({ data }) {
+export function Timeline({ data }) {
   // Define a mapping of characters to frame types
   const frameTypeMapping = {
     K: 'keyframe',
@@ -56,4 +56,46 @@ function Timeline({ data }) {
   );
 }
 
-export default Timeline;
+export function SecondsCounter({ numSeconds }) {
+  const secMeters = [];
+
+  // Create an array of secMeter containers based on the provided numSeconds
+  for (let i = 0; i <= numSeconds; i++) {
+    // Label every 6th secMeter with the corresponding seconds
+    const label = i % 6 === 0 ? `${Math.floor(i / 6)}s` : '';
+
+    secMeters.push(
+      <div key={i} className="secMeter">
+        {label}
+      </div>
+    );
+  }
+
+  return (
+    <div className="secondsCounter">
+      {secMeters.map((secMeter) => secMeter)}
+    </div>
+  );
+}
+
+export function FrameCounter({ numFrames }) {
+  const frameMeters = [];
+
+  // Create an array of frameMeter containers based on the provided numFrames
+  for (let i = 0; i <= numFrames; i++) {
+    // Label every 6th frameMeter with the corresponding seconds
+    const label = i % 5 === 0 ? `${i}f` : '';
+
+    frameMeters.push(
+      <div key={i} className="frameMeter">
+        {label}
+      </div>
+    );
+  }
+
+  return (
+    <div className="framesCounter">
+      {frameMeters.map((frameMeters) => frameMeters)}
+    </div>
+  );
+}

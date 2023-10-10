@@ -1,0 +1,265 @@
+:root {
+    /*App Theme Colors*/
+    --app-bg-color: rgb(30, 30, 30);
+    --app-bg-color-hi: rgb(50, 50, 50);
+
+    /*Frame Colors*/
+    --frame-color: rgb(124, 124, 124);
+    --empty-frame-color: rgb(73, 73, 73);
+    --void1-frame-color: rgb(26, 26, 26);
+    --void2-frame-color: rgb(38, 38, 38);
+
+    /*Border Colors*/
+    --frame-border-color: black;
+    --timeline-border-color: rgb(20, 20, 20);
+
+    --scrollbar-width: 4px;
+    --scrollbar-track-color: var(--app-bg-color-hi);
+    --scrollbar-thumb-color: var(--frame-color);
+}
+
+body {
+    color: white;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.5;
+    text-shadow: 3px 3px 5px rgba(0, 0, 0, .2);
+}
+
+.container {
+    width: 1280px;
+    height: 720px;
+    border: 1px solid var(--timeline-border-color);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.left-pane {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.right-pane {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.quadrant {
+    border: 1px solid var(--timeline-border-color);
+    padding: 10px;
+    height: 100%;
+    box-sizing: border-box
+}
+
+.quadrant1,
+.quadrant2 {
+    height: 75px;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(to bottom, var(--app-bg-color-hi), var(--app-bg-color))
+}
+
+.quadrant3 {
+    background-color: var(--app-bg-color);
+}
+
+.quadrant4 {
+    overflow-x: scroll; /* Use 'scroll' to always show the scrollbar */
+    overflow-y: hidden;
+    margin: 0;
+    padding: 0;
+    background-color: var(--app-bg-color);
+    position: relative;
+  }
+  
+  .quadrant4::-webkit-scrollbar {
+    width: var(--scrollbar-width);
+  }
+  
+  .quadrant4::-webkit-scrollbar-track {
+    background-color: var(--scrollbar-track-color);
+  }
+  
+  .quadrant4::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb-color);
+    border-radius: var(--scrollbar-width); /* Make it round */
+  }
+
+/* React Pane Resizer */
+
+.Resizer {
+    background: #000;
+    opacity: 1;
+    z-index: 1;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    -moz-background-clip: padding;
+    -webkit-background-clip: padding;
+    background-clip: padding-box;
+}
+
+.Resizer:hover {
+    -webkit-transition: all 2s ease;
+    transition: all 2s ease;
+}
+
+.Resizer.horizontal {
+    height: 11px;
+    margin: -5px 0;
+    border-top: 5px solid rgba(255, 255, 255, 0);
+    border-bottom: 5px solid rgba(255, 255, 255, 0);
+    cursor: row-resize;
+    width: 100%;
+}
+
+.Resizer.horizontal:hover {
+    border-top: 5px solid rgba(0, 0, 0, 0.5);
+    border-bottom: 5px solid rgba(0, 0, 0, 0.5);
+}
+
+.Resizer.vertical {
+    width: 11px;
+    margin: 0 -5px;
+    border-left: 5px solid rgba(255, 255, 255, 0);
+    border-right: 5px solid rgba(255, 255, 255, 0);
+    cursor: col-resize;
+}
+
+.Resizer.vertical:hover {
+    border-left: 5px solid rgba(100, 180, 255, 0.5);
+    border-right: 5px solid rgba(100, 180, 255, 0.5);
+}
+
+.Resizer.disabled {
+    cursor: not-allowed;
+}
+
+.Resizer.disabled:hover {
+    border-color: transparent;
+}
+
+/* Timeline */
+
+.timeline {
+    display: flex;
+    flex-direction: row;
+    border: 0.5px solid var(--frame-border-color);
+    box-sizing: border-box;
+}
+
+.frame {
+    width: 20px;
+    height: 35px;
+    background-color: var(--frame-color);
+    box-sizing: border-box;
+}
+
+.frame:hover {
+    background-color: rgb(0, 120, 215);
+    transition: 0.2s
+}
+
+.keyframe {
+    position: relative;
+    border-left: 0.5px solid var(--frame-border-color);
+}
+
+.keyframe::before {
+    content: '';
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    background-color: black;
+    bottom: 2px;
+    left: 2px;
+    border-radius: 50%;
+}
+
+.blank-keyframe {
+    position: relative;
+    background-color: var(--empty-frame-color);
+    border-left: 0.5px solid var(--frame-border-color);
+}
+
+.blank-keyframe::before {
+    content: '';
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    background-color: transparent;
+    border: 1px solid black;
+    bottom: 2px;
+    left: 2px;
+    border-radius: 50%;
+}
+
+.empty-frame {
+    background-color: var(--empty-frame-color);
+}
+
+.void1-frame {
+    background-color: var(--void1-frame-color);
+    border-right: 0.5px solid var(--frame-border-color);
+}
+
+.void2-frame {
+    background-color: var(--void2-frame-color);
+    border-right: 0.5px solid var(--frame-border-color);
+}
+
+/* SecondsCounter */
+
+.secondsCounter {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+  
+  .secMeter {
+    width: 60px;
+    height: 15px;
+    background-color: var(--app-bg-color);
+    border: 1px solid var(--timeline-border-color);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 14px;
+    color: white;
+    padding: 4px;
+  }
+
+  /* FramesCounter */
+
+.framesCounter {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+  
+  .frameMeter {
+    width: 10px;
+    height: 15px;
+    background-color: var(--app-bg-color);
+    border: 1px solid var(--timeline-border-color);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 14px;
+    color: white;
+    padding: 4px;
+  }
