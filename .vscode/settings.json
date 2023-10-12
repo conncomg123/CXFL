@@ -65,7 +65,12 @@
         "forward_list": "cpp",
         "list": "cpp",
         "filesystem": "cpp",
-        "iomanip": "cpp"
+        "iomanip": "cpp",
+        "set": "cpp",
+        "unordered_map": "cpp",
+        "unordered_set": "cpp",
+        "functional": "cpp",
+        "xhash": "cpp"
     },
     "cmake.configureOnOpen": true
 }

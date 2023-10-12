@@ -1,4 +1,5 @@
 #include "../include/SymbolInstance.h"
+#include <limits>
 SymbolInstance::SymbolInstance(pugi::xml_node& elementNode) : Element(elementNode),
 Matrix(elementNode.child("matrix").child("Matrix")),
 Point(elementNode.child("transformationPoint").child("Point")) {

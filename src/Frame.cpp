@@ -1,6 +1,6 @@
 #include "../include/Frame.h"
 #include <iostream>
-
+#include <algorithm>
 void Frame::loadElements(pugi::xml_node& frameNode) {
 	auto elements = frameNode.child("elements").children();
 	for (auto iter = elements.begin(); iter != elements.end(); ++iter) {
