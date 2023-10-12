@@ -1,4 +1,5 @@
 #include "../include/Matrix.h"
+#include <limits>
 Matrix::Matrix(pugi::xml_node& matrixNode) {
 	this->root = matrixNode;
 	// empty values for a and d is 1.0; b, c, tx, and ty is 0.0

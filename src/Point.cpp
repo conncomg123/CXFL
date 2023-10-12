@@ -1,4 +1,5 @@
 #include "../include/Point.h"
+#include <limits>
 Point::Point(pugi::xml_node& pointNode) {
 	this->root = pointNode;
 	this->x = pointNode.attribute("x").as_double();
