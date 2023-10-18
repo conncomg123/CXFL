@@ -13,7 +13,7 @@ Layer::Layer(pugi::xml_node& layerNode) {
 	this->setLayerType(layerNode.attribute("layerType").empty() ? "normal" : layerNode.attribute("layerType").value());
 	this->setLocked(layerNode.attribute("locked").as_bool());
 	this->setName(layerNode.attribute("name").empty() ? "layer" : layerNode.attribute("name").value());
-	this->setParentLayerIndex((layerNode.attribute("parentLayerIndex").empty()) ? std::nullopt : std::optional<unsigned int>(layerNode.attribute("parentLayerIndex").as_uint()));
+	this->setParentLayerIndex((layerNode.attribute("parentLayerIndex").empty()) ? std::nullopt : std::make_optional<unsigned int>(layerNode.attribute("parentLayerIndex").as_uint()));
 	loadFrames(this->root);
 }
 Layer::~Layer() {

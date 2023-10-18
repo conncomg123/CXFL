@@ -9,7 +9,7 @@ protected:
 public:
 	Element();
 	Element(pugi::xml_node& elementNode);
-	~Element();
+	virtual ~Element();
 	Element(const Element& element);
 	virtual double getWidth() const = 0;
 	void setWidth(double width);

@@ -7,7 +7,7 @@ Point(elementNode.child("transformationPoint").child("Point")) {
 	this->selected = elementNode.attribute("isSelected").as_bool();
 	this->symbolType = elementNode.attribute("symbolType").as_string();
 	this->firstFrame = elementNode.attribute("firstFrame").as_uint();
-	this->lastFrame = elementNode.attribute("lastFrame").as_uint();
+	this->lastFrame = elementNode.attribute("lastFrame").empty() ? std::nullopt : std::make_optional<unsigned int>(elementNode.attribute("lastFrame").as_uint());
 	this->loop = elementNode.attribute("loop").as_string();
 }
 SymbolInstance::~SymbolInstance() {

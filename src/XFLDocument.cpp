@@ -22,7 +22,7 @@ XFLDocument::~XFLDocument() {
 void XFLDocument::write(const std::string& filename) {
 	xflTree->save_file(filename.c_str());
 }
-Timeline* XFLDocument::getTimeline(int index) {
+Timeline* XFLDocument::getTimeline(unsigned int index) {
 	return timelines[index].get();
 }
 pugi::xml_node& XFLDocument::getRoot() {

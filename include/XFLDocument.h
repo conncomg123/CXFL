@@ -19,7 +19,7 @@ public:
 	~XFLDocument();
 	void write(const std::string& filename);
 	SymbolInstance getSymbolInstance(const std::string& name);
-	Timeline* getTimeline(int index);
+	Timeline* getTimeline(unsigned int index);
 	pugi::xml_node& getRoot();
 };
 

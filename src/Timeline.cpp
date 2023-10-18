@@ -26,11 +26,10 @@ unsigned int Timeline::getLayerCount() {
 unsigned int Timeline::addNewLayer(const std::string& name, const std::string& layerType) {
 	// create the layer
 	auto newChild = this->root.child("layers").append_child("DOMLayer");
-	// if it's not a folder, insert one blank keyframe
 	auto newLayer = std::make_unique<Layer>(newChild);
 	newLayer->setName(name);
 	newLayer->setLayerType(layerType);
-	// add the layer to the vector
+	// if it's not a folder, insert one blank keyframe
 	if (layerType != "folder") {
 		auto newFrameChild = newChild.append_child("frames").append_child("DOMFrame");
 		newFrameChild.append_attribute("index").set_value(0);
@@ -40,6 +39,7 @@ unsigned int Timeline::addNewLayer(const std::string& name, const std::string& l
 		this->layers.push_back(std::move(newLayer));
 		this->layers.back()->frames.push_back(std::move(newFrame));
 	}
+	// add the layer to the vector
 	else this->layers.push_back(std::move(newLayer));
 	return this->layers.size() - 1;
 }
