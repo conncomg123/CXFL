@@ -11,15 +11,15 @@ private:
 	pugi::xml_node root;
 	std::string libraryItemName;
 	bool selected;
-	std::string symbolType;
 	unsigned int firstFrame;
 	std::optional<unsigned int> lastFrame;
+	std::string symbolType;
 	std::string loop;
 	double getWidthRecur() const;
 	double getHeightRecur() const;
 public:
 	SymbolInstance(pugi::xml_node& elementNode);
-	~SymbolInstance();
+	~SymbolInstance() override;
 	SymbolInstance(SymbolInstance& symbolInstance);
 	std::string getLibraryItemName();
 	void setLibraryItemName(const std::string& libraryItemName);

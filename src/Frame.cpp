@@ -12,8 +12,8 @@ void Frame::loadElements(pugi::xml_node& frameNode) {
 }
 Frame::Frame(pugi::xml_node& frameNode, bool isBlank) {
 	this->root = frameNode;
-	this->startFrame = frameNode.attribute("index").as_int();
-	this->duration = frameNode.attribute("duration").empty() ? 1 : frameNode.attribute("duration").as_int();
+	this->startFrame = frameNode.attribute("index").as_uint();
+	this->duration = frameNode.attribute("duration").empty() ? 1 : frameNode.attribute("duration").as_uint();
 	this->labelType = frameNode.attribute("labelType").empty() ? "none" : frameNode.attribute("labelType").value();
 	this->name = frameNode.attribute("name").value();
 	if (!isBlank) loadElements(frameNode);
