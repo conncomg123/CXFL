@@ -102,3 +102,7 @@ bool Frame::isEmpty() const {
 pugi::xml_node& Frame::getRoot() {
 	return this->root;
 }
+void Frame::clearElements() {
+	this->elements.clear();
+	this->getRoot().remove_child("elements");
+}

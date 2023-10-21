@@ -20,18 +20,54 @@ Layer::~Layer() {
 
 }
 
+void Layer::removeKeyframe(unsigned int keyFrameIndex) {
+	if(keyFrameIndex >= this->frames.size()) throw std::out_of_range("Keyframe index out of range");
+	Frame* frame = this->frames[keyFrameIndex].get();
+	this->getRoot().child("frames").remove_child(frame->getRoot());
+	this->frames.erase(this->frames.begin() + keyFrameIndex);
+}
+
+bool Layer::clearKeyFrame(unsigned int frameIndex) {
+	if (frameIndex > this->getFrameCount()) {
+		throw std::out_of_range("Frame index out of range");
+	}
+	unsigned int index = this->getKeyframeIndex(frameIndex);
+	Frame* frame = this->frames[index].get();
+	if (frameIndex != frame->getStartFrame()) return false;
+	// Special case for if there's one keyframe: replace it with a blank one (remove all elements)
+	if (this->frames.size() == 1) {
+		if(frame->isEmpty()) return false;
+		frame->clearElements();
+		return true;
+	}
+	// Special case for the first keyframe: replace it with the next one
+	if(index == 0) {
+		Frame* nextFrame = this->frames[index + 1].get();
+		nextFrame->setDuration(nextFrame->getDuration() + frame->getDuration());
+		nextFrame->setStartFrame(index);
+		this->removeKeyframe(index);
+		return true;
+	}
+	Frame* prevFrame = this->frames[index - 1].get();
+	prevFrame->setDuration(prevFrame->getDuration() + frame->getDuration());
+	this->removeKeyframe(index);
+	return true;
+}
+
 bool Layer::insertKeyframe(unsigned int frameIndex, bool isBlank) {
 	if (frameIndex > this->getFrameCount()) {
 		throw std::out_of_range("Frame index out of range");
 	}
-	Frame* frame = this->getFrame(frameIndex);
-	if (frameIndex == frame->getStartFrame()) frameIndex++;
-	if (frameIndex >= this->getFrameCount()) return false;
-	frame = this->getFrame(frameIndex);
-	if (frameIndex == frame->getStartFrame()) return false;
+	unsigned int index = this->getKeyframeIndex(frameIndex);
+	Frame* frame = this->frames[index].get();
+	if (frameIndex == frame->getStartFrame()) {
+		frameIndex++;
+		if (frameIndex >= this->getFrameCount()) return false;
+		unsigned int newIndex = this->getKeyframeIndex(frameIndex);
+		if (newIndex == index) return false;
+	}
 	auto newFrame = std::make_unique<Frame>(*frame, isBlank);
 	newFrame->setName("");
-	unsigned int index = this->getKeyframeIndex(frameIndex);
 	newFrame->setDuration(frame->getDuration() + frame->getStartFrame() - frameIndex);
 	frame->setDuration(frameIndex - frame->getStartFrame());
 	newFrame->setStartFrame(frameIndex);
