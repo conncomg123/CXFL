@@ -1,9 +1,8 @@
 #include "../include/SymbolInstance.h"
 #include <limits>
-SymbolInstance::SymbolInstance(pugi::xml_node& elementNode) : Element(elementNode),
-Matrix(elementNode.child("matrix").child("Matrix")),
-Point(elementNode.child("transformationPoint").child("Point")) {
-	this->libraryItemName = elementNode.attribute("libraryItemName").as_string();
+SymbolInstance::SymbolInstance(pugi::xml_node& elementNode) : Instance(elementNode), 
+		matrix(elementNode.child("matrix").child("Matrix")), 
+		point(elementNode.child("transformationPoint").child("Point")) {
 	this->selected = elementNode.attribute("isSelected").as_bool();
 	this->symbolType = elementNode.attribute("symbolType").as_string();
 	this->firstFrame = elementNode.attribute("firstFrame").as_uint();
@@ -12,23 +11,14 @@ Point(elementNode.child("transformationPoint").child("Point")) {
 }
 SymbolInstance::~SymbolInstance() {
 }
-SymbolInstance::SymbolInstance(SymbolInstance& symbolInstance) : Element(symbolInstance),
-Matrix(*this->getMatrix()),
-Point(*this->getPoint()) {
+SymbolInstance::SymbolInstance(SymbolInstance& symbolInstance) : Instance(symbolInstance), 
+		matrix(symbolInstance.getMatrix()), 
+		point(symbolInstance.getPoint()) {
 	this->setHeight(symbolInstance.getHeight());
 	this->setWidth(symbolInstance.getWidth());
 	this->setFirstFrame(symbolInstance.getFirstFrame());
 	this->setLastFrame(symbolInstance.getLastFrame());
-	this->setLibraryItemName(symbolInstance.getLibraryItemName());
 	this->setLoop(symbolInstance.getLoop());
-}
-std::string SymbolInstance::getLibraryItemName() {
-	return this->libraryItemName;
-}
-void SymbolInstance::setLibraryItemName(const std::string& libraryItemName) {
-	if (this->Element::root.attribute("libraryItemName").empty()) this->Element::root.append_attribute("libraryItemName");
-	this->Element::root.attribute("libraryItemName").set_value(libraryItemName.c_str());
-	this->libraryItemName = libraryItemName;
 }
 bool SymbolInstance::isSelected() {
 	return this->selected;
@@ -91,11 +81,11 @@ double SymbolInstance::getHeight() const {
 	// else, use private implementation and then set it (todo)
 	return 0;
 }
-Matrix* SymbolInstance::getMatrix() {
-	return static_cast<Matrix*>(this);
+Matrix& SymbolInstance::getMatrix() {
+	return this->matrix;
 }
-Point* SymbolInstance::getPoint() {
-	return static_cast<Point*>(this);
+Point& SymbolInstance::getPoint() {
+	return this->point;
 }
 
 double SymbolInstance::getWidthRecur() const {

@@ -1,15 +1,16 @@
 #ifndef SYMBOLINSTANCE_H
 #define SYMBOLINSTANCE_H
 
-#include "Element.h"
+#include "Instance.h"
 #include "Matrix.h"
 #include "Point.h"
 #include <optional>
+#include <memory>
 
-class SymbolInstance : public Element, private Matrix, private Point {
+class SymbolInstance : public Instance {
 private:
-	pugi::xml_node root;
-	std::string libraryItemName;
+	Matrix matrix;
+	Point point;
 	bool selected;
 	unsigned int firstFrame;
 	std::optional<unsigned int> lastFrame;
@@ -21,8 +22,6 @@ public:
 	SymbolInstance(pugi::xml_node& elementNode);
 	~SymbolInstance() override;
 	SymbolInstance(SymbolInstance& symbolInstance);
-	std::string getLibraryItemName();
-	void setLibraryItemName(const std::string& libraryItemName);
 	bool isSelected();
 	void setSelected(bool selected);
 	std::string getSymbolType();
@@ -36,8 +35,8 @@ public:
 	void setLoop(const std::string& loop);
 	double getWidth() const override;
 	double getHeight() const override;
-	Matrix* getMatrix();
-	Point* getPoint();
+	Matrix& getMatrix();
+	Point& getPoint();
 };
 
 #endif // SYMBOLINSTANCE_H
