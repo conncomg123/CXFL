@@ -10,6 +10,7 @@ private:
 	pugi::xml_node root;
 	void loadFrames(pugi::xml_node& layerNode);
 	bool insertKeyframe(unsigned int frameIndex, bool isBlank);
+	void removeKeyframe(unsigned int keyframeIndex);
 	std::vector<std::unique_ptr<Frame>> frames;
 	std::string color;
 	std::string layerType;
@@ -21,6 +22,7 @@ public:
 	~Layer();
 	bool insertKeyframe(unsigned int frameIndex);
 	bool insertBlankKeyframe(unsigned int frameIndex);
+	bool clearKeyFrame(unsigned int frameIndex);
 	Frame* getKeyFrame(unsigned int index);
 	unsigned int getKeyframeIndex(unsigned int frameIndex);
 	Frame* getFrame(unsigned int frameIndex);

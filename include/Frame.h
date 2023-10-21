@@ -23,6 +23,7 @@ private:
 	void setDuration(unsigned int duration);
 	void setStartFrame(unsigned int startFrame);
 	void setKeyMode(unsigned int keyMode);
+	void clearElements();
 public:
 	Frame(pugi::xml_node& frameNode, bool isBlank = false);
 	Frame(const Frame& frame, bool isBlank = false);
