@@ -1,29 +1,28 @@
 #include "../include/Timeline.h"
-#include <stdexcept>
-void Timeline::loadLayers(pugi::xml_node& timelineNode) {
+void Timeline::loadLayers(pugi::xml_node& timelineNode) noexcept {
 	auto layers = timelineNode.child("layers").children("DOMLayer");
 	for (auto iter = layers.begin(); iter != layers.end(); ++iter) {
 		this->layers.push_back(std::make_unique<Layer>(*iter));
 	}
 }
-Timeline::Timeline(pugi::xml_node& timelineNode) {
+Timeline::Timeline(pugi::xml_node& timelineNode) noexcept {
 	this->root = timelineNode;
 	loadLayers(timelineNode);
 }
 Timeline::~Timeline() {
 
 }
-unsigned int Timeline::getFrameCount() {
+unsigned int Timeline::getFrameCount() const noexcept {
 	unsigned int max = 0;
 	for (auto& layer : this->layers) {
 		if (layer->getFrameCount() > max) max = layer->getFrameCount();
 	}
 	return max;
 }
-unsigned int Timeline::getLayerCount() {
+unsigned int Timeline::getLayerCount() const noexcept {
 	return this->layers.size();
 }
-unsigned int Timeline::addNewLayer(const std::string& name, const std::string& layerType) {
+unsigned int Timeline::addNewLayer(const std::string& name, const std::string& layerType) noexcept {
 	// create the layer
 	auto newChild = this->root.child("layers").append_child("DOMLayer");
 	auto newLayer = std::make_unique<Layer>(newChild);
@@ -43,10 +42,7 @@ unsigned int Timeline::addNewLayer(const std::string& name, const std::string& l
 	else this->layers.push_back(std::move(newLayer));
 	return this->layers.size() - 1;
 }
-void Timeline::deleteLayer(unsigned int index) {
-	if (index >= this->layers.size()) {
-		throw std::out_of_range("Layer index out of range");
-	}
+void Timeline::deleteLayer(unsigned int index) noexcept {
 	Layer* curLayer = this->layers[index].get();
 	// if it's a folder, need a recursive delete since folders can contain other folders and layers
 	if (curLayer->getLayerType() == "folder") {
@@ -67,20 +63,20 @@ void Timeline::deleteLayer(unsigned int index) {
 		}
 	}
 }
-Layer* Timeline::getLayer(unsigned int index) {
-	if (index > this->layers.size()) {
-		throw std::out_of_range("Layer index out of range");
-	}
+Layer* Timeline::getLayer(unsigned int index) const noexcept {
 	return layers[index].get();
 }
-std::string Timeline::getName() {
+std::string Timeline::getName() const noexcept {
 	return this->name;
 }
-void Timeline::setName(const std::string& name) {
+void Timeline::setName(const std::string& name) noexcept {
 	if (this->root.attribute("name").empty()) this->root.append_attribute("name");
 	this->root.attribute("name").set_value(name.c_str());
 	this->name = name;
 }
-pugi::xml_node& Timeline::getRoot() {
+pugi::xml_node& Timeline::getRoot() noexcept {
+	return this->root;
+}
+const pugi::xml_node& Timeline::getRoot() const noexcept {
 	return this->root;
 }

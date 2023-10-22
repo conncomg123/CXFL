@@ -17,27 +17,28 @@ class Frame {
 private:
 	pugi::xml_node root;
 	std::vector<std::unique_ptr<Element>> elements;
-	void loadElements(pugi::xml_node& frameNode);
+	void loadElements(pugi::xml_node& frameNode) noexcept;
 	unsigned int startFrame, duration, keyMode;
 	std::string labelType, name;
-	void setDuration(unsigned int duration);
-	void setStartFrame(unsigned int startFrame);
-	void setKeyMode(unsigned int keyMode);
-	void clearElements();
+	void setDuration(unsigned int duration) noexcept;
+	void setStartFrame(unsigned int startFrame) noexcept;
+	void setKeyMode(unsigned int keyMode) noexcept;
+	void clearElements() noexcept;
 public:
-	Frame(pugi::xml_node& frameNode, bool isBlank = false);
-	Frame(const Frame& frame, bool isBlank = false);
-	~Frame();
-	Element* getElement(unsigned int index) const;
-	unsigned int getDuration() const;
-	unsigned int getStartFrame() const;
-	unsigned int getKeyMode() const;
-	std::string getLabelType() const;
-	void setLabelType(const std::string& labelType);
-	std::string getName() const;
-	void setName(const std::string& name);
-	bool isEmpty() const;
-	pugi::xml_node& getRoot();
+	Frame(pugi::xml_node& frameNode, bool isBlank = false) noexcept;
+	Frame(const Frame& frame, bool isBlank = false) noexcept;
+	~Frame() noexcept;
+	Element* getElement(unsigned int index) const noexcept;
+	unsigned int getDuration() const noexcept;
+	unsigned int getStartFrame() const noexcept;
+	unsigned int getKeyMode() const noexcept;
+	std::string getLabelType() const noexcept;
+	void setLabelType(const std::string& labelType) noexcept(false);
+	std::string getName() const noexcept;
+	void setName(const std::string& name) noexcept;
+	bool isEmpty() const noexcept;
+	pugi::xml_node& getRoot() noexcept;
+	const pugi::xml_node& getRoot() const noexcept;
 };
 const std::vector<std::string_view> ACCEPTABLE_LABEL_TYPES = { "none", "name", "comment", "anchor" };
 #endif // FRAME_H

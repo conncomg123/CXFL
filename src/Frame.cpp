@@ -1,7 +1,7 @@
 #include "../include/Frame.h"
 #include <iostream>
 #include <algorithm>
-void Frame::loadElements(pugi::xml_node& frameNode) {
+void Frame::loadElements(pugi::xml_node& frameNode) noexcept {
 	auto elements = frameNode.child("elements").children();
 	for (auto iter = elements.begin(); iter != elements.end(); ++iter) {
 		std::string type = iter->name();
@@ -10,7 +10,7 @@ void Frame::loadElements(pugi::xml_node& frameNode) {
 		}
 	}
 }
-Frame::Frame(pugi::xml_node& frameNode, bool isBlank) {
+Frame::Frame(pugi::xml_node& frameNode, bool isBlank) noexcept {
 	this->root = frameNode;
 	this->startFrame = frameNode.attribute("index").as_uint();
 	this->duration = frameNode.attribute("duration").empty() ? 1 : frameNode.attribute("duration").as_uint();
@@ -20,7 +20,7 @@ Frame::Frame(pugi::xml_node& frameNode, bool isBlank) {
 }
 
 // copy constructor, make a deep copy of the frame
-Frame::Frame(const Frame& frame, bool isBlank) {
+Frame::Frame(const Frame& frame, bool isBlank) noexcept {
 	// use the parent of this->root to insert the copy
 	auto parent = frame.root.parent();
 	if (!isBlank) {
@@ -36,16 +36,16 @@ Frame::Frame(const Frame& frame, bool isBlank) {
 	this->setLabelType(frame.getLabelType());
 	this->setName(frame.getName());
 }
-Frame::~Frame() {
+Frame::~Frame() noexcept {
 
 }
-Element* Frame::getElement(unsigned int index) const {
+Element* Frame::getElement(unsigned int index) const noexcept {
 	return elements[index].get();
 }
-unsigned int Frame::getDuration() const {
+unsigned int Frame::getDuration() const noexcept {
 	return this->duration;
 }
-void Frame::setDuration(unsigned int duration) {
+void Frame::setDuration(unsigned int duration) noexcept {
 	// if duration is 1, we need to remove the attribute if it exists, else we need to set it
 	if (duration == 1) this->root.remove_attribute("duration");
 	else {
@@ -54,37 +54,37 @@ void Frame::setDuration(unsigned int duration) {
 	}
 	this->duration = duration;
 }
-unsigned int Frame::getStartFrame() const {
+unsigned int Frame::getStartFrame() const noexcept {
 	return this->startFrame;
 }
-void Frame::setStartFrame(unsigned int startFrame) {
+void Frame::setStartFrame(unsigned int startFrame) noexcept {
 	if (this->root.attribute("index").empty()) this->root.append_attribute("index");
 	this->root.attribute("index").set_value(startFrame);
 	this->startFrame = startFrame;
 }
-unsigned int Frame::getKeyMode() const {
+unsigned int Frame::getKeyMode() const noexcept {
 	return this->keyMode;
 }
-void Frame::setKeyMode(unsigned int keyMode) {
+void Frame::setKeyMode(unsigned int keyMode) noexcept {
 	if (this->root.attribute("keyMode").empty()) this->root.append_attribute("keyMode");
 	this->root.attribute("keyMode").set_value(keyMode);
 	this->keyMode = keyMode;
 }
-std::string Frame::getLabelType() const {
+std::string Frame::getLabelType() const noexcept {
 	return this->labelType;
 }
-void Frame::setLabelType(const std::string& labelType) {
+void Frame::setLabelType(const std::string& labelType) noexcept(false) {
 	if (std::find(ACCEPTABLE_LABEL_TYPES.begin(), ACCEPTABLE_LABEL_TYPES.end(), labelType) == ACCEPTABLE_LABEL_TYPES.end()) {
-		throw std::invalid_argument("Invalid label type");
+		throw std::invalid_argument("Invalid label type: " + labelType);
 	}
 	if (this->root.attribute("labelType").empty()) this->root.append_attribute("labelType");
 	this->root.attribute("labelType").set_value(labelType.c_str());
 	this->labelType = labelType;
 }
-std::string Frame::getName() const {
+std::string Frame::getName() const noexcept {
 	return this->name;
 }
-void Frame::setName(const std::string& name) {
+void Frame::setName(const std::string& name) noexcept {
 	if (name.empty()) {
 		this->root.remove_attribute("name");
 		this->setLabelType("none");
@@ -96,13 +96,16 @@ void Frame::setName(const std::string& name) {
 	}
 	this->name = name;
 }
-bool Frame::isEmpty() const {
+bool Frame::isEmpty() const noexcept {
 	return this->elements.empty();
 }
-pugi::xml_node& Frame::getRoot() {
+pugi::xml_node& Frame::getRoot() noexcept {
 	return this->root;
 }
-void Frame::clearElements() {
+const pugi::xml_node& Frame::getRoot() const noexcept {
+	return this->root;
+}
+void Frame::clearElements() noexcept {
 	this->elements.clear();
 	this->getRoot().remove_child("elements");
 }

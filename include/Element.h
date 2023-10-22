@@ -10,16 +10,17 @@ protected:
 	std::string elementType;
 	double width, height;
 public:
-	Element();
-	Element(pugi::xml_node& elementNode, std::string elementType);
-	virtual ~Element();
-	Element(const Element& element);
+	Element() noexcept;
+	Element(pugi::xml_node& elementNode, std::string elementType) noexcept(false);
+	virtual ~Element() noexcept;
+	Element(const Element& element) noexcept;
 	virtual double getWidth() const = 0;
-	void setWidth(double width);
+	void setWidth(double width) noexcept;
 	virtual double getHeight() const = 0;
-	void setHeight(double height);
-	std::string getElementType();
-	pugi::xml_node& getRoot();
+	void setHeight(double height) noexcept;
+	std::string getElementType() const noexcept;
+	pugi::xml_node& getRoot() noexcept;
+	const pugi::xml_node& getRoot() const noexcept;
 };
 const std::vector<std::string_view> ACCEPTABLE_ELEMENT_TYPES = {"shape", "text", "tflText", "instance", "shapeObj"}; 
 #endif // ELEMENT_H
