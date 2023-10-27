@@ -18,7 +18,7 @@ public:
 	unsigned int addNewLayer(const std::string& name, const std::string& layerType = "normal") noexcept;
 	void deleteLayer(unsigned int index) noexcept;
 	Layer* getLayer(unsigned int index) const noexcept;
-	std::string getName() const noexcept;
+	const std::string& getName() const noexcept;
 	void setName(const std::string& name) noexcept;
 	pugi::xml_node& getRoot() noexcept;
 	const pugi::xml_node& getRoot() const noexcept;

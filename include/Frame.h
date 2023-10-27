@@ -32,9 +32,9 @@ public:
 	unsigned int getDuration() const noexcept;
 	unsigned int getStartFrame() const noexcept;
 	unsigned int getKeyMode() const noexcept;
-	std::string getLabelType() const noexcept;
+	const std::string& getLabelType() const noexcept;
 	void setLabelType(const std::string& labelType) noexcept(false);
-	std::string getName() const noexcept;
+	const std::string& getName() const noexcept;
 	void setName(const std::string& name) noexcept;
 	bool isEmpty() const noexcept;
 	pugi::xml_node& getRoot() noexcept;

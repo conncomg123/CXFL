@@ -18,7 +18,7 @@ public:
 	void setWidth(double width) noexcept;
 	virtual double getHeight() const = 0;
 	void setHeight(double height) noexcept;
-	std::string getElementType() const noexcept;
+	const std::string& getElementType() const noexcept;
 	pugi::xml_node& getRoot() noexcept;
 	const pugi::xml_node& getRoot() const noexcept;
 };

@@ -26,7 +26,7 @@ void Element::setWidth(double width) noexcept {
 void Element::setHeight(double height) noexcept {
 	this->height = height;
 }
-std::string Element::getElementType() const noexcept {
+const std::string& Element::getElementType() const noexcept {
 	return this->elementType;
 }
 pugi::xml_node& Element::getRoot() noexcept {

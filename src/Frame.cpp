@@ -70,7 +70,7 @@ void Frame::setKeyMode(unsigned int keyMode) noexcept {
 	this->root.attribute("keyMode").set_value(keyMode);
 	this->keyMode = keyMode;
 }
-std::string Frame::getLabelType() const noexcept {
+const std::string& Frame::getLabelType() const noexcept {
 	return this->labelType;
 }
 void Frame::setLabelType(const std::string& labelType) noexcept(false) {
@@ -81,7 +81,7 @@ void Frame::setLabelType(const std::string& labelType) noexcept(false) {
 	this->root.attribute("labelType").set_value(labelType.c_str());
 	this->labelType = labelType;
 }
-std::string Frame::getName() const noexcept {
+const std::string& Frame::getName() const noexcept {
 	return this->name;
 }
 void Frame::setName(const std::string& name) noexcept {

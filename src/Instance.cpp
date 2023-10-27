@@ -11,10 +11,10 @@ Instance::Instance(const Instance& instance) noexcept : Element(instance) {
     this->instanceType = instance.getInstanceType();
     this->libraryItem = instance.getLibraryItem();
 }
-std::string Instance::getInstanceType() const noexcept {
+const std::string& Instance::getInstanceType() const noexcept {
     return this->instanceType;
 }
-std::string Instance::getLibraryItem() const noexcept {
+const std::string& Instance::getLibraryItem() const noexcept {
     return this->libraryItem;
 }
 void Instance::setLibraryItem(const std::string& libraryItem) noexcept {

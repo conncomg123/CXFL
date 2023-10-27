@@ -80,7 +80,7 @@ Frame* Layer::getKeyFrame(unsigned int index) const noexcept {
 	return frames[index].get();
 }
 
-unsigned int Layer::getKeyframeIndex(unsigned int frameIndex) const noexcept {
+constexpr unsigned int Layer::getKeyframeIndex(unsigned int frameIndex) const noexcept {
 	// return the nth keyframe where n.startFrame <= frameIndex < n.startFrame + n.duration using binary search
 	unsigned int index = 0;
 	unsigned int start = 0;
@@ -107,7 +107,7 @@ Frame* Layer::getFrame(unsigned int frameIndex) const noexcept {
 	return this->frames[index].get();
 }
 
-std::string Layer::getColor() const noexcept {
+const std::string& Layer::getColor() const noexcept {
 	return this->color;
 }
 void Layer::setColor(const std::string& color) noexcept {
@@ -115,7 +115,7 @@ void Layer::setColor(const std::string& color) noexcept {
 	this->root.attribute("color").set_value(color.c_str());
 	this->color = color;
 }
-std::string Layer::getLayerType() const noexcept {
+const std::string& Layer::getLayerType() const noexcept {
 	return this->layerType;
 }
 void Layer::setLayerType(const std::string& layerType) noexcept(false) {
@@ -141,7 +141,7 @@ void Layer::setLocked(bool locked) noexcept {
 	}
 	this->locked = locked;
 }
-std::string Layer::getName() const noexcept {
+const std::string& Layer::getName() const noexcept {
 	return this->name;
 }
 void Layer::setName(const std::string& name) noexcept {
