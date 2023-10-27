@@ -1,5 +1,10 @@
 #include "../include/Point.h"
 #include <limits>
+
+Point::Point() noexcept {
+	this->x = 0.0;
+	this->y = 0.0;
+}
 Point::Point(pugi::xml_node& pointNode) noexcept {
 	this->root = pointNode;
 	this->x = pointNode.attribute("x").as_double();

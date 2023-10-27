@@ -8,6 +8,7 @@ private:
 	pugi::xml_node root;
 	double x, y;
 public:
+	Point() noexcept;
 	Point(pugi::xml_node& pointNode) noexcept;
 	Point(const pugi::xml_node& pointNode) noexcept;
 	~Point() noexcept;

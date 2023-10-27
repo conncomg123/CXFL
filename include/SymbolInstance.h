@@ -9,9 +9,6 @@
 
 class SymbolInstance : public Instance {
 private:
-	Matrix matrix;
-	Point point;
-	bool selected;
 	unsigned int firstFrame;
 	std::optional<unsigned int> lastFrame;
 	std::string symbolType;
@@ -22,8 +19,6 @@ public:
 	SymbolInstance(pugi::xml_node& elementNode) noexcept;
 	~SymbolInstance() noexcept override;
 	SymbolInstance(SymbolInstance& symbolInstance) noexcept;
-	bool isSelected() const noexcept;
-	void setSelected(bool selected) noexcept;
 	const std::string& getSymbolType() const noexcept;
 	void setSymbolType(const std::string& symbolType) noexcept;
 	unsigned int getFirstFrame() const noexcept;
@@ -35,10 +30,6 @@ public:
 	void setLoop(const std::string& loop) noexcept;
 	double getWidth() const noexcept override;
 	double getHeight() const noexcept override;
-	Matrix& getMatrix() noexcept;
-	const Matrix& getMatrix() const noexcept;
-	Point& getPoint() noexcept;
-	const Point& getPoint() const noexcept;
 };
 
 #endif // SYMBOLINSTANCE_H

@@ -1,8 +1,6 @@
 #include "../include/SymbolInstance.h"
 #include <limits>
-SymbolInstance::SymbolInstance(pugi::xml_node& elementNode) noexcept : Instance(elementNode), 
-		matrix(elementNode.child("matrix").child("Matrix")), 
-		point(elementNode.child("transformationPoint").child("Point")) {
+SymbolInstance::SymbolInstance(pugi::xml_node& elementNode) noexcept : Instance(elementNode) {
 	this->selected = elementNode.attribute("isSelected").as_bool();
 	this->symbolType = elementNode.attribute("symbolType").as_string();
 	this->firstFrame = elementNode.attribute("firstFrame").as_uint();
@@ -11,25 +9,12 @@ SymbolInstance::SymbolInstance(pugi::xml_node& elementNode) noexcept : Instance(
 }
 SymbolInstance::~SymbolInstance() noexcept {
 }
-SymbolInstance::SymbolInstance(SymbolInstance& symbolInstance) noexcept : Instance(symbolInstance), 
-		matrix(symbolInstance.getMatrix()), 
-		point(symbolInstance.getPoint()) {
+SymbolInstance::SymbolInstance(SymbolInstance& symbolInstance) noexcept : Instance(symbolInstance) {
 	this->setHeight(symbolInstance.getHeight());
 	this->setWidth(symbolInstance.getWidth());
 	this->setFirstFrame(symbolInstance.getFirstFrame());
 	this->setLastFrame(symbolInstance.getLastFrame());
 	this->setLoop(symbolInstance.getLoop());
-}
-bool SymbolInstance::isSelected() const noexcept {
-	return this->selected;
-}
-void SymbolInstance::setSelected(bool selected) noexcept {
-	if (!selected) this->Element::root.remove_attribute("isSelected");
-	else {
-		if (this->Element::root.attribute("isSelected").empty()) this->Element::root.append_attribute("isSelected");
-		this->Element::root.attribute("isSelected").set_value(selected);
-	}
-	this->selected = selected;
 }
 const std::string& SymbolInstance::getSymbolType() const noexcept {
 	return this->symbolType;
@@ -80,18 +65,6 @@ double SymbolInstance::getHeight() const noexcept {
 	if (std::abs(this->height - UNDEF) < std::numeric_limits<double>::epsilon()) return this->height;
 	// else, use private implementation and then set it (todo)
 	return 0;
-}
-Matrix& SymbolInstance::getMatrix() noexcept {
-	return this->matrix;
-}
-const Matrix& SymbolInstance::getMatrix() const noexcept {
-	return this->matrix;
-}
-Point& SymbolInstance::getPoint() noexcept {
-	return this->point;
-}
-const Point& SymbolInstance::getPoint() const noexcept {
-	return this->point;
 }
 
 double SymbolInstance::getWidthRecur() const noexcept {
