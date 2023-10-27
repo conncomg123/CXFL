@@ -8,6 +8,7 @@ private:
 	pugi::xml_node root;
 	double a, b, c, d, tx, ty;
 public:
+	Matrix() noexcept;
 	Matrix(pugi::xml_node& matrixNode) noexcept;
 	Matrix(const pugi::xml_node& matrixNode) noexcept;
 	~Matrix() noexcept;
