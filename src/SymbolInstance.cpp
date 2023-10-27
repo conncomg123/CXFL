@@ -31,7 +31,7 @@ void SymbolInstance::setSelected(bool selected) noexcept {
 	}
 	this->selected = selected;
 }
-std::string SymbolInstance::getSymbolType() const noexcept {
+const std::string& SymbolInstance::getSymbolType() const noexcept {
 	return this->symbolType;
 }
 void SymbolInstance::setSymbolType(const std::string& symbolType) noexcept {
@@ -61,7 +61,7 @@ void SymbolInstance::setLastFrame(std::optional<unsigned int> lastFrame) noexcep
 	}
 	this->lastFrame = lastFrame;
 }
-std::string SymbolInstance::getLoop() const noexcept {
+const std::string& SymbolInstance::getLoop() const noexcept {
 	return this->loop;
 }
 void SymbolInstance::setLoop(const std::string& loop) noexcept {

@@ -9,8 +9,8 @@ public:
     Instance(pugi::xml_node& elementNode) noexcept;
     Instance(std::string& instanceType, std::string& libraryItem) noexcept;
     Instance(const Instance& instance) noexcept;
-    std::string getInstanceType() const noexcept;
-    std::string getLibraryItem() const noexcept;
+    const std::string& getInstanceType() const noexcept;
+    const std::string& getLibraryItem() const noexcept;
     void setLibraryItem(const std::string& libraryItem) noexcept;
 };
 #endif // INSTANCE_H

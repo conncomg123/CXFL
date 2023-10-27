@@ -66,7 +66,7 @@ void Timeline::deleteLayer(unsigned int index) noexcept {
 Layer* Timeline::getLayer(unsigned int index) const noexcept {
 	return layers[index].get();
 }
-std::string Timeline::getName() const noexcept {
+const std::string& Timeline::getName() const noexcept {
 	return this->name;
 }
 void Timeline::setName(const std::string& name) noexcept {

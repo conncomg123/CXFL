@@ -24,14 +24,14 @@ public:
 	SymbolInstance(SymbolInstance& symbolInstance) noexcept;
 	bool isSelected() const noexcept;
 	void setSelected(bool selected) noexcept;
-	std::string getSymbolType() const noexcept;
+	const std::string& getSymbolType() const noexcept;
 	void setSymbolType(const std::string& symbolType) noexcept;
 	unsigned int getFirstFrame() const noexcept;
 	void setFirstFrame(unsigned int firstFrame) noexcept;
 	std::optional<unsigned int> getLastFrame() const noexcept;
 	void setLastFrame(unsigned int lastFrame) noexcept;
 	void setLastFrame(std::optional<unsigned int> lastFrame) noexcept;
-	std::string getLoop() const noexcept;
+	const std::string& getLoop() const noexcept;
 	void setLoop(const std::string& loop) noexcept;
 	double getWidth() const noexcept override;
 	double getHeight() const noexcept override;
