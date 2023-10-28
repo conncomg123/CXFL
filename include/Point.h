@@ -7,6 +7,7 @@ class Point {
 private:
 	pugi::xml_node root;
 	double x, y;
+	void setVal(const char* name, double value, double defaultValue = 0.0) noexcept;
 public:
 	Point() noexcept;
 	Point(pugi::xml_node& pointNode) noexcept;

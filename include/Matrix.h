@@ -1,16 +1,17 @@
 #ifndef MATRIX_H
 #define MATRIX_H
-
 #include "pugixml.hpp"
 
 class Matrix {
 private:
-	pugi::xml_node root;
+	pugi::xml_node root, parent;
 	double a, b, c, d, tx, ty;
+	void setVal(const char* name, double value, double defaultValue = 0.0) noexcept;
+	void removeDefaultMatrix() noexcept;
 public:
 	Matrix() noexcept;
-	Matrix(pugi::xml_node& matrixNode) noexcept;
-	Matrix(const pugi::xml_node& matrixNode) noexcept;
+	Matrix(pugi::xml_node& matrixNode, pugi::xml_node& parentNode) noexcept;
+	Matrix(const pugi::xml_node& matrixNode, const pugi::xml_node& parentNode) noexcept;
 	~Matrix() noexcept;
 	Matrix(const Matrix& matrix) noexcept;
 	double getA() const noexcept;

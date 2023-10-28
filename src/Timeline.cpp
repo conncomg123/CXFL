@@ -42,6 +42,13 @@ unsigned int Timeline::addNewLayer(const std::string& name, const std::string& l
 	else this->layers.push_back(std::move(newLayer));
 	return this->layers.size() - 1;
 }
+const std::vector<unsigned int> Timeline::findLayerIndex(const std::string& name) const noexcept {
+	std::vector<unsigned int> indices;
+	for (unsigned int i = 0; i < this->layers.size(); i++) {
+		if (this->layers[i]->getName() == name) indices.push_back(i);
+	}
+	return indices;
+}
 void Timeline::deleteLayer(unsigned int index) noexcept {
 	Layer* curLayer = this->layers[index].get();
 	// if it's a folder, need a recursive delete since folders can contain other folders and layers

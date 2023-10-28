@@ -77,8 +77,11 @@ void Frame::setLabelType(const std::string& labelType) noexcept(false) {
 	if (std::find(ACCEPTABLE_LABEL_TYPES.begin(), ACCEPTABLE_LABEL_TYPES.end(), labelType) == ACCEPTABLE_LABEL_TYPES.end()) {
 		throw std::invalid_argument("Invalid label type: " + labelType);
 	}
-	if (this->root.attribute("labelType").empty()) this->root.append_attribute("labelType");
-	this->root.attribute("labelType").set_value(labelType.c_str());
+	if(labelType == "none") this->root.remove_attribute("labelType");
+	else {
+		if (this->root.attribute("labelType").empty()) this->root.append_attribute("labelType");
+		this->root.attribute("labelType").set_value(labelType.c_str());
+	}
 	this->labelType = labelType;
 }
 const std::string& Frame::getName() const noexcept {

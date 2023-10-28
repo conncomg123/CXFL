@@ -1,11 +1,12 @@
 #include "../include/Element.h"
 #include <stdexcept>
 Element::Element() noexcept {
+	this->selected = false;
 	this->width = UNDEF;
 	this->height = UNDEF;
 }
 Element::Element(pugi::xml_node& elementNode, std::string elementType) noexcept(false) : 
-		matrix(elementNode.child("matrix").child("Matrix")), 
+		matrix(elementNode.child("matrix").child("Matrix"), elementNode), 
 		transformationPoint(elementNode.child("transformationPoint").child("Point")) {
 	if(std::find(ACCEPTABLE_ELEMENT_TYPES.begin(), ACCEPTABLE_ELEMENT_TYPES.end(), elementType) == ACCEPTABLE_ELEMENT_TYPES.end()) throw std::invalid_argument("Invalid element type: " + elementType);
 	this->elementType = elementType;
@@ -45,11 +46,17 @@ void Element::setSelected(bool selected) noexcept {
 	}
 	this->selected = selected;
 }
+Matrix& Element::getMatrix() noexcept {
+	return this->matrix;
+}
 const Matrix& Element::getMatrix() const noexcept {
 	return this->matrix;
 }
 void Element::setMatrix(const Matrix& matrix) noexcept {
 	this->matrix = matrix;
+}
+Point& Element::getTransformationPoint() noexcept {
+	return this->transformationPoint;
 }
 const Point& Element::getTransformationPoint() const noexcept {
 	return this->transformationPoint;
