@@ -3,6 +3,7 @@
 #include "pugixml.hpp"
 #include "Frame.h"
 #include <vector>
+#include <array>
 #include <memory>
 class Layer {
 	friend class Timeline;
@@ -24,7 +25,7 @@ public:
 	bool insertBlankKeyframe(unsigned int frameIndex) noexcept;
 	bool clearKeyFrame(unsigned int frameIndex) noexcept;
 	Frame* getKeyFrame(unsigned int index) const noexcept;
-	constexpr unsigned int getKeyframeIndex(unsigned int frameIndex) const noexcept;
+	unsigned int getKeyframeIndex(unsigned int frameIndex) const noexcept;
 	Frame* getFrame(unsigned int frameIndex) const noexcept;
 	const std::string& getColor() const noexcept;
 	void setColor(const std::string& color) noexcept;
@@ -40,5 +41,5 @@ public:
 	pugi::xml_node& getRoot() noexcept;
 	const pugi::xml_node& getRoot() const noexcept;
 };
-const std::vector<std::string_view> ACCEPTABLE_LAYER_TYPES = { "normal", "guide", "guided", "mask", "masked", "folder" };
+constexpr std::array<std::string_view, 6> ACCEPTABLE_LAYER_TYPES = { "normal", "guide", "guided", "mask", "masked", "folder" };
 #endif // LAYER_H

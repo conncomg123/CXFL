@@ -15,7 +15,8 @@ public:
 	~Timeline() noexcept;
 	unsigned int getFrameCount() const noexcept;
 	unsigned int getLayerCount() const noexcept;
-	unsigned int addNewLayer(const std::string& name, const std::string& layerType = "normal") noexcept;
+	unsigned int addNewLayer(const std::string& name = "New Layer", const std::string& layerType = "normal") noexcept;
+	const std::vector<unsigned int> findLayerIndex(const std::string& name) const noexcept;
 	void deleteLayer(unsigned int index) noexcept;
 	Layer* getLayer(unsigned int index) const noexcept;
 	const std::string& getName() const noexcept;

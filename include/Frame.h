@@ -4,6 +4,7 @@
 #include "Element.h"
 #include "SymbolInstance.h"
 #include <vector>
+#include <array>
 #include <memory>
 enum KeyMode {
 	KEY_MODE_NORMAL = 9728,
@@ -40,5 +41,5 @@ public:
 	pugi::xml_node& getRoot() noexcept;
 	const pugi::xml_node& getRoot() const noexcept;
 };
-const std::vector<std::string_view> ACCEPTABLE_LABEL_TYPES = { "none", "name", "comment", "anchor" };
+constexpr std::array<std::string_view, 4> ACCEPTABLE_LABEL_TYPES = { "none", "name", "comment", "anchor" };
 #endif // FRAME_H

@@ -80,7 +80,7 @@ Frame* Layer::getKeyFrame(unsigned int index) const noexcept {
 	return frames[index].get();
 }
 
-constexpr unsigned int Layer::getKeyframeIndex(unsigned int frameIndex) const noexcept {
+unsigned int Layer::getKeyframeIndex(unsigned int frameIndex) const noexcept {
 	// return the nth keyframe where n.startFrame <= frameIndex < n.startFrame + n.duration using binary search
 	unsigned int index = 0;
 	unsigned int start = 0;
@@ -123,7 +123,7 @@ void Layer::setLayerType(const std::string& layerType) noexcept(false) {
 		throw std::invalid_argument("Invalid layer type specified: " + layerType);
 	}
 	// normal doesn't show up in the xml
-	if (layerType.find("normal") != std::string::npos) this->root.remove_attribute("layerType");
+	if (layerType == "normal") this->root.remove_attribute("layerType");
 	else {
 		if (this->root.attribute("layerType").empty()) this->root.append_attribute("layerType");
 		this->root.attribute("layerType").set_value(layerType.c_str());
@@ -153,7 +153,7 @@ std::optional<unsigned int> Layer::getParentLayerIndex() const noexcept {
 	return this->parentLayerIndex;
 }
 void Layer::setParentLayerIndex(std::optional<unsigned int> parentLayerIndex) noexcept {
-	if (!parentLayerIndex.has_value()) this->root.remove_attribute("parentLayerIndex");
+	if (!parentLayerIndex) this->root.remove_attribute("parentLayerIndex");
 	else {
 		if (this->root.attribute("parentLayerIndex").empty()) this->root.append_attribute("parentLayerIndex");
 		this->root.attribute("parentLayerIndex").set_value(parentLayerIndex.value());

@@ -1,5 +1,5 @@
 #include "../include/SymbolInstance.h"
-#include <limits>
+constexpr auto EPSILON = 0.0001;
 SymbolInstance::SymbolInstance(pugi::xml_node& elementNode) noexcept : Instance(elementNode) {
 	this->selected = elementNode.attribute("isSelected").as_bool();
 	this->symbolType = elementNode.attribute("symbolType").as_string();
@@ -56,13 +56,13 @@ void SymbolInstance::setLoop(const std::string& loop) noexcept {
 }
 double SymbolInstance::getWidth() const noexcept {
 	// if width is not UNDEF, return it
-	if (std::abs(this->width - UNDEF) < std::numeric_limits<double>::epsilon()) return this->width;
+	if (std::abs(this->width - UNDEF) < EPSILON) return this->width;
 	// else, use private implementation and then set it (todo)
 	return 0;
 }
 double SymbolInstance::getHeight() const noexcept {
 	// if height is not UNDEF, return it
-	if (std::abs(this->height - UNDEF) < std::numeric_limits<double>::epsilon()) return this->height;
+	if (std::abs(this->height - UNDEF) < EPSILON) return this->height;
 	// else, use private implementation and then set it (todo)
 	return 0;
 }

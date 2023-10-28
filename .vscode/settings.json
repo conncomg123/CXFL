@@ -70,7 +70,8 @@
         "unordered_map": "cpp",
         "unordered_set": "cpp",
         "functional": "cpp",
-        "xhash": "cpp"
+        "xhash": "cpp",
+        "array": "cpp"
     },
     "cmake.configureOnOpen": true
 }

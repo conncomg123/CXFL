@@ -26,17 +26,28 @@ int main() {
 	// xfl.getTimeline(0)->deleteLayer(0);
 	// time inserting 1000 new layers
 	clock_t start = clock();
+	// for (int i = 0; i < 10; i++) {
+	// 	xfl.getTimeline(0)->addNewLayer("test");
+	// }
+	// // insert keyframes on all 
+	// for (int i = 0; i < xfl.getTimeline(0)->getLayerCount(); i++) {
+	// 	for (int j = 0; j < xfl.getTimeline(0)->getLayer(i)->getFrameCount(); j++) {
+	// 		xfl.getTimeline(0)->getLayer(i)->insertKeyframe(j);
+	// 	}
+	// }
 	for (int i = 0; i < 1000; i++) {
-		xfl.getTimeline(0)->addNewLayer("test");
-	}
-	// insert keyframes on all 
-	for (int i = 0; i < xfl.getTimeline(0)->getLayerCount(); i++) {
-		for (int j = 0; j < xfl.getTimeline(0)->getLayer(i)->getFrameCount(); j++) {
-			xfl.getTimeline(0)->getLayer(i)->insertKeyframe(j);
+		for(int j = 0; j < 1000; j++) {
+			xfl.getTimeline(0)->getLayer(0)->getFrame(0)->getElement(0)->getMatrix().setTx(i);
+			xfl.getTimeline(0)->getLayer(0)->getFrame(0)->getElement(0)->getMatrix().setTy(j);
 		}
-	}
+	} 
 	clock_t end = clock();
-	std::cout << "Inserting " << 1000 * xfl.getTimeline(0)->getFrameCount() << " new frames took " << (double)(end - start) / CLOCKS_PER_SEC << " seconds" << std::endl;
+	std::cout << "Moving " << 1000 * 1000 << " elements took " << (double)(end - start) / CLOCKS_PER_SEC << " seconds" << std::endl;
+	// std::cout << "Inserting " << 10 * xfl.getTimeline(0)->getFrameCount() << " new frames took " << (double)(end - start) / CLOCKS_PER_SEC << " seconds" << std::endl;
+	std::cout << (xfl.getTimeline(0)->getLayer(0)->getFrame(0)->getElement(0)->getMatrix().getRoot() == nullptr) << std::endl;
+	xfl.getTimeline(0)->getLayer(0)->getFrame(0)->getElement(0)->getMatrix().setTx(0);
+	xfl.getTimeline(0)->getLayer(0)->getFrame(0)->getElement(0)->getMatrix().setTy(0);
+	std::cout << (xfl.getTimeline(0)->getLayer(0)->getFrame(0)->getElement(0)->getMatrix().getRoot() == nullptr) << std::endl;
 	//xfl.getTimeline(0)->addNewLayer("test2");
 	xfl.write("C:\\Stuff\\CXFL\\test\\DOMDocument.xml");
 	return 0;

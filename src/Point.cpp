@@ -1,6 +1,5 @@
 #include "../include/Point.h"
-#include <limits>
-
+constexpr auto EPSILON = 0.0001;
 Point::Point() noexcept {
 	this->x = 0.0;
 	this->y = 0.0;
@@ -25,25 +24,26 @@ Point::Point(const Point& point) noexcept {
 	this->setX(point.getX());
 	this->setY(point.getY());
 }
+void Point::setVal(const char* name, double value, double defaultValue) noexcept {
+	if(std::abs(value - defaultValue) < EPSILON) this->root.remove_attribute(name);
+	else {
+		if (this->root.attribute(name).empty()) this->root.append_attribute(name);
+		this->root.attribute(name).set_value(value);
+	}
+}
 double Point::getX() const noexcept {
 	return this->x;
 }
 void Point::setX(double x) noexcept {
-	if (std::abs(x) < std::numeric_limits<double>::epsilon()) this->root.remove_attribute("x");
-	else {
-		if (this->root.attribute("x").empty()) this->root.append_attribute("x");
-		this->root.attribute("x").set_value(x);
-	}
+	this->setVal("x", x);
+	this->x = x;
 }
 double Point::getY() const noexcept {
 	return this->y;
 }
 void Point::setY(double y) noexcept {
-	if (std::abs(y) < std::numeric_limits<double>::epsilon()) this->root.remove_attribute("y");
-	else {
-		if (this->root.attribute("y").empty()) this->root.append_attribute("y");
-		this->root.attribute("y").set_value(y);
-	}
+	this->setVal("y", y);
+	this->y = y;
 }
 pugi::xml_node& Point::getRoot() noexcept {
 	return this->root;
