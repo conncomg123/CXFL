@@ -14,8 +14,26 @@ Layer::Layer(pugi::xml_node& layerNode) noexcept {
 	this->setLocked(layerNode.attribute("locked").as_bool());
 	this->setName(layerNode.attribute("name").empty() ? "layer" : layerNode.attribute("name").value());
 	this->setParentLayerIndex((layerNode.attribute("parentLayerIndex").empty()) ? std::nullopt : std::make_optional<unsigned int>(layerNode.attribute("parentLayerIndex").as_uint()));
-	loadFrames(this->root);
+	this->setCurrent(layerNode.attribute("current").as_bool());
+	this->setSelected(layerNode.attribute("isSelected").as_bool());
+	this->loadFrames(this->root);
 }
+
+// copy constructor, make a deep copy of the layer
+Layer::Layer(const Layer& layer) noexcept {
+	// use the parent of this->root to insert the copy
+	auto parent = layer.root.parent();
+	this->root = parent.insert_copy_before(layer.root, layer.root);
+	this->setColor(layer.getColor());
+	this->setLayerType(layer.getLayerType());
+	this->setLocked(layer.isLocked());
+	this->setName(layer.getName());
+	this->setParentLayerIndex(layer.getParentLayerIndex());
+	this->setCurrent(layer.isCurrent());
+	this->setSelected(layer.isSelected());
+	this->loadFrames(this->root);
+}
+
 Layer::~Layer() noexcept {
 
 }
@@ -159,6 +177,28 @@ void Layer::setParentLayerIndex(std::optional<unsigned int> parentLayerIndex) no
 		this->root.attribute("parentLayerIndex").set_value(parentLayerIndex.value());
 	}
 	this->parentLayerIndex = parentLayerIndex;
+}
+bool Layer::isCurrent() const noexcept {
+	return this->current;
+}
+void Layer::setCurrent(bool current) noexcept {
+	if (!current) this->root.remove_attribute("current");
+	else {
+		if (this->root.attribute("current").empty()) this->root.append_attribute("current");
+		this->root.attribute("current").set_value(current);
+	}
+	this->current = current;
+}
+bool Layer::isSelected() const noexcept {
+	return this->selected;
+}
+void Layer::setSelected(bool selected) noexcept {
+	if (!selected) this->root.remove_attribute("isSelected");
+	else {
+		if (this->root.attribute("isSelected").empty()) this->root.append_attribute("isSelected");
+		this->root.attribute("isSelected").set_value(selected);
+	}
+	this->selected = selected;
 }
 
 unsigned int Layer::getFrameCount() const noexcept {

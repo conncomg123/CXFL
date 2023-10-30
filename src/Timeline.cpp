@@ -7,10 +7,26 @@ void Timeline::loadLayers(pugi::xml_node& timelineNode) noexcept {
 }
 Timeline::Timeline(pugi::xml_node& timelineNode) noexcept {
 	this->root = timelineNode;
+	this->name = timelineNode.attribute("name").value();
+	this->currentFrame = timelineNode.attribute("currentFrame").as_uint();
 	loadLayers(timelineNode);
 }
 Timeline::~Timeline() {
 
+}
+void Timeline::setSelectedLayer(unsigned int index, bool appendToCurrentSelection) noexcept {
+	if (!appendToCurrentSelection) {
+		for (auto& layer : this->layers) {
+			layer->setSelected(false);
+		}
+	}
+	this->getLayer(index)->setSelected(true);
+}
+void Timeline::setCurrentLayer(unsigned int index) noexcept {
+	for (auto& layer : this->layers) {
+		layer->setCurrent(false);
+	}
+	this->getLayer(index)->setCurrent(true);
 }
 unsigned int Timeline::getFrameCount() const noexcept {
 	unsigned int max = 0;
@@ -41,6 +57,20 @@ unsigned int Timeline::addNewLayer(const std::string& name, const std::string& l
 	// add the layer to the vector
 	else this->layers.push_back(std::move(newLayer));
 	return this->layers.size() - 1;
+}
+unsigned int Timeline::duplicateLayer(unsigned int index) noexcept {
+	auto dupedLayer = std::make_unique<Layer>(*this->getLayer(index));
+	dupedLayer->setName(dupedLayer->getName() + "_copy");
+	this->layers.emplace(this->layers.begin() + index, std::move(dupedLayer));
+	// for each layer after index, update the parentLayerIndex
+	for (unsigned int i = index; i < this->layers.size(); i++) {
+		if (this->layers[i]->getParentLayerIndex().has_value() && this->layers[i]->getParentLayerIndex() > index) {
+			this->layers[i]->setParentLayerIndex(this->layers[i]->getParentLayerIndex().value() + 1);
+		}
+	}
+	this->setSelectedLayer(index);
+	this->setCurrentLayer(index);
+	return index;
 }
 const std::vector<unsigned int> Timeline::findLayerIndex(const std::string& name) const noexcept {
 	std::vector<unsigned int> indices;
@@ -80,6 +110,14 @@ void Timeline::setName(const std::string& name) noexcept {
 	if (this->root.attribute("name").empty()) this->root.append_attribute("name");
 	this->root.attribute("name").set_value(name.c_str());
 	this->name = name;
+}
+unsigned int Timeline::getCurrentFrame() const noexcept {
+	return this->currentFrame;
+}
+void Timeline::setCurrentFrame(unsigned int currentFrame) noexcept {
+	if (this->root.attribute("currentFrame").empty()) this->root.append_attribute("currentFrame");
+	this->root.attribute("currentFrame").set_value(currentFrame);
+	this->currentFrame = currentFrame;
 }
 pugi::xml_node& Timeline::getRoot() noexcept {
 	return this->root;

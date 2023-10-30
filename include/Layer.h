@@ -16,10 +16,11 @@ private:
 	std::string color;
 	std::string layerType;
 	std::optional<unsigned int> parentLayerIndex;
-	bool locked;
+	bool locked, current, selected;
 	std::string name;
 public:
 	Layer(pugi::xml_node& layerNode) noexcept;
+	Layer(const Layer& layer) noexcept;
 	~Layer() noexcept;
 	bool insertKeyframe(unsigned int frameIndex) noexcept;
 	bool insertBlankKeyframe(unsigned int frameIndex) noexcept;
@@ -33,6 +34,10 @@ public:
 	void setLayerType(const std::string& layerType) noexcept(false);
 	bool isLocked() const noexcept;
 	void setLocked(bool locked) noexcept;
+	bool isCurrent() const noexcept;
+	void setCurrent(bool current) noexcept;
+	bool isSelected() const noexcept;
+	void setSelected(bool selected) noexcept;
 	const std::string& getName() const noexcept;
 	void setName(const std::string& name) noexcept;
 	std::optional<unsigned int> getParentLayerIndex() const noexcept;

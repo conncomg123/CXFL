@@ -11,6 +11,7 @@ Element::Element(pugi::xml_node& elementNode, std::string elementType) noexcept(
 	if(std::find(ACCEPTABLE_ELEMENT_TYPES.begin(), ACCEPTABLE_ELEMENT_TYPES.end(), elementType) == ACCEPTABLE_ELEMENT_TYPES.end()) throw std::invalid_argument("Invalid element type: " + elementType);
 	this->elementType = elementType;
 	this->root = elementNode;
+	this->selected = elementNode.attribute("isSelected").as_bool();
 	this->width = UNDEF;
 	this->height = UNDEF;
 }
