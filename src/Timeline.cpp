@@ -75,7 +75,7 @@ unsigned int Timeline::duplicateLayer(unsigned int index) noexcept {
 const std::vector<unsigned int> Timeline::findLayerIndex(const std::string& name) const noexcept {
 	std::vector<unsigned int> indices;
 	for (unsigned int i = 0; i < this->layers.size(); i++) {
-		if (this->layers[i]->getName() == name) indices.push_back(i);
+		if (this->getLayer(i)->getName() == name) indices.push_back(i);
 	}
 	return indices;
 }
