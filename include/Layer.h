@@ -46,5 +46,5 @@ public:
 	pugi::xml_node& getRoot() noexcept;
 	const pugi::xml_node& getRoot() const noexcept;
 };
-constexpr std::array<std::string_view, 6> ACCEPTABLE_LAYER_TYPES = { "normal", "guide", "guided", "mask", "masked", "folder" };
+constexpr std::array<std::string_view, 7> ACCEPTABLE_LAYER_TYPES = { "normal", "guide", "guided", "mask", "masked", "folder", "camera" };
 #endif // LAYER_H

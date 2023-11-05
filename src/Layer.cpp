@@ -200,8 +200,8 @@ void Layer::setSelected(bool selected) noexcept {
 	}
 	this->selected = selected;
 }
-
 unsigned int Layer::getFrameCount() const noexcept {
+	if(this->frames.size() == 0) return 0;
 	return this->frames[this->frames.size() - 1]->getStartFrame() + this->frames[this->frames.size() - 1]->getDuration();
 }
 pugi::xml_node& Layer::getRoot() noexcept {
