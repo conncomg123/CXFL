@@ -28,6 +28,7 @@ public:
 	XFLDocument(const std::string& filename);
 	~XFLDocument();
 	void write(const std::string& filename);
+	unsigned int duplicateTimeline(unsigned int index);
 	SymbolInstance getSymbolInstance(const std::string& name);
 	Timeline* getTimeline(unsigned int index);
 	pugi::xml_node& getRoot();

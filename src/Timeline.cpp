@@ -14,6 +14,13 @@ Timeline::Timeline(pugi::xml_node& timelineNode) noexcept {
 Timeline::~Timeline() {
 
 }
+Timeline::Timeline(const Timeline& other) noexcept {
+	auto parent = other.root.parent();
+	this->root = parent.insert_copy_after(other.root, other.root);
+	this->setName(other.getName());
+	this->setCurrentFrame(other.getCurrentFrame());
+	this->loadLayers(this->root);
+}
 void Timeline::setSelectedLayer(unsigned int index, bool appendToCurrentSelection) noexcept {
 	if (!appendToCurrentSelection) {
 		for (auto& layer : this->layers) {
