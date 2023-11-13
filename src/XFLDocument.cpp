@@ -224,6 +224,12 @@ void XFLDocument::write(const std::string& filename) {
 		throw std::runtime_error("Invalid file extension");
 	}
 }
+unsigned int XFLDocument::duplicateTimeline(unsigned int index) {
+    auto dupedTimeline = std::make_unique<Timeline>(*this->getTimeline(index));
+    dupedTimeline->setName(dupedTimeline->getName() + "_copy");
+    this->timelines.emplace(this->timelines.begin() + index, std::move(dupedTimeline));
+    return index + 1;
+}
 Timeline* XFLDocument::getTimeline(unsigned int index) {
 	return timelines[index].get();
 }

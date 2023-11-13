@@ -14,6 +14,7 @@ private:
 public:
 	Timeline(pugi::xml_node& timelineNode) noexcept;
 	~Timeline() noexcept;
+	Timeline(const Timeline& other) noexcept;
 	void setSelectedLayer(unsigned int index, bool appendToCurrentSelection = false) noexcept;
 	void setCurrentLayer(unsigned int index) noexcept;
 	unsigned int getFrameCount() const noexcept;
