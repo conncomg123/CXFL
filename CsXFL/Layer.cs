@@ -18,9 +18,9 @@ public class Layer
     private List<Frame> frames;
     private bool locked, current, selected;
     uint? parentLayerIndex;
-    private void SetOrRemoveAttribute(in string attributeName, object? value, object? defaultValue)
+    private void SetOrRemoveAttribute<T>(in string attributeName, T value, T defaultValue)
     {
-        if (value == defaultValue)
+        if (EqualityComparer<T>.Default.Equals(value, defaultValue))
         {
             root?.Attribute(attributeName)?.Remove();
         }
@@ -65,7 +65,7 @@ public class Layer
         ns = root.Name.Namespace;
         color = (string?)layerNode.Attribute("color") ?? DefaultValues.Color;
         layerType = (string?)layerNode.Attribute("layerType") ?? DefaultValues.LayerType;
-        if(!AcceptableLayerTypes.Contains(layerType))
+        if (!AcceptableLayerTypes.Contains(layerType))
         {
             throw new ArgumentException("Invalid layer type: " + layerType);
         }
@@ -100,7 +100,7 @@ public class Layer
     int GetKeyframeIndex(int frameIndex)
     {
         // return the nth keyframe where n.StartFrame <= frameIndex < (n.StartFrame + n.Duration) with binary search
-        int left = 0, right = frames.Count- 1;   
+        int left = 0, right = frames.Count - 1;
         while (left <= right)
         {
             int mid = (left + right) / 2;
@@ -132,12 +132,12 @@ public class Layer
     {
         int index = GetKeyframeIndex(frameIndex);
         Frame frame = frames[index];
-        if(frameIndex == frame.StartFrame)
+        if (frameIndex == frame.StartFrame)
         {
             frameIndex++;
-            if(frameIndex >= GetFrameCount()) return false;
+            if (frameIndex >= GetFrameCount()) return false;
             int newIndex = GetKeyframeIndex(frameIndex);
-            if(newIndex != index) return false;
+            if (newIndex != index) return false;
         }
         Frame newFrame = new Frame(ref frame, isBlank)
         {

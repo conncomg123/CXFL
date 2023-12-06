@@ -28,9 +28,9 @@ public class Frame
     private List<Element> elements;
     private int startFrame, duration, keyMode;
     private string labelType, name;
-    private void SetOrRemoveAttribute(in string attributeName, object? value, object? defaultValue)
+    private void SetOrRemoveAttribute<T>(in string attributeName, T value, T defaultValue)
     {
-        if (value == defaultValue)
+        if (EqualityComparer<T>.Default.Equals(value, defaultValue))
         {
             root?.Attribute(attributeName)?.Remove();
         }
