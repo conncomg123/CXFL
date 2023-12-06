@@ -11,9 +11,9 @@ public abstract class Element
         public const bool Selected = false;
 
     }
-    private void SetOrRemoveAttribute(in string attributeName, object? value, object? defaultValue)
+    private void SetOrRemoveAttribute<T>(in string attributeName, T value, T defaultValue)
     {
-        if (value == defaultValue)
+        if (EqualityComparer<T>.Default.Equals(value, defaultValue))
         {
             root?.Attribute(attributeName)?.Remove();
         }

@@ -13,15 +13,15 @@ public class SymbolInstance : Instance
     private uint firstFrame;
     private uint? lastFrame;
     private string symbolType, loop;
-    private void SetOrRemoveAttribute(in string attributeName, object? value, object? defaultValue)
+    private void SetOrRemoveAttribute<T>(in string attributeName, T value, T defaultValue)
     {
-        if (value == defaultValue)
+        if (EqualityComparer<T>.Default.Equals(value, defaultValue))
         {
-            Root?.Attribute(attributeName)?.Remove();
+            root?.Attribute(attributeName)?.Remove();
         }
         else
         {
-            Root?.SetAttributeValue(attributeName, value);
+            root?.SetAttributeValue(attributeName, value);
         }
     }
     public uint FirstFrame { get { return firstFrame; } set { firstFrame = value; SetOrRemoveAttribute("firstFrame", value, DefaultValues.FirstFrame); } }
