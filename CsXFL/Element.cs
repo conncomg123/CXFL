@@ -3,7 +3,7 @@ using System.Reflection.Metadata;
 using System.Xml.Linq;
 public abstract class Element
 {
-    private static readonly List<string> AcceptableElementTypes = new List<string> { "shape", "text", "tflText", "instance", "shapeObj" };
+    private static readonly List<string> AcceptableElementTypes = new List<string> {"shape", "text", "tflText", "instance", "shapeObj"};
     public static class DefaultValues
     {
         public const double Width = double.NaN;

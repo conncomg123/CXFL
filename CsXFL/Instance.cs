@@ -3,7 +3,7 @@ using System.Xml.Linq;
 public class Instance : Element
 {
     private readonly string instanceType;
-    private string libraryItem;
+    private string libraryItem; // change to Item when implemented
     public string InstanceType { get { return instanceType; } }
     public string LibraryItem
     {

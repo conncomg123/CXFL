@@ -2,7 +2,7 @@ using System.Xml.Linq;
 
 public class Layer
 {
-    private static readonly List<string> AcceptableLayerTypes = new List<string> { "normal", "guide", "guided", "mask", "masked", "folder", "camera" };
+    private static readonly List<string> AcceptableLayerTypes = new List<string> {"normal", "guide", "guided", "mask", "masked", "folder", "camera"};
     public static class DefaultValues
     {
         public const string Color = "#000000";
@@ -97,6 +97,31 @@ public class Layer
         root?.Element(ns + "frames")?.Elements().ToList()[keyframeIndex].Remove();
         frames.RemoveAt(keyframeIndex);
     }
+
+    public bool ClearKeyframe(int frameIndex)
+    {
+        int index = GetKeyframeIndex(frameIndex);
+        Frame frame = frames[index];
+        if(frameIndex != frame.StartFrame) return false;
+        if(frames.Count == 1)
+        {  
+            if(frame.IsEmpty()) return false;
+            frame.ClearElements();
+            return true;
+        }
+        if(index == 0)
+        {
+            Frame nextFrame = frames[index + 1];
+            nextFrame.Duration = nextFrame.Duration + frame.Duration;
+            nextFrame.StartFrame = 0;
+            RemoveKeyframe(index);
+            return true;
+        }
+        Frame previousFrame = frames[index - 1];
+        previousFrame.Duration += frame.Duration;
+        RemoveKeyframe(index);
+        return true;
+    }
     int GetKeyframeIndex(int frameIndex)
     {
         // return the nth keyframe where n.StartFrame <= frameIndex < (n.StartFrame + n.Duration) with binary search
@@ -128,7 +153,7 @@ public class Layer
     {
         return frames[GetKeyframeIndex(frameIndex)];
     }
-    public bool InsertKeyframe(int frameIndex, bool isBlank)
+    private bool InsertKeyframe(int frameIndex, bool isBlank)
     {
         int index = GetKeyframeIndex(frameIndex);
         Frame frame = frames[index];
@@ -139,7 +164,7 @@ public class Layer
             int newIndex = GetKeyframeIndex(frameIndex);
             if (newIndex != index) return false;
         }
-        Frame newFrame = new Frame(ref frame, isBlank)
+        Frame newFrame = new(ref frame, isBlank)
         {
             Name = Frame.DefaultValues.Name,
             Duration = frame.Duration + frame.StartFrame - frameIndex
@@ -149,5 +174,13 @@ public class Layer
         frames.Insert(index + 1, newFrame);
         frame.Root!.AddAfterSelf(newFrame.Root);
         return true;
+    }
+    public bool InsertKeyframe(int frameIndex)
+    {
+        return InsertKeyframe(frameIndex, false);
+    }
+    public bool InsertBlankKeyframe(int frameIndex)
+    {
+        return InsertKeyframe(frameIndex, true);
     }
 }
