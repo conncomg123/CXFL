@@ -34,12 +34,12 @@ public class SymbolInstance : Instance
     private double GetWidthHelper()
     {
         // todo: implement
-        return double.NaN;
+        throw new NotImplementedException("pls be patient");
     }
     private double GetHeightHelper()
     {
         // todo: implement
-        return double.NaN;
+        throw new NotImplementedException("pls be patient");
     }
     public SymbolInstance(in XElement elementNode) : base(elementNode)
     {

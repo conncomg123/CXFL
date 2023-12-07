@@ -9,5 +9,3 @@ node_modules/
 build-CXFLGUI-Desktop_Qt_6_6_0_MinGW_64_bit-Debug/
 */bin/*
 */obj/*
-*.fla
-*.xml
