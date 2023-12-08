@@ -38,7 +38,7 @@ public class Document
         timelines = new List<Timeline>();
         LoadTimelines(root!);
     }
-    public void Write(string filename)
+    public void Save(string filename)
     {
         SaveXFL(filename);
     }

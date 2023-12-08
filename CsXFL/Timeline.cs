@@ -97,4 +97,98 @@ public class Timeline
     {
         return layers.Count;
     }
+    // dupe single layer
+    private Layer DuplicateSingleLayer(int layerIndex, int whereToInsert)
+    {
+        Layer dupedLayer = new(layers[layerIndex]);
+        dupedLayer.Name += "_copy";
+        layers[whereToInsert].Root?.AddBeforeSelf(dupedLayer.Root);
+        layers.Insert(whereToInsert, dupedLayer);
+        SetSelectedLayer(whereToInsert);
+        SetCurrentLayer(whereToInsert);
+        // increment parentLayerIndex for all layers after the insertion point
+        for (int i = whereToInsert + 1; i < layers.Count; i++)
+        {
+            if (layers[i].ParentLayerIndex is not null && layers[i].ParentLayerIndex >= whereToInsert)
+            {
+                layers[i].ParentLayerIndex++;
+            }
+        }
+        return dupedLayer;
+    }
+    // dupe layer, including children
+    public void DuplicateLayer(int layerIndex)
+    {
+        Layer originalLayer = layers[layerIndex];
+        if (originalLayer.LayerType != "folder")
+        {
+            DuplicateSingleLayer(layerIndex, layerIndex);
+            return;
+        }
+        // todo: iterate through all children, dupe them and retain their hierarchy and order
+        // lots of ugly looking logic, but it's all needed since we're inserting elements into the list as we iterate through it, probably a better way to do this
+        List<int> parentLayerIndices = new();
+        parentLayerIndices.Add(layerIndex);
+        int insertionPoint = layerIndex, currentIndex = layerIndex + 2;
+        int numDupes = 0;
+        // dupe original folder
+        DuplicateSingleLayer(layerIndex, insertionPoint);
+        numDupes++;
+        insertionPoint++;
+        Layer currentLayer = layers[currentIndex];
+        int currentLayerParentIndex = (int)currentLayer.ParentLayerIndex!;
+        int currentParentLayerIndicesArrayIndex = 0;
+        while (parentLayerIndices.Contains(currentLayer.ParentLayerIndex - numDupes ?? -1))
+        {
+            if (currentLayer.ParentLayerIndex != currentLayerParentIndex) // will always run after a folder is duplicated
+            {
+                currentLayerParentIndex = (int)currentLayer.ParentLayerIndex!;
+                currentParentLayerIndicesArrayIndex--;
+            }
+            DuplicateSingleLayer(currentIndex, insertionPoint).ParentLayerIndex = parentLayerIndices[currentParentLayerIndicesArrayIndex];
+            numDupes++;
+            insertionPoint++;
+            currentLayerParentIndex++;
+            if (currentLayer.LayerType == "folder")
+            {
+                parentLayerIndices.Add(insertionPoint - 1);
+                currentParentLayerIndicesArrayIndex += 2;
+            }
+            currentIndex += 2;
+            if (currentIndex >= Layers.Count) break;
+            currentLayer = layers[currentIndex];
+
+        }
+    }
+    public List<int> FindLayerIndex(string name)
+    {
+        List<int> indices = new();
+        for (int i = 0; i < layers.Count; i++)
+        {
+            if (layers[i].Name == name) indices.Add(i);
+        }
+        return indices;
+    }
+    public void DeleteLayer(int index)
+    {
+        Layer currentLayer = layers[index];
+        if (currentLayer.LayerType == "folder")
+        {
+            for (int i = index + 1; i < layers.Count; i++)
+            {
+                if (layers[i].ParentLayerIndex != index) continue;
+                DeleteLayer(i);
+                i--;
+            }
+        }
+        currentLayer.Root?.Remove();
+        layers.RemoveAt(index);
+        for (int i = index; i < layers.Count; i++)
+        {
+            if (layers[i].ParentLayerIndex is not null && layers[i].ParentLayerIndex > index)
+            {
+                layers[i].ParentLayerIndex--;
+            }
+        }
+    }
 }
