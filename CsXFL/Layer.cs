@@ -17,7 +17,7 @@ public class Layer
     private string color, layerType, name;
     private List<Frame> frames;
     private bool locked, current, selected;
-    uint? parentLayerIndex;
+    int? parentLayerIndex;
     private void SetOrRemoveAttribute<T>(in string attributeName, T value, T defaultValue)
     {
         if (EqualityComparer<T>.Default.Equals(value, defaultValue))
@@ -48,7 +48,7 @@ public class Layer
     public bool Locked { get { return locked; } set { locked = value; SetOrRemoveAttribute("locked", value, DefaultValues.Locked); } }
     public bool Current { get { return current; } set { current = value; SetOrRemoveAttribute("current", value, DefaultValues.Current); } }
     public bool Selected { get { return selected; } set { selected = value; SetOrRemoveAttribute("isSelected", value, DefaultValues.Selected); } }
-    public uint? ParentLayerIndex { get { return parentLayerIndex; } set { parentLayerIndex = value; SetOrRemoveAttribute("parentLayerIndex", value, null); } }
+    public int? ParentLayerIndex { get { return parentLayerIndex; } set { parentLayerIndex = value; SetOrRemoveAttribute("parentLayerIndex", value, null); } }
 
     private void LoadFrames(XElement layerNode)
     {
@@ -73,12 +73,12 @@ public class Layer
         locked = (bool?)layerNode.Attribute("locked") ?? DefaultValues.Locked;
         current = (bool?)layerNode.Attribute("current") ?? DefaultValues.Current;
         selected = (bool?)layerNode.Attribute("isSelected") ?? DefaultValues.Selected;
-        parentLayerIndex = (uint?)layerNode.Attribute("parentLayerIndex");
+        parentLayerIndex = (int?)layerNode.Attribute("parentLayerIndex");
         frames = new List<Frame>();
         LoadFrames(root);
     }
 
-    public Layer(ref Layer other)
+    public Layer(Layer other)
     {
         root = other.root is null ? null : new XElement(other.root);
         ns = other.ns;
