@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+namespace CsXFL;
 
 public class Point
 {
@@ -10,22 +11,9 @@ public class Point
     }
     private double x, y;
     private XElement? root;
-        public double X { get { return x; } set { x = value; SetOrRemoveAttribute("x", value, DefaultValues.X); } }
-    public double Y { get { return y; } set { y = value; SetOrRemoveAttribute("y", value, DefaultValues.Y); } }
+        public double X { get { return x; } set { x = value; root?.SetOrRemoveAttribute("x", value, DefaultValues.X); } }
+    public double Y { get { return y; } set { y = value; root?.SetOrRemoveAttribute("y", value, DefaultValues.Y); } }
     public ref XElement? Root { get { return ref root; } }
-
-    private void SetOrRemoveAttribute(in string attributeName, double value, double defaultValue)
-    {
-        if (Math.Abs(value - defaultValue) < Epsilon)
-        {
-            root?.Attribute(attributeName)?.Remove();
-        }
-        else
-        {
-            root?.SetAttributeValue(attributeName, value);
-        }
-    }
-
     public Point()
     {
         root = null;

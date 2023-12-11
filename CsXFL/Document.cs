@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using System.IO.Compression;
+namespace CsXFL;
 public class Document
 {
     private string filename;
@@ -64,7 +65,7 @@ public class Document
         }
         else
         {
-            throw new Exception("Invalid file extension");
+            throw new ArgumentException("Invalid file extension");
         }
     }
     public void Save(string filename)

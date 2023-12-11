@@ -1,5 +1,6 @@
 using System;
 using System.Xml.Linq;
+namespace CsXFL;
 
 public class SymbolInstance : Instance
 {
@@ -13,23 +14,12 @@ public class SymbolInstance : Instance
     private uint firstFrame;
     private uint? lastFrame;
     private string symbolType, loop;
-    private void SetOrRemoveAttribute<T>(in string attributeName, T value, T defaultValue)
-    {
-        if (EqualityComparer<T>.Default.Equals(value, defaultValue))
-        {
-            root?.Attribute(attributeName)?.Remove();
-        }
-        else
-        {
-            root?.SetAttributeValue(attributeName, value);
-        }
-    }
-    public uint FirstFrame { get { return firstFrame; } set { firstFrame = value; SetOrRemoveAttribute("firstFrame", value, DefaultValues.FirstFrame); } }
-    public uint? LastFrame { get { return lastFrame; } set { lastFrame = value; SetOrRemoveAttribute("lastFrame", value, null); } }
-    public string SymbolType { get { return symbolType; } set { symbolType = value; SetOrRemoveAttribute("symbolType", value, DefaultValues.SymbolType); } }
-    public string Loop { get { return loop; } set { loop = value; SetOrRemoveAttribute("loop", value, DefaultValues.Loop); } }
-    public override double Width { get { return GetWidthHelper(); } set { width = value; SetOrRemoveAttribute("width", value, double.NaN); } }
-    public override double Height { get { return GetHeightHelper(); } set { height = value; SetOrRemoveAttribute("height", value, double.NaN); } }
+    public uint FirstFrame { get { return firstFrame; } set { firstFrame = value; root?.SetOrRemoveAttribute("firstFrame", value, DefaultValues.FirstFrame); } }
+    public uint? LastFrame { get { return lastFrame; } set { lastFrame = value; root?.SetOrRemoveAttribute("lastFrame", value, null); } }
+    public string SymbolType { get { return symbolType; } set { symbolType = value; root?.SetOrRemoveAttribute("symbolType", value, DefaultValues.SymbolType); } }
+    public string Loop { get { return loop; } set { loop = value; root?.SetOrRemoveAttribute("loop", value, DefaultValues.Loop); } }
+    public override double Width { get { return GetWidthHelper(); } set { width = value; root?.SetOrRemoveAttribute("width", value, double.NaN); } }
+    public override double Height { get { return GetHeightHelper(); } set { height = value; root?.SetOrRemoveAttribute("height", value, double.NaN); } }
 
     private double GetWidthHelper()
     {
