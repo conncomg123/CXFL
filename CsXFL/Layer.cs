@@ -1,4 +1,6 @@
+using System.Collections.ObjectModel;
 using System.Xml.Linq;
+namespace CsXFL;
 
 public class Layer
 {
@@ -18,17 +20,6 @@ public class Layer
     private List<Frame> frames;
     private bool locked, current, selected;
     int? parentLayerIndex;
-    private void SetOrRemoveAttribute<T>(in string attributeName, T value, T defaultValue)
-    {
-        if (EqualityComparer<T>.Default.Equals(value, defaultValue))
-        {
-            root?.Attribute(attributeName)?.Remove();
-        }
-        else
-        {
-            root?.SetAttributeValue(attributeName, value);
-        }
-    }
     public XElement? Root { get { return root; } }
     public string Color { get { return color; } set { color = value; root?.SetAttributeValue("color", value); } }
     public string LayerType
@@ -41,15 +32,15 @@ public class Layer
                 throw new ArgumentException("Invalid layer type: " + value);
             }
             layerType = value;
-            SetOrRemoveAttribute("layerType", value, DefaultValues.LayerType);
+            root?.SetOrRemoveAttribute("layerType", value, DefaultValues.LayerType);
         }
     }
     public string Name { get { return name; } set { name = value; root?.SetAttributeValue("name", value); } }
-    public bool Locked { get { return locked; } set { locked = value; SetOrRemoveAttribute("locked", value, DefaultValues.Locked); } }
-    public bool Current { get { return current; } set { current = value; SetOrRemoveAttribute("current", value, DefaultValues.Current); } }
-    public bool Selected { get { return selected; } set { selected = value; SetOrRemoveAttribute("isSelected", value, DefaultValues.Selected); } }
-    public int? ParentLayerIndex { get { return parentLayerIndex; } set { parentLayerIndex = value; SetOrRemoveAttribute("parentLayerIndex", value, null); } }
-
+    public bool Locked { get { return locked; } set { locked = value; root?.SetOrRemoveAttribute("locked", value, DefaultValues.Locked); } }
+    public bool Current { get { return current; } set { current = value; root?.SetOrRemoveAttribute("current", value, DefaultValues.Current); } }
+    public bool Selected { get { return selected; } set { selected = value; root?.SetOrRemoveAttribute("isSelected", value, DefaultValues.Selected); } }
+    public int? ParentLayerIndex { get { return parentLayerIndex; } set { parentLayerIndex = value; root?.SetOrRemoveAttribute("parentLayerIndex", value, null); } }
+    public ReadOnlyCollection<Frame> Frames { get { return frames.AsReadOnly(); } }
     private void LoadFrames(XElement layerNode)
     {
         List<XElement>? frameNodes = layerNode?.Element(ns + "frames")?.Elements().ToList();

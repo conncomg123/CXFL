@@ -15,13 +15,26 @@ public class TimelineTests
     nonfolderlayer
     */
     // ONLY Layer_2 has any content, each non-folder layer has one
-    // keyframe and has 3766 frames.
+    // keyframe and has 3766 frames, except for Layer_1, which has 2 keyframes at the start.
 
     // hard-coded constants from the DOMDocument.xml file
-    const int INIT_NUM_FRAMES = 3766;
-    const int INIT_NUM_LAYERS = 10;
-    const int INIT_FOLDER_IDX = 4;
-    const int INIT_NUM_SUBFOLDER_LAYERS = 4;
+    public const int INIT_NUM_FRAMES = 3766;
+    public const int INIT_NUM_LAYERS = 10;
+    public const int INIT_FOLDER_IDX = 4;
+    public const int INIT_NUM_SUBFOLDER_LAYERS = 4;
+    public List<string> INIT_LAYER_NAMES = new()
+    {
+        "Layer_1",
+        "Layer_2",
+        "Layer_3",
+        "Layer_4",
+        "folder",
+        "folderlayer",
+        "folderfolder",
+        "folderfolderlayer",
+        "folderlayer_2",
+        "nonfolderlayer"
+    };
     [Fact]
     public void AddNewLayer_ShouldAddNewLayer_WithCorrectAttributes()
     {

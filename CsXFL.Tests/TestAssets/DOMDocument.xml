@@ -8,11 +8,14 @@
           <Include href="Symbol 1.xml" itemIcon="1" loadImmediate="false" itemID="653f16ec-000025d4" lastModified="1698633452"/>
      </symbols>
      <timelines>
-          <DOMTimeline name="New Timeline Name" currentFrame="4" layerDepthEnabled="true">
+          <DOMTimeline name="New Timeline Name" currentFrame="1" layerDepthEnabled="true">
                <layers>
-                    <DOMLayer name="Layer_1" color="#00FFFF">
+                    <DOMLayer name="Layer_1" color="#00FFFF" current="true" isSelected="true">
                          <frames>
-                              <DOMFrame index="0" duration="3766" keyMode="9728">
+                              <DOMFrame index="0" keyMode="9728">
+                                   <elements/>
+                              </DOMFrame>
+                              <DOMFrame index="1" duration="3765" keyMode="9728">
                                    <elements/>
                               </DOMFrame>
                          </frames>
@@ -48,7 +51,7 @@
                          </frames>
                     </DOMLayer>
                     <DOMLayer name="folder" color="#FF4FFF" autoNamed="false" layerType="folder"/>
-                    <DOMLayer name="folderlayer" color="#669900" parentLayerIndex="4" current="true" isSelected="true" autoNamed="false">
+                    <DOMLayer name="folderlayer" color="#669900" parentLayerIndex="4" autoNamed="false">
                          <frames>
                               <DOMFrame index="0" duration="3766" keyMode="9728">
                                    <elements/>

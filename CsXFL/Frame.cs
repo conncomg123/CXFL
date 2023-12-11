@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO.Compression;
 using System.Linq;
+namespace CsXFL;
 using System.Xml.Linq;
 
 public class Frame
@@ -28,23 +29,12 @@ public class Frame
     private readonly List<Element> elements;
     private int startFrame, duration, keyMode;
     private string labelType, name;
-    private void SetOrRemoveAttribute<T>(in string attributeName, T value, T defaultValue)
-    {
-        if (EqualityComparer<T>.Default.Equals(value, defaultValue))
-        {
-            root?.Attribute(attributeName)?.Remove();
-        }
-        else
-        {
-            root?.SetAttributeValue(attributeName, value);
-        }
-    }
     public XElement? Root { get { return root; } }
     public int StartFrame { get { return startFrame; } set { startFrame = value; root?.SetAttributeValue("index", value); } }
-    public int Duration { get { return duration; } set { duration = value; SetOrRemoveAttribute("duration", value, DefaultValues.Duration); } }
-    public int KeyMode { get { return keyMode; } set { keyMode = value; SetOrRemoveAttribute("keyMode", value, DefaultValues.KeyMode); } }
-    public string LabelType { get { return labelType; } set { if(!AcceptableLabelTypes.Contains(value)) throw new ArgumentException(); labelType = value; SetOrRemoveAttribute("labelType", value, DefaultValues.LabelType); } }
-    public string Name { get { return name; } set { name = value; SetOrRemoveAttribute("name", value, DefaultValues.Name); } }
+    public int Duration { get { return duration; } set { duration = value; root?.SetOrRemoveAttribute("duration", value, DefaultValues.Duration); } }
+    public int KeyMode { get { return keyMode; } set { keyMode = value; root?.SetOrRemoveAttribute("keyMode", value, DefaultValues.KeyMode); } }
+    public string LabelType { get { return labelType; } set { if(!AcceptableLabelTypes.Contains(value)) throw new ArgumentException(); labelType = value; root?.SetOrRemoveAttribute("labelType", value, DefaultValues.LabelType); } }
+    public string Name { get { return name; } set { name = value; root?.SetOrRemoveAttribute("name", value, DefaultValues.Name); } }
     public List<Element> Eelements { get { return elements; } }
     private void LoadElements(in XElement frameNode)
     {

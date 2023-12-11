@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+namespace CsXFL;
 
 public class Instance : Element
 {

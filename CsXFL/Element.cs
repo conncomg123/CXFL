@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using System.Reflection.Metadata;
 using System.Xml.Linq;
+namespace CsXFL;
 public abstract class Element
 {
     private static readonly List<string> AcceptableElementTypes = new List<string> {"shape", "text", "tflText", "instance", "shapeObj"};
@@ -10,17 +11,6 @@ public abstract class Element
         public const double Height = double.NaN;
         public const bool Selected = false;
 
-    }
-    private void SetOrRemoveAttribute<T>(in string attributeName, T value, T defaultValue)
-    {
-        if (EqualityComparer<T>.Default.Equals(value, defaultValue))
-        {
-            root?.Attribute(attributeName)?.Remove();
-        }
-        else
-        {
-            root?.SetAttributeValue(attributeName, value);
-        }
     }
     protected XElement? root;
     protected XNamespace ns;
@@ -33,7 +23,7 @@ public abstract class Element
     public string? ElementType { get { return elementType; } }
     public virtual double Width { get { return width; } set { width = value; root?.SetAttributeValue("width", value); } }
     public virtual double Height { get { return height; } set { height = value; root?.SetAttributeValue("height", value); } }
-    public bool Selected { get { return selected; } set { selected = value; SetOrRemoveAttribute("isSelected", value, DefaultValues.Selected); } }
+    public bool Selected { get { return selected; } set { selected = value; root?.SetOrRemoveAttribute("isSelected", value, DefaultValues.Selected); } }
     public Matrix Matrix { get { return matrix; } }
     public Point TransformationPoint { get { return transformationPoint; } }
     public Element()
