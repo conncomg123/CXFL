@@ -25,7 +25,7 @@ public class LayerTests
         Timeline timeline = doc.GetTimeline(0);
         Layer layer = timeline.Layers[0];
         Frame removed = layer.Frames[1];
-        XElement frameRoot  = removed.Root!;
+        XElement frameRoot = removed.Root!;
         int numFrames = layer.GetFrameCount();
         int numKeyframes = layer.Frames.Count;
         // Act
@@ -35,5 +35,18 @@ public class LayerTests
         Assert.Equal(numKeyframes - 1, layer.Frames.Count);
         Assert.DoesNotContain(removed, layer.Frames);
         Assert.True(layer.Root!.Elements().All(e => e.Name != frameRoot.Name || e != frameRoot));
+    }
+    [Fact]
+    public void ClearKeyframe_ShouldBeNoop_OnNonKeyframe()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Timeline timeline = doc.GetTimeline(0);
+        Layer layer = timeline.Layers[1];
+        // Act
+        bool result = layer.ClearKeyframe(1);
+        // Assert
+        Assert.False(result);
+
     }
 }

@@ -37,7 +37,7 @@ public class Timeline
         LoadLayers(root);
     }
     public Timeline() : this(new XElement("timeline")) { }
-    public Timeline(ref Timeline other)
+    public Timeline(Timeline other)
     {
         root = other.root is null ? null : new XElement(other.root);
         ns = other.ns;

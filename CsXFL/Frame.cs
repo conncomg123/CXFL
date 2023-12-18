@@ -35,7 +35,7 @@ public class Frame
     public int KeyMode { get { return keyMode; } set { keyMode = value; root?.SetOrRemoveAttribute("keyMode", value, DefaultValues.KeyMode); } }
     public string LabelType { get { return labelType; } set { if(!AcceptableLabelTypes.Contains(value)) throw new ArgumentException(); labelType = value; root?.SetOrRemoveAttribute("labelType", value, DefaultValues.LabelType); } }
     public string Name { get { return name; } set { name = value; root?.SetOrRemoveAttribute("name", value, DefaultValues.Name); } }
-    public List<Element> Eelements { get { return elements; } }
+    public List<Element> Elements { get { return elements; } }
     private void LoadElements(in XElement frameNode)
     {
         List<XElement>? elementNodes = frameNode.Element(ns + "elements")?.Elements().ToList();
