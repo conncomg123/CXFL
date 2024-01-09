@@ -7,7 +7,7 @@ public class Timeline
     public static class DefaultValues
     {
         public const string Name = "timeline";
-        public const int CurrentFrame = 0;
+        public const int CurrentFrame = -1;
     }
     private XElement? root;
     private XNamespace ns;
