@@ -3,28 +3,54 @@ namespace CsXFL;
 
 public class Instance : Element
 {
-    private readonly string instanceType;
-    private string libraryItem; // change to Item when implemented
-    public string InstanceType { get { return instanceType; } }
-    public string LibraryItem
+    private static readonly Dictionary<string, string> NodeNameToInstanceType = new Dictionary<string, string>
     {
-        get { return libraryItem; }
+        {"DOMSymbolInstance", "symbol"},
+        {"DOMBitmapInstance", "bitmap"},
+        {"DOMVideoInstance", "video"},
+        {"DOMCompiledClipInstance", "compiled clip"}
+    };
+    private static readonly List<string> AcceptableInstanceTypes = new List<string> {"symbol", "bitmap", "embedded video", "linked video", "video",  "compiled clip"};
+    private readonly string instanceType;
+    private string libraryItemName;
+    public string InstanceType { get { return instanceType; } }
+    public string LibraryItemName
+    {
+        get { return libraryItemName; }
         set
         {
-            libraryItem = value;
-            root?.SetAttributeValue("libraryItem", value);
+            libraryItemName = value;
+            root?.SetAttributeValue("libraryItemName", value);
         }
     }
 
     public Instance(in XElement elementNode) : base(elementNode, "instance")
     {
-        instanceType = (string?)elementNode.Attribute("instanceType") ?? string.Empty;
-        libraryItem = (string?)elementNode.Attribute("libraryItem") ?? string.Empty;
+        instanceType = NodeNameToInstanceType[elementNode.Name.LocalName];
+        if (!AcceptableInstanceTypes.Contains(instanceType))
+        {
+            throw new ArgumentException("Invalid instance type: " + instanceType);
+        }
+        libraryItemName = (string?)elementNode.Attribute("libraryItemName") ?? string.Empty;
     }
     public Instance(in Instance other) : base(other)
     {
+        if (!AcceptableInstanceTypes.Contains(other.instanceType))
+        {
+            throw new ArgumentException("Invalid instance type: " + other.instanceType);
+        }
         instanceType = other.instanceType;
-        libraryItem = other.libraryItem;
+        libraryItemName = other.libraryItemName;
+    }
+    public Instance(in Item item, string instanceType, string nodeName) : base(item, "instance", nodeName)
+    {
+        if (!AcceptableInstanceTypes.Contains(instanceType))
+        {
+            throw new ArgumentException("Invalid instance type: " + instanceType);
+        }
+        this.instanceType = instanceType;
+        libraryItemName = item.Name;
+        root!.SetAttributeValue("libraryItemName", libraryItemName);
     }
 
 }

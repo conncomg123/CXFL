@@ -23,18 +23,20 @@ public class Frame
         public const int KeyMode = (int)KeyModes.Normal;
         public const string LabelType = "none";
         public const string Name = "";
+        public const string SoundName = "";
     }
     private readonly XElement? root;
     private readonly XNamespace ns;
     private readonly List<Element> elements;
     private int startFrame, duration, keyMode;
-    private string labelType, name;
+    private string labelType, name, soundName;
     public XElement? Root { get { return root; } }
     public int StartFrame { get { return startFrame; } set { startFrame = value; root?.SetAttributeValue("index", value); } }
     public int Duration { get { return duration; } set { duration = value; root?.SetOrRemoveAttribute("duration", value, DefaultValues.Duration); } }
     public int KeyMode { get { return keyMode; } set { keyMode = value; root?.SetOrRemoveAttribute("keyMode", value, DefaultValues.KeyMode); } }
     public string LabelType { get { return labelType; } set { if(!AcceptableLabelTypes.Contains(value)) throw new ArgumentException(); labelType = value; root?.SetOrRemoveAttribute("labelType", value, DefaultValues.LabelType); } }
     public string Name { get { return name; } set { name = value; root?.SetOrRemoveAttribute("name", value, DefaultValues.Name); } }
+    public string SoundName { get { return soundName; } set { soundName = value; root?.SetOrRemoveAttribute("soundName", value, DefaultValues.SoundName); } }
     public List<Element> Elements { get { return elements; } }
     private void LoadElements(in XElement frameNode)
     {
@@ -57,6 +59,7 @@ public class Frame
         keyMode = (int?)frameNode.Attribute("keyMode") ?? DefaultValues.KeyMode;
         labelType = (string?)frameNode.Attribute("labelType") ?? DefaultValues.LabelType;
         name = (string?)frameNode.Attribute("name") ?? DefaultValues.Name;
+        soundName = (string?)frameNode.Attribute("soundName") ?? DefaultValues.SoundName;
         elements = new List<Element>();
         if (!isBlank) LoadElements(root);
     }
@@ -70,6 +73,7 @@ public class Frame
         keyMode = other.keyMode;
         labelType = other.labelType;
         name = other.name;
+        soundName = other.soundName;
         elements = new List<Element>();
         if (root is not null && !isBlank) LoadElements(root);
     }
@@ -81,6 +85,27 @@ public class Frame
     public void ClearElements()
     {
         elements.Clear();
-        root?.Element(ns + "elements")?.Remove();
+        root?.Element(ns + "elements")?.RemoveAll();
+    }
+    public Instance? AddItem(Item item)
+    {
+        // need to create constructors that turn items into instances unless it's a soundItem
+        if(item is SoundItem soundItem) {
+            this.SoundName = soundItem.Href;
+            return null;
+        }
+        if(item is SymbolItem symbolItem) {
+            SymbolInstance symbolInstance = new SymbolInstance(symbolItem);
+            Elements.Add(symbolInstance);
+            root?.Element(ns + "elements")?.Add(symbolInstance.Root);
+            return symbolInstance;
+        }
+        if(item is BitmapItem bitmapItem) {
+            BitmapInstance bitmapInstance = new BitmapInstance(bitmapItem);
+            Elements.Add(bitmapInstance);
+            root?.Element(ns + "elements")?.Add(bitmapInstance.Root);
+            return bitmapInstance;
+        }
+        return null;
     }
 }

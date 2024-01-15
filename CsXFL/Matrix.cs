@@ -15,7 +15,7 @@ public class Matrix
     }
     private double a, b, c, d, tx, ty;
     private XElement? root;
-    private XNamespace ns;
+    private readonly XNamespace ns;
     private XElement? parent;
     private void SetOrRemoveAttribute(in string attributeName, double value, double defaultValue)
     {
@@ -39,14 +39,18 @@ public class Matrix
             Root?.SetAttributeValue(attributeName, value);
         }
     }
+    public static bool IsDefaultMatrix(in Matrix matrix)
+    {
+        return Math.Abs(matrix.A - DefaultValues.A) < Epsilon &&
+            Math.Abs(matrix.B - DefaultValues.B) < Epsilon &&
+            Math.Abs(matrix.C - DefaultValues.C) < Epsilon &&
+            Math.Abs(matrix.D - DefaultValues.D) < Epsilon &&
+            Math.Abs(matrix.Tx - DefaultValues.Tx) < Epsilon &&
+            Math.Abs(matrix.Ty - DefaultValues.Ty) < Epsilon;
+    }
     private void RemoveDefaultMatrix()
     {
-        if (Math.Abs(A - DefaultValues.A) < Epsilon &&
-            Math.Abs(B - DefaultValues.B) < Epsilon &&
-            Math.Abs(C - DefaultValues.C) < Epsilon &&
-            Math.Abs(D - DefaultValues.D) < Epsilon &&
-            Math.Abs(Tx - DefaultValues.Tx) < Epsilon &&
-            Math.Abs(Ty - DefaultValues.Ty) < Epsilon)
+        if (IsDefaultMatrix(this))
         {
             Root?.Parent!.Element(ns + "matrix")?.Remove();
             Root = null;
@@ -118,9 +122,9 @@ public class Matrix
     {
         this.parent = parent;
     }
-    public Matrix()
+    public Matrix(XNamespace ns)
     {
-        ns = string.Empty;
+        this.ns = ns;
         A = DefaultValues.A;
         B = DefaultValues.B;
         C = DefaultValues.C;

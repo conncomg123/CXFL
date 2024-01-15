@@ -26,16 +26,16 @@ public abstract class Element
     public bool Selected { get { return selected; } set { selected = value; root?.SetOrRemoveAttribute("isSelected", value, DefaultValues.Selected); } }
     public Matrix Matrix { get { return matrix; } }
     public Point TransformationPoint { get { return transformationPoint; } }
-    public Element()
+    public Element(XNamespace ns)
     {
         root = null;
-        ns = string.Empty;
+        this.ns = ns;
         elementType = string.Empty;
         width = double.NaN;
         height = double.NaN;
         selected = false;
-        matrix = new Matrix();
-        transformationPoint = new Point();
+        matrix = new Matrix(ns);
+        transformationPoint = new Point(ns);
     }
     public Element(in XElement elementNode, string elementType)
     {
@@ -49,8 +49,8 @@ public abstract class Element
         width = double.NaN;
         height = double.NaN;
         selected = (bool?)elementNode.Attribute("isSelected") ?? DefaultValues.Selected;
-        matrix = elementNode.Element(ns + "matrix")?.Element(ns + "Matrix") is not null ? new Matrix(elementNode.Element(ns + "matrix")!.Element(ns + "Matrix"), root) : new Matrix();
-        transformationPoint = elementNode.Element(ns + "transformationPoint")?.Element(ns + "Point") is not null ? new Point(elementNode.Element(ns + "transformationPoint")!.Element(ns + "Point")!) : new Point();
+        matrix = elementNode.Element(ns + "matrix")?.Element(ns + "Matrix") is not null ? new Matrix(elementNode.Element(ns + "matrix")!.Element(ns + "Matrix"), root) : new Matrix(ns);
+        transformationPoint = elementNode.Element(ns + "transformationPoint")?.Element(ns + "Point") is not null ? new Point(elementNode.Element(ns + "transformationPoint")!.Element(ns + "Point")!) : new Point(ns);
     }
     public Element(in Element other)
     {
@@ -62,5 +62,18 @@ public abstract class Element
         selected = other.selected;
         matrix = new Matrix(root?.Element(ns + "matrix")!.Element(ns + "Matrix")!, root);
         transformationPoint = new Point(root?.Element(ns + "transformationPoint")!.Element(ns + "Point")!);
+    }
+    public Element(Item item, string elementType, string nodeName) : this(item.Namespace)
+    {
+        if (!AcceptableElementTypes.Contains(elementType))
+        {
+            throw new ArgumentException("Invalid element type: " + elementType);
+        }
+        ns = item.Namespace;
+        root = new XElement(ns + nodeName);
+        root.Add(new XElement(ns + "transformationPoint"));
+        root.Element(ns + "transformationPoint")?.Add(transformationPoint.Root);
+        this.elementType = elementType;
+        matrix.SetParent(root);
     }
 }

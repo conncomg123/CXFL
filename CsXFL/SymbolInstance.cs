@@ -9,7 +9,7 @@ public class SymbolInstance : Instance
     {
         public const uint FirstFrame = 0;
         public const string SymbolType = "";
-        public const string Loop = "";
+        public const string Loop = "loop";
     }
     private uint firstFrame;
     private uint? lastFrame;
@@ -44,5 +44,15 @@ public class SymbolInstance : Instance
         lastFrame = other.lastFrame;
         symbolType = other.symbolType;
         loop = other.loop;
+    }
+    // cast from SymbolItem to SymbolInstance
+    public SymbolInstance(in SymbolItem item) : base(item, "symbol", "DOMSymbolInstance")
+    {
+        firstFrame = DefaultValues.FirstFrame;
+        lastFrame = null;
+        symbolType = item.SymbolType;
+        loop = DefaultValues.Loop;
+        root!.SetAttributeValue("symbolType", symbolType);
+        root!.SetAttributeValue("loop", loop);
     }
 }

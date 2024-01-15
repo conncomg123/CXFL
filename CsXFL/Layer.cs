@@ -14,10 +14,10 @@ public class Layer
         public const bool Current = false;
         public const bool Selected = false;
     }
-    private XElement? root;
-    private XNamespace ns;
+    private readonly XElement? root;
+    private readonly XNamespace ns;
     private string color, layerType, name;
-    private List<Frame> frames;
+    private readonly List<Frame> frames;
     private bool locked, current, selected;
     int? parentLayerIndex;
     public XElement? Root { get { return root; } }
