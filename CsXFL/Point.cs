@@ -10,31 +10,36 @@ public class Point
         public const double Y = 0.0;
     }
     private double x, y;
-    private XElement? root;
-        public double X { get { return x; } set { x = value; root?.SetOrRemoveAttribute("x", value, DefaultValues.X); } }
+    private readonly XNamespace ns;
+    private XElement root;
+    public double X { get { return x; } set { x = value; root?.SetOrRemoveAttribute("x", value, DefaultValues.X); } }
     public double Y { get { return y; } set { y = value; root?.SetOrRemoveAttribute("y", value, DefaultValues.Y); } }
-    public ref XElement? Root { get { return ref root; } }
-    public Point()
+    public ref XElement Root { get { return ref root; } }
+    public Point(XNamespace ns)
     {
-        root = null;
+        this.ns = ns;
+        root = new XElement(ns + "Point");
         x = DefaultValues.X;
         y = DefaultValues.Y;
     }
-    public Point(double x, double y)
+    public Point(double x, double y, XNamespace ns)
     {
-        root = null;
+        this.ns = ns;
+        root = new XElement(ns + "Point");
         this.x = x;
         this.y = y;
     }
     public Point(XElement pointNode)
     {
+        ns = pointNode.Name.Namespace;
         root = pointNode;
         x = (double?) pointNode.Attribute("x") ?? DefaultValues.X;
         y = (double?) pointNode.Attribute("y") ?? DefaultValues.Y;
     }
     public Point(in Point other)
     {
-        root = other.Root is null ? null : new XElement(other.Root);
+        ns = other.ns;
+        root = other.Root;
         x = other.X;
         y = other.Y;
     }

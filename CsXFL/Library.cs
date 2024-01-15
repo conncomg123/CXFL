@@ -4,16 +4,16 @@ namespace CsXFL;
 public class Library
 {
     public const string LIBRARY_PATH = "LIBRARY";
-    private Dictionary<string, Item> items;
-    private List<Item> unusedItems;
-    private Document containingDocument;
+    private readonly Dictionary<string, Item> items;
+    private readonly List<Item> unusedItems;
+    private readonly Document containingDocument;
     public Dictionary<string, Item> Items { get { return items; } }
     public List<Item> UnusedItems { get { return unusedItems; } }
     private void LoadXFLFolders(XElement foldersNode)
     {
         List<XElement>? folderNodes = foldersNode.Elements().ToList();
         if (folderNodes is null) return;
-        foreach(XElement folderNode in folderNodes)
+        foreach (XElement folderNode in folderNodes)
         {
             FolderItem folder = new(folderNode);
             items.Add(folder.Name, folder);
@@ -79,7 +79,7 @@ public class Library
                 case "symbols":
                     LoadXFLSymbols(libraryNode);
                     break;
-                
+
             }
         }
     }
@@ -101,11 +101,24 @@ public class Library
     {
         return items.ContainsKey(namePath);
     }
-    // public bool AddItemToDocument(Point position, string namePath, Frame where)
-    // {
-    //     if (!ItemExists(namePath)) return false;
-    //     Item item = items[namePath];
-    //     if (item is null) return false;
-    //     where.Elements.Add(new Element(item, position));
-    // }
+    public bool AddItemToDocument(double posX, double posY, string namePath, Frame? where = null)
+    {
+        if (where is null)
+        {
+            var currentTimeline = containingDocument.GetTimeline(containingDocument.CurrentTimeline);
+            var currentLayer = currentTimeline.Layers[currentTimeline.CurrentLayer];
+            var currentFrame = currentLayer.GetFrame(currentTimeline.CurrentFrame);
+            where = currentFrame;
+        }
+        if (!ItemExists(namePath)) return false;
+        Item item = items[namePath];
+        if (item is null) return false;
+        var added = where.AddItem(item);
+        if (added != null)
+        {
+            added.Matrix.Tx = posX;
+            added.Matrix.Ty = posY;
+        }
+        return true;
+    }
 }

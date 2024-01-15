@@ -9,14 +9,15 @@ public class Timeline
         public const string Name = "timeline";
         public const int CurrentFrame = -1;
     }
-    private XElement? root;
-    private XNamespace ns;
-    private List<Layer> layers;
+    private readonly XElement? root;
+    private readonly XNamespace ns;
+    private readonly List<Layer> layers;
     private string name;
     private int currentFrame;
     public XElement? Root { get { return root; } }
     public string Name { get { return name; } set { name = value; root?.SetAttributeValue("name", value); } }
     public int CurrentFrame { get { return currentFrame; } set { currentFrame = value; root?.SetAttributeValue("currentFrame", value); } }
+    public int CurrentLayer { get { return layers.FindIndex(layer => layer.Current); } set { SetCurrentLayer(value); } }
     public List<Layer> Layers { get { return layers; } }
     private void LoadLayers(XElement? timelineNode)
     {

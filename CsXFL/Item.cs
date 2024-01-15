@@ -9,9 +9,12 @@ public abstract class Item
     "screen", "video"};
     private readonly XElement? root;
     protected XNamespace ns;
-    private string itemType, name;
+    private readonly string itemType;
+    private string name;
+
     public string ItemType { get { return itemType; } }
     public string Name { get { return name; } set { name = value; root?.SetAttributeValue("name", value); } }
+    public XNamespace Namespace { get { return ns; } }
     public XElement? Root { get { return root; } }
     public Item()
     {

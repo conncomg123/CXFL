@@ -14,9 +14,9 @@ public class Document
     private XDocument? xflTree;
     private readonly List<Timeline> timelines;
     private readonly Library library;
-    private int width, height;
+    private readonly int width, height;
     private int currentTimeline;
-    private double frameRate;
+    private readonly double frameRate;
     private readonly XNamespace ns;
     private XElement? root;
     public XElement? Root { get { return root; } }
