@@ -2,7 +2,7 @@
 class LipsyncAPI
 {
 
-    Document Doc = new("C:\\Users\\Administrator\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
+    Document Doc = new("C:\\Stuff\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
 
     int END_INDEX = 0;
     int WORD_PHONEME_INDEX = 1;
@@ -136,11 +136,11 @@ class LipsyncAPI
         {
             int Frame2;
             int CurrentFrame = (int)(StartFrame + Math.Round(PhonemeStartTime * Doc.FrameRate));
-            bool IsKeyframe = (CurrentFrame == Doc.GetTimeline(0).Layers[LayerIndex].Frames[CurrentFrame].StartFrame);
+            bool IsKeyframe = (CurrentFrame == Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).StartFrame);
 
             if (!IsKeyframe) Doc.GetTimeline(0).Layers[LayerIndex].ConvertToKeyframes(CurrentFrame);
 
-            (Doc.GetTimeline(0).Layers[LayerIndex].Frames[CurrentFrame].Elements[0] as SymbolInstance).Loop = "play once";
+            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance).Loop = "play once";
 
             foreach (var keyValuePair in phonemes)
             {
@@ -152,7 +152,8 @@ class LipsyncAPI
                 Console.WriteLine();
             }
 
-            var phoneme = phonemes[PhonemeStartTime][WORD_PHONEME_INDEX].ToString().Substring(0, 2);
+            var phoneme = phonemes[PhonemeStartTime][WORD_PHONEME_INDEX].ToString();
+            if (!string.IsNullOrEmpty(phoneme))  phoneme = phoneme.Length > 1 ? phoneme.Substring(0, 2) : phoneme;
 
             if (DIPHTHONGS.Contains(phoneme))
             {
@@ -170,14 +171,14 @@ class LipsyncAPI
                 Frame2 = OFFSET_MAP[PHONEME_TO_MOUTH_SHAPE[phoneme]];
             };
 
-            (Doc.GetTimeline(0).Layers[LayerIndex].Frames[CurrentFrame].Elements[0] as SymbolInstance).FirstFrame = (uint)(PoseStartFrame + Frame2);
-            (Doc.GetTimeline(0).Layers[LayerIndex].Frames[CurrentFrame].Elements[0] as SymbolInstance).LastFrame = (uint)(PoseStartFrame + Frame2 + LENGTH_MAP[PHONEME_TO_MOUTH_SHAPE[phoneme]] - 1);
-            (Doc.GetTimeline(0).Layers[LayerIndex].Frames[CurrentFrame].Elements[0] as SymbolInstance).Loop = "play once";
+            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance).FirstFrame = (uint)(PoseStartFrame + Frame2);
+            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance).LastFrame = (uint)(PoseStartFrame + Frame2 + LENGTH_MAP[PHONEME_TO_MOUTH_SHAPE[phoneme]] - 1);
+            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance).Loop = "play once";
 
             // [!] isEqual sillyness
             if (SINGLE_FRAME_MOUTH_SHAPES.Contains(PHONEME_TO_MOUTH_SHAPE[phoneme]))
             {
-                (Doc.GetTimeline(0).Layers[LayerIndex].Frames[CurrentFrame].Elements[0] as SymbolInstance).Loop = "single frame";
+                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance).Loop = "single frame";
             }
 
             MouthShapeMap[CurrentFrame] = PHONEME_TO_MOUTH_SHAPE[phoneme];
@@ -192,7 +193,7 @@ class LipsyncAPI
             {
                 int CurFrame = Frame3 + i;
                 // If the current frame isn't the first frame in a frame sequence, make a note of that.
-                bool IsKeyframe = (CurFrame == Doc.GetTimeline(0).Layers[LayerIndex].Frames[CurFrame].StartFrame);
+                bool IsKeyframe = (CurFrame == Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).StartFrame);
 
                 if (Frame3 != CurFrame && IsKeyframe)
                 {
@@ -205,21 +206,21 @@ class LipsyncAPI
                 var MouthShape = DIPHTHONG_ORDERING[DiphthongMap[Frame3]][i];
                 var FirstFrame = OFFSET_MAP[MouthShape];
 
-                (Doc.GetTimeline(0).Layers[LayerIndex].Frames[CurFrame].Elements[0] as SymbolInstance).FirstFrame = (uint)(PoseStartFrame + FirstFrame);
-                (Doc.GetTimeline(0).Layers[LayerIndex].Frames[CurFrame].Elements[0] as SymbolInstance).LastFrame = (uint)(PoseStartFrame + FirstFrame + LENGTH_MAP[MouthShape] - 1);
-                (Doc.GetTimeline(0).Layers[LayerIndex].Frames[CurFrame].Elements[0] as SymbolInstance).Loop = "play once";
+                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance).FirstFrame = (uint)(PoseStartFrame + FirstFrame);
+                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance).LastFrame = (uint)(PoseStartFrame + FirstFrame + LENGTH_MAP[MouthShape] - 1);
+                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance).Loop = "play once";
 
                 // [!] isEqual sillyness
                 if (SINGLE_FRAME_MOUTH_SHAPES.Contains(MouthShape))
                 {
-                    (Doc.GetTimeline(0).Layers[LayerIndex].Frames[CurFrame].Elements[0] as SymbolInstance).Loop = "single frame";
+                    (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance).Loop = "single frame";
                 }
 
                 MouthShapeMap[CurFrame] = DIPHTHONG_ORDERING[DiphthongMap[Frame3]][i];
             };
 
             int CurrentFrame = (int)(StartFrame + Math.Round(phonemes.Keys.ToList()[phonemes.Keys.Count - 1] * Doc.FrameRate));
-            (Doc.GetTimeline(0).Layers[LayerIndex].Frames[CurrentFrame].Elements[0] as SymbolInstance).Loop = "single frame";
+            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance).Loop = "single frame";
 
         };
 
