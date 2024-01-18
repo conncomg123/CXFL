@@ -49,4 +49,75 @@ public class LayerTests
         Assert.False(result);
 
     }
+    [Fact]
+    public void ConvertToKeyframes_ShouldConvertSingleFrameToKeyframe()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Timeline timeline = doc.GetTimeline(0);
+        Layer layer = timeline.Layers[0];
+        int startFrame = 5;
+        int endFrame = 5;
+        int numKeyframes = layer.Frames.Count;
+        int numFrames = layer.GetFrameCount();
+
+        // Act
+        bool result = layer.ConvertToKeyframes(startFrame, endFrame);
+
+        // Assert
+        Assert.True(result);
+        Assert.True(layer.GetFrameCount() == numFrames);
+        Assert.True(layer.Frames.Count == numKeyframes + 1);
+        Assert.True(layer.GetFrame(startFrame).StartFrame == startFrame);
+    }
+
+    [Fact]
+    public void ConvertToKeyframes_ShouldConvertRangeOfFramesToKeyframes()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Timeline timeline = doc.GetTimeline(0);
+        Layer layer = timeline.Layers[0];
+        int startFrame = 10;
+        int endFrame = 15;
+        int numKeyframes = layer.Frames.Count;
+        int numFrames = layer.GetFrameCount();
+
+        // Act
+        bool result = layer.ConvertToKeyframes(startFrame, endFrame);
+
+        // Assert
+        Assert.True(result);
+        Assert.True(layer.GetFrameCount() == numFrames);
+        Assert.True(layer.Frames.Count == numKeyframes + (endFrame - startFrame + 1));
+        for (int i = startFrame; i <= endFrame; i++)
+        {
+            Assert.True(layer.GetFrame(i).StartFrame == i);
+        }
+    }
+
+    [Fact]
+    public void ConvertToKeyframes_ShouldNotConvertExistingKeyframes()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Timeline timeline = doc.GetTimeline(0);
+        Layer layer = timeline.Layers[0];
+        int startFrame = 0;
+        int endFrame = 1;
+        int numKeyframes = layer.Frames.Count;
+        int numFrames = layer.GetFrameCount();
+
+        // Act
+        bool result = layer.ConvertToKeyframes(startFrame, endFrame);
+
+        // Assert
+        Assert.False(result);
+        Assert.True(layer.GetFrameCount() == numFrames);
+        Assert.True(layer.Frames.Count == numKeyframes);
+        for (int i = startFrame; i <= endFrame; i++)
+        {
+            Assert.True(layer.GetFrame(i).StartFrame == i);
+        }
+    }
 }

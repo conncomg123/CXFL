@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Numerics;
 using System.Xml.Linq;
 namespace CsXFL;
 
@@ -173,5 +174,19 @@ public class Layer
     public bool InsertBlankKeyframe(int frameIndex)
     {
         return InsertKeyframe(frameIndex, true);
+    }
+    public bool ConvertToKeyframes(int startFrame, int endFrame = int.MinValue) {
+        if (endFrame == int.MinValue) endFrame = startFrame;
+        int numConverted = 0;
+        for (int i = startFrame; i <= endFrame; i++)
+        {
+            bool isKeyFrame = GetFrame(i).StartFrame == i;
+            if (!isKeyFrame)
+            {
+                InsertKeyframe(i);
+                numConverted++;
+            }
+        }
+        return numConverted > 0;
     }
 }
