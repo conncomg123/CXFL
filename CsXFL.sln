@@ -5,7 +5,9 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CsXFL", "CsXFL\CsXFL.csproj", "{A3ACAE7E-1C44-44E1-9AE5-788565025371}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CsXFL.Tests", "CsXFL.Tests\CsXFL.Tests.csproj", "{2C8BB7B2-19E0-4579-9CCA-7AF0540B17AD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CsXFL.Tests", "CsXFL.Tests\CsXFL.Tests.csproj", "{2C8BB7B2-19E0-4579-9CCA-7AF0540B17AD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SceneGenerator", "SceneGenerator\SceneGenerator.csproj", "{20CC5EAF-375A-46AA-AAE4-4CFC17519E9F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,6 +33,14 @@ Global
 		{2C8BB7B2-19E0-4579-9CCA-7AF0540B17AD}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2C8BB7B2-19E0-4579-9CCA-7AF0540B17AD}.Release|x64.ActiveCfg = Release|Any CPU
 		{2C8BB7B2-19E0-4579-9CCA-7AF0540B17AD}.Release|x64.Build.0 = Release|Any CPU
+		{20CC5EAF-375A-46AA-AAE4-4CFC17519E9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{20CC5EAF-375A-46AA-AAE4-4CFC17519E9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20CC5EAF-375A-46AA-AAE4-4CFC17519E9F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{20CC5EAF-375A-46AA-AAE4-4CFC17519E9F}.Debug|x64.Build.0 = Debug|Any CPU
+		{20CC5EAF-375A-46AA-AAE4-4CFC17519E9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{20CC5EAF-375A-46AA-AAE4-4CFC17519E9F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{20CC5EAF-375A-46AA-AAE4-4CFC17519E9F}.Release|x64.ActiveCfg = Release|Any CPU
+		{20CC5EAF-375A-46AA-AAE4-4CFC17519E9F}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
