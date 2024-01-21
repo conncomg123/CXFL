@@ -26,6 +26,7 @@ public class Document
     public string Filename { get { return filename; } }
     public int CurrentTimeline { get { return currentTimeline - 1; } set { value++; currentTimeline = value; root?.SetAttributeValue("currentTimeline", value); } }
     public double FrameRate { get { return frameRate; } set { root?.SetAttributeValue("frameRate", value); } }
+    public List<Timeline> Timelines { get { return timelines; } }
     private void LoadFLA(string filename)
     {
         using ZipArchive archive = ZipFile.Open(filename, ZipArchiveMode.Read);
@@ -52,6 +53,7 @@ public class Document
     private void SaveXFL(string filename)
     {
         xflTree?.Save(filename);
+        library.SaveXFL(filename);
     }
     private void LoadTimelines(XElement documentNode)
     {
@@ -65,7 +67,20 @@ public class Document
 
     public Document(string filename)
     {
-        if (Path.GetExtension(filename) == ".xml")
+        if(Path.GetExtension(filename) == ".xfl")
+        {
+            // find DOMDocument.xml in the same directory
+            string domDocumentPath = Path.Combine(Path.GetDirectoryName(filename)!, "DOMDocument.xml");
+            if (!File.Exists(domDocumentPath)) throw new FileNotFoundException("DOMDocument.xml not found in XFL directory");
+            this.filename = domDocumentPath;
+            isXFL = true;
+            LoadXFL(domDocumentPath);
+            ns = root!.Name.Namespace;
+            timelines = new List<Timeline>();
+            library = new Library(this);
+            LoadTimelines(root!);
+        }
+        else if (Path.GetExtension(filename) == ".xml")
         {
             this.filename = filename;
             isXFL = true;
