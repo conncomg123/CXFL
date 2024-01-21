@@ -1,8 +1,7 @@
 ﻿using CsXFL;
 class LipsyncAPI
 {
-
-    Document Doc = new("C:\\Stuff\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
+    static Document Doc = new("C:\\Stuff\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
 
     int END_INDEX = 0;
     int WORD_PHONEME_INDEX = 1;
@@ -205,7 +204,7 @@ class LipsyncAPI
 
                 var MouthShape = DIPHTHONG_ORDERING[DiphthongMap[Frame3]][i];
                 var FirstFrame = OFFSET_MAP[MouthShape];
-
+                
                 (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance).FirstFrame = (uint)(PoseStartFrame + FirstFrame);
                 (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance).LastFrame = (uint)(PoseStartFrame + FirstFrame + LENGTH_MAP[MouthShape] - 1);
                 (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance).Loop = "play once";
@@ -242,6 +241,7 @@ class LipsyncAPI
     {
         LipsyncAPI programInstance = new LipsyncAPI();
         programInstance.LipsyncSingle();
+        Doc.Save("C:\\Stuff\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
     }
 
 };

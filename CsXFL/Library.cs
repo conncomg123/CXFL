@@ -1,15 +1,39 @@
+using System.IO.Compression;
 using System.Xml.Linq;
 
 namespace CsXFL;
 public class Library
 {
+    private class ItemOperation
+    {
+        public enum OperationType
+        {
+            Add,
+            Remove,
+            Rename
+        }
+
+        public OperationType Type { get; }
+        public string ItemName { get; }
+        public string? NewItemPath { get; }  // Only used for Add operations
+        public string? NewItemName { get; }  // Only used for Rename operations
+
+        public ItemOperation(OperationType type, string itemName, string? newItemPath = null, string? newItemName = null)
+        {
+            Type = type;
+            ItemName = itemName;
+            NewItemPath = newItemPath;
+            NewItemName = newItemName;
+        }
+    }
     public const string LIBRARY_PATH = "LIBRARY";
     private readonly Dictionary<string, Item> items;
+    private readonly Queue<ItemOperation> itemOperations;
     private readonly List<Item> unusedItems;
     private readonly Document containingDocument;
     public Dictionary<string, Item> Items { get { return items; } }
     public List<Item> UnusedItems { get { return unusedItems; } }
-    private void LoadXFLFolders(XElement foldersNode)
+    private void LoadFolders(XElement foldersNode)
     {
         List<XElement>? folderNodes = foldersNode.Elements().ToList();
         if (folderNodes is null) return;
@@ -19,7 +43,7 @@ public class Library
             items.Add(folder.Name, folder);
         }
     }
-    private void LoadXFLMedia(XElement mediaNode)
+    private void LoadMedia(XElement mediaNode)
     {
         List<XElement>? mediaNodes = mediaNode.Elements().ToList();
         if (mediaNodes is null) return;
@@ -43,21 +67,90 @@ public class Library
     {
         List<XElement>? symbolNodes = symbolsNode.Elements().ToList();
         if (symbolNodes is null) return;
-        foreach (XElement symbolNode in symbolNodes)
+        foreach (XElement includeNode in symbolNodes)
         {
-            string symbolPath = (string)symbolNode.Attribute("href")!;
+            string symbolPath = (string)includeNode.Attribute("href")!;
             if (symbolPath == string.Empty) continue;
             // make symbolPath into absolute path
             symbolPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, symbolPath);
             XDocument? symbolTree = XDocument.Load(symbolPath);
             if (symbolTree is null) continue;
-            SymbolItem symbol = new(symbolTree.Root!);
+            SymbolItem symbol = new(symbolTree.Root!, includeNode);
+            items.Add(symbol.Name, symbol);
+        }
+    }
+    private void LoadFLAFolders(XElement foldersNode)
+    {
+        List<XElement>? folderNodes = foldersNode.Elements().ToList();
+        if (folderNodes is null) return;
+        foreach (XElement folderNode in folderNodes)
+        {
+            FolderItem folder = new(folderNode);
+            items.Add(folder.Name, folder);
+        }
+    }
+    private void LoadFLAMedia(XElement mediaNode)
+    {
+        List<XElement>? mediaNodes = mediaNode.Elements().ToList();
+        if (mediaNodes is null) return;
+        foreach (XElement mediaNode_ in mediaNodes)
+        {
+            string mediaType = mediaNode_.Name.LocalName;
+            switch (mediaType)
+            {
+                case "DOMBitmapItem":
+                    BitmapItem bitmap = new(mediaNode_);
+                    items.Add(bitmap.Name, bitmap);
+                    break;
+                case "DOMSoundItem":
+                    SoundItem sound = new(mediaNode_);
+                    items.Add(sound.Name, sound);
+                    break;
+            }
+        }
+    }
+    private void LoadFLASymbols(XElement symbolsNode)
+    {
+        List<XElement>? symbolNodes = symbolsNode.Elements().ToList();
+        if (symbolNodes is null) return;
+        foreach (XElement includeNode in symbolNodes)
+        {
+            using ZipArchive archive = ZipFile.OpenRead(containingDocument.Filename);
+            string symbolPath = (string)includeNode.Attribute("href")!;
+            if (symbolPath == string.Empty) continue;
+            // make symbolPath into relative path to the fla archive
+            symbolPath = Path.Combine(LIBRARY_PATH, symbolPath).Replace('\\', '/');
+            ZipArchiveEntry? symbolEntry = archive.GetEntry(symbolPath);
+            if (symbolEntry is null) continue;
+            XDocument? symbolTree = XDocument.Load(symbolEntry!.Open());
+            if (symbolTree is null) continue;
+            SymbolItem symbol = new(symbolTree.Root!, includeNode);
             items.Add(symbol.Name, symbol);
         }
     }
     private void LoadFLALibrary(XElement documentNode)
     {
+        // Everything before the first timeline is in the library
+        List<XElement>? libraryNodes = documentNode.Elements().ToList();
+        if (libraryNodes is null) return;
+        foreach (XElement libraryNode in libraryNodes)
+        {
+            string currentNode = libraryNode.Name.LocalName;
+            if (currentNode == "timelines") break;
+            switch (currentNode)
+            {
+                case "folders":
+                    LoadFolders(libraryNode);
+                    break;
+                case "media":
+                    LoadMedia(libraryNode);
+                    break;
+                case "symbols":
+                    LoadFLASymbols(libraryNode);
+                    break;
 
+            }
+        }
     }
     private void LoadXFLLibrary(XElement documentNode)
     {
@@ -71,10 +164,10 @@ public class Library
             switch (currentNode)
             {
                 case "folders":
-                    LoadXFLFolders(libraryNode);
+                    LoadFolders(libraryNode);
                     break;
                 case "media":
-                    LoadXFLMedia(libraryNode);
+                    LoadMedia(libraryNode);
                     break;
                 case "symbols":
                     LoadXFLSymbols(libraryNode);
@@ -87,6 +180,7 @@ public class Library
     {
         items = new Dictionary<string, Item>();
         unusedItems = new List<Item>();
+        itemOperations = new();
         this.containingDocument = containingDocument;
         if (containingDocument.IsXFL)
         {
@@ -120,5 +214,62 @@ public class Library
             added.Matrix.Ty = posY;
         }
         return true;
+    }
+    public bool RenameItem(string oldName, string newName)
+    {
+        if (!ItemExists(oldName)) return false;
+        if (ItemExists(newName)) return false;
+        Item item = items[oldName];
+        bool isSymbol = false;
+        if(item is SymbolItem symbol)
+        {
+            symbol.Include.Href = newName + ".xml";
+            isSymbol = true;
+        }
+        if(item is SoundItem sound)
+        {
+            sound.Href = newName;
+        }
+        if(item is BitmapItem bitmap)
+        {
+            bitmap.Href = newName;
+        }
+        item.Name = newName;
+        items.Remove(oldName);
+        items.Add(newName, item);
+        itemOperations.Enqueue(new ItemOperation(ItemOperation.OperationType.Rename, oldName + (isSymbol ? ".xml" : ""), null, newName + (isSymbol ? ".xml" : "")));
+        LibraryEventMessenger.Instance.NotifyItemRenamed(oldName, newName);
+        return true;
+    }
+    public bool RemoveItem(string itemPath)
+    {
+        if (!ItemExists(itemPath)) return false;
+        Item item = items[itemPath];
+        item.Root?.Remove();
+        items.Remove(itemPath);
+        unusedItems.Add(item);
+        itemOperations.Enqueue(new ItemOperation(ItemOperation.OperationType.Remove, itemPath));
+        return true;
+    }
+    public void SaveXFL(string filename)
+    {
+        while (itemOperations.Count > 0 && itemOperations.Dequeue() is ItemOperation operation)
+        {
+            string targetPath = Path.Combine(Path.GetDirectoryName(filename)!, LIBRARY_PATH, operation.ItemName);
+            switch (operation.Type)
+            {
+                case ItemOperation.OperationType.Add:
+                    File.Copy(operation.NewItemPath!, targetPath);
+                    break;
+                case ItemOperation.OperationType.Remove:
+                    // File.Delete(targetPath); // This is commented out because it's dangerous, will add safety checks later
+                    Console.WriteLine("Removed File: " + targetPath);
+                    break;
+                case ItemOperation.OperationType.Rename:
+                    string renamedPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, operation.NewItemName!);
+                    File.Move(targetPath, renamedPath);
+                    break;
+            }
+        }
     }
 }
