@@ -1,7 +1,7 @@
 using System.Xml.Linq;
 namespace CsXFL;
 
-public class Instance : Element
+public class Instance : Element, ILibraryEventReceiver
 {
     private static readonly Dictionary<string, string> NodeNameToInstanceType = new Dictionary<string, string>
     {
@@ -32,7 +32,7 @@ public class Instance : Element
             throw new ArgumentException("Invalid instance type: " + instanceType);
         }
         libraryItemName = (string?)elementNode.Attribute("libraryItemName") ?? string.Empty;
-        LibraryEventMessenger.Instance.OnLibraryEvent += OnLibraryEvent;
+        LibraryEventMessenger.Instance.RegisterReceiver(libraryItemName, this);
     }
     public Instance(in Instance other) : base(other)
     {
@@ -42,7 +42,7 @@ public class Instance : Element
         }
         instanceType = other.instanceType;
         libraryItemName = other.libraryItemName;
-        LibraryEventMessenger.Instance.OnLibraryEvent += OnLibraryEvent;
+        LibraryEventMessenger.Instance.RegisterReceiver(libraryItemName, this);
     }
     public Instance(in Item item, string instanceType, string nodeName) : base(item, "instance", nodeName)
     {
@@ -53,21 +53,17 @@ public class Instance : Element
         this.instanceType = instanceType;
         libraryItemName = item.Name;
         root!.SetAttributeValue("libraryItemName", libraryItemName);
-        LibraryEventMessenger.Instance.OnLibraryEvent += OnLibraryEvent;
+        LibraryEventMessenger.Instance.RegisterReceiver(libraryItemName, this);
     }
     ~Instance()
     {
-        LibraryEventMessenger.Instance.OnLibraryEvent -= OnLibraryEvent;
+        LibraryEventMessenger.Instance.UnregisterReceiver(libraryItemName, this);
     }
     public void OnLibraryEvent(object sender, LibraryEventMessenger.LibraryEventArgs e)
     {
         if (e.EventType == LibraryEventMessenger.LibraryEvent.ItemRenamed && libraryItemName == e.OldName)
         {
             LibraryItemName = e.NewName!;
-        }
-        if(e.EventType == LibraryEventMessenger.LibraryEvent.ItemRemoved && libraryItemName == e.Name)
-        {
-            LibraryItemName = string.Empty;
         }
     }
 }

@@ -224,6 +224,7 @@ public class Library
         if(item is SymbolItem symbol)
         {
             symbol.Include.Href = newName + ".xml";
+            symbol.Timeline.Name = newName;
             isSymbol = true;
         }
         if(item is SoundItem sound)
@@ -245,10 +246,14 @@ public class Library
     {
         if (!ItemExists(itemPath)) return false;
         Item item = items[itemPath];
+        if(item is SymbolItem symbolItem)
+        {
+            symbolItem.Include.Root?.Remove();
+        }
         item.Root?.Remove();
         items.Remove(itemPath);
-        unusedItems.Add(item);
         itemOperations.Enqueue(new ItemOperation(ItemOperation.OperationType.Remove, itemPath));
+        LibraryEventMessenger.Instance.NotifyItemRemoved(itemPath);
         return true;
     }
     public void SaveXFL(string filename)
@@ -269,6 +274,15 @@ public class Library
                     string renamedPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, operation.NewItemName!);
                     File.Move(targetPath, renamedPath);
                     break;
+            }
+        }
+        // now need to overwrite symbols, will add modified flag to symbol items for optimization later
+        foreach (var item in items.Values)
+        {
+            if (item is SymbolItem symbol)
+            {
+                string symbolPath = Path.Combine(Path.GetDirectoryName(filename)!, LIBRARY_PATH, symbol.Include.Href);
+                symbol.Root?.Save(symbolPath);
             }
         }
     }

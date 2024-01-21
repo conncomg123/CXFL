@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.IO.Compression;
 using System.Linq;
 namespace CsXFL;
+
+using System.Collections.ObjectModel;
 using System.Xml.Linq;
 
-public class Frame
+public class Frame : ILibraryEventReceiver
 {
     private static readonly List<string> AcceptableLabelTypes = new List<string> { "none", "name", "comment", "anchor" };
     public enum KeyModes : int
@@ -42,14 +44,15 @@ public class Frame
         get { return soundName; }
         set
         {
+            var oldName = soundName;
             soundName = value;
             root?.SetOrRemoveAttribute("soundName", value, DefaultValues.SoundName);
-            if (subscribed && value == DefaultValues.SoundName) LibraryEventMessenger.Instance.OnLibraryEvent -= OnLibraryEvent;
-            if (!subscribed && value != DefaultValues.SoundName) LibraryEventMessenger.Instance.OnLibraryEvent += OnLibraryEvent;
+            if (subscribed && value == DefaultValues.SoundName) LibraryEventMessenger.Instance.UnregisterReceiver(oldName, this);
+            if (!subscribed && value != DefaultValues.SoundName) LibraryEventMessenger.Instance.RegisterReceiver(value, this);
             subscribed = value != DefaultValues.SoundName;
         }
     }
-    public List<Element> Elements { get { return elements; } }
+    public ReadOnlyCollection<Element> Elements { get { return elements.AsReadOnly(); } }
     private void LoadElements(in XElement frameNode)
     {
         List<XElement>? elementNodes = frameNode.Element(ns + "elements")?.Elements().ToList();
@@ -59,6 +62,7 @@ public class Frame
             if (elementNode.Name.ToString().Contains("SymbolInstance"))
             {
                 elements.Add(new SymbolInstance(elementNode));
+                LibraryEventMessenger.Instance.RegisterReceiver((elements.Last() as SymbolInstance)!.LibraryItemName, this);
             }
         }
     }
@@ -75,7 +79,7 @@ public class Frame
         elements = new List<Element>();
         if (!isBlank) LoadElements(root);
         subscribed = SoundName != DefaultValues.SoundName;
-        if (subscribed) LibraryEventMessenger.Instance.OnLibraryEvent += OnLibraryEvent;
+        if (subscribed) LibraryEventMessenger.Instance.RegisterReceiver(SoundName, this);
     }
 
     public Frame(ref Frame other, bool isBlank = false)
@@ -91,11 +95,21 @@ public class Frame
         elements = new List<Element>();
         if (root is not null && !isBlank) LoadElements(root);
         subscribed = SoundName != DefaultValues.SoundName;
-        if (subscribed) LibraryEventMessenger.Instance.OnLibraryEvent += OnLibraryEvent;
+        if (subscribed) LibraryEventMessenger.Instance.RegisterReceiver(SoundName, this);
     }
     ~Frame()
     {
-        if (subscribed) LibraryEventMessenger.Instance.OnLibraryEvent -= OnLibraryEvent;
+        if (subscribed)
+        {
+            LibraryEventMessenger.Instance.UnregisterReceiver(SoundName, this);
+            foreach (Element element in elements)
+            {
+                if (element is Instance instance)
+                {
+                    LibraryEventMessenger.Instance.UnregisterReceiver(instance.LibraryItemName, this);
+                }
+            }
+        }
     }
 
     public bool IsEmpty()
@@ -104,6 +118,14 @@ public class Frame
     }
     public void ClearElements()
     {
+        // unregister from library events
+        foreach (Element element in elements)
+        {
+            if (element is Instance instance)
+            {
+                LibraryEventMessenger.Instance.UnregisterReceiver(instance.LibraryItemName, this);
+            }
+        }
         elements.Clear();
         root?.Element(ns + "elements")?.RemoveAll();
     }
@@ -118,14 +140,14 @@ public class Frame
         if (item is SymbolItem symbolItem)
         {
             SymbolInstance symbolInstance = new SymbolInstance(symbolItem);
-            Elements.Add(symbolInstance);
+            elements.Add(symbolInstance);
             root?.Element(ns + "elements")?.Add(symbolInstance.Root);
             return symbolInstance;
         }
         if (item is BitmapItem bitmapItem)
         {
             BitmapInstance bitmapInstance = new BitmapInstance(bitmapItem);
-            Elements.Add(bitmapInstance);
+            elements.Add(bitmapInstance);
             root?.Element(ns + "elements")?.Add(bitmapInstance.Root);
             return bitmapInstance;
         }
@@ -133,13 +155,25 @@ public class Frame
     }
     public void OnLibraryEvent(object sender, LibraryEventMessenger.LibraryEventArgs e)
     {
-        if(e.EventType == LibraryEventMessenger.LibraryEvent.ItemRenamed && soundName == e.OldName)
+        if (e.EventType == LibraryEventMessenger.LibraryEvent.ItemRenamed && soundName == e.OldName)
         {
             SoundName = e.NewName!;
         }
-        if(e.EventType == LibraryEventMessenger.LibraryEvent.ItemRemoved && soundName == e.Name)
+        if (e.EventType == LibraryEventMessenger.LibraryEvent.ItemRemoved)
         {
-            SoundName = DefaultValues.SoundName;
+            if (SoundName == e.Name)
+            {
+                SoundName = DefaultValues.SoundName;
+            }
+            for (int i = elements.Count - 1; i >= 0; i--)
+            {
+                Element element = elements[i];
+                if (element is SymbolInstance symbolInstance && symbolInstance.LibraryItemName == e.Name)
+                {
+                    elements.RemoveAt(i);
+                    symbolInstance.Root?.Remove();
+                }
+            }
         }
     }
 }
