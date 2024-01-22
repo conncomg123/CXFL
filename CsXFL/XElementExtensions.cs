@@ -1,8 +1,8 @@
 using System.Xml.Linq;
 namespace CsXFL;
-public static class XElementExtensions
+internal static class XElementExtensions
 {
-    public static void SetOrRemoveAttribute<T>(this XElement element, string attributeName, T value, T defaultValue)
+    internal static void SetOrRemoveAttribute<T>(this XElement element, string attributeName, T value, T defaultValue)
     {
         if (EqualityComparer<T>.Default.Equals(value, defaultValue))
         {

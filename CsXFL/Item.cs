@@ -4,7 +4,7 @@ using System.Xml.Linq;
 namespace CsXFL;
 public abstract class Item
 {
-    private static readonly List<string> AcceptableItemTypes = new List<string> {"undefined",
+    private static readonly HashSet<string> AcceptableItemTypes = new HashSet<string> {"undefined",
     "component", "movie clip", "graphic", "button", "folder", "font", "sound", "bitmap", "compiled clip",
     "screen", "video"};
     private readonly XElement? root;

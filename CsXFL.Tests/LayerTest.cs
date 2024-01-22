@@ -24,16 +24,16 @@ public class LayerTests
         Document doc = new("TestAssets/DOMDocument.xml");
         Timeline timeline = doc.GetTimeline(0);
         Layer layer = timeline.Layers[0];
-        Frame removed = layer.Frames[1];
+        Frame removed = layer.KeyFrames[1];
         XElement frameRoot = removed.Root!;
         int numFrames = layer.GetFrameCount();
-        int numKeyframes = layer.Frames.Count;
+        int numKeyframes = layer.KeyFrames.Count;
         // Act
         layer.ClearKeyframe(1);
         // Assert
         Assert.Equal(numFrames, layer.GetFrameCount());
-        Assert.Equal(numKeyframes - 1, layer.Frames.Count);
-        Assert.DoesNotContain(removed, layer.Frames);
+        Assert.Equal(numKeyframes - 1, layer.KeyFrames.Count);
+        Assert.DoesNotContain(removed, layer.KeyFrames);
         Assert.True(layer.Root!.Elements().All(e => e.Name != frameRoot.Name || e != frameRoot));
     }
     [Fact]
@@ -58,7 +58,7 @@ public class LayerTests
         Layer layer = timeline.Layers[0];
         int startFrame = 5;
         int endFrame = 5;
-        int numKeyframes = layer.Frames.Count;
+        int numKeyframes = layer.KeyFrames.Count;
         int numFrames = layer.GetFrameCount();
 
         // Act
@@ -67,7 +67,7 @@ public class LayerTests
         // Assert
         Assert.True(result);
         Assert.True(layer.GetFrameCount() == numFrames);
-        Assert.True(layer.Frames.Count == numKeyframes + 1);
+        Assert.True(layer.KeyFrames.Count == numKeyframes + 1);
         Assert.True(layer.GetFrame(startFrame).StartFrame == startFrame);
     }
 
@@ -80,7 +80,7 @@ public class LayerTests
         Layer layer = timeline.Layers[0];
         int startFrame = 10;
         int endFrame = 15;
-        int numKeyframes = layer.Frames.Count;
+        int numKeyframes = layer.KeyFrames.Count;
         int numFrames = layer.GetFrameCount();
 
         // Act
@@ -89,7 +89,7 @@ public class LayerTests
         // Assert
         Assert.True(result);
         Assert.True(layer.GetFrameCount() == numFrames);
-        Assert.True(layer.Frames.Count == numKeyframes + (endFrame - startFrame + 1));
+        Assert.True(layer.KeyFrames.Count == numKeyframes + (endFrame - startFrame + 1));
         for (int i = startFrame; i <= endFrame; i++)
         {
             Assert.True(layer.GetFrame(i).StartFrame == i);
@@ -105,7 +105,7 @@ public class LayerTests
         Layer layer = timeline.Layers[0];
         int startFrame = 0;
         int endFrame = 1;
-        int numKeyframes = layer.Frames.Count;
+        int numKeyframes = layer.KeyFrames.Count;
         int numFrames = layer.GetFrameCount();
 
         // Act
@@ -114,7 +114,7 @@ public class LayerTests
         // Assert
         Assert.False(result);
         Assert.True(layer.GetFrameCount() == numFrames);
-        Assert.True(layer.Frames.Count == numKeyframes);
+        Assert.True(layer.KeyFrames.Count == numKeyframes);
         for (int i = startFrame; i <= endFrame; i++)
         {
             Assert.True(layer.GetFrame(i).StartFrame == i);

@@ -5,8 +5,8 @@ namespace CsXFL;
 
 public class Layer
 {
-    private static readonly List<string> AcceptableLayerTypes = new List<string> {"normal", "guide", "guided", "mask", "masked", "folder", "camera"};
-    public static class DefaultValues
+    private static readonly HashSet<string> AcceptableLayerTypes = new HashSet<string> { "normal", "guide", "guided", "mask", "masked", "folder", "camera" };
+    internal static class DefaultValues
     {
         public const string Color = "#000000";
         public const string LayerType = "normal";
@@ -21,7 +21,7 @@ public class Layer
     private readonly List<Frame> frames;
     private bool locked, current, selected;
     int? parentLayerIndex;
-    public XElement? Root { get { return root; } }
+    internal XElement? Root { get { return root; } }
     public string Color { get { return color; } set { color = value; root?.SetAttributeValue("color", value); } }
     public string LayerType
     {
@@ -41,7 +41,7 @@ public class Layer
     public bool Current { get { return current; } set { current = value; root?.SetOrRemoveAttribute("current", value, DefaultValues.Current); } }
     public bool Selected { get { return selected; } set { selected = value; root?.SetOrRemoveAttribute("isSelected", value, DefaultValues.Selected); } }
     public int? ParentLayerIndex { get { return parentLayerIndex; } set { parentLayerIndex = value; root?.SetOrRemoveAttribute("parentLayerIndex", value, null); } }
-    public ReadOnlyCollection<Frame> Frames { get { return frames.AsReadOnly(); } }
+    public ReadOnlyCollection<Frame> KeyFrames { get { return frames.AsReadOnly(); } }
     private void LoadFrames(XElement layerNode)
     {
         List<XElement>? frameNodes = layerNode?.Element(ns + "frames")?.Elements().ToList();
@@ -51,7 +51,7 @@ public class Layer
             frames.Add(new Frame(frameNode));
         }
     }
-    public Layer(XElement layerNode)
+    internal Layer(XElement layerNode)
     {
         root = layerNode;
         ns = root.Name.Namespace;
@@ -70,7 +70,7 @@ public class Layer
         LoadFrames(root);
     }
 
-    public Layer(Layer other)
+    internal Layer(Layer other)
     {
         root = other.root is null ? null : new XElement(other.root);
         ns = other.ns;
@@ -94,14 +94,14 @@ public class Layer
     {
         int index = GetKeyframeIndex(frameIndex);
         Frame frame = frames[index];
-        if(frameIndex != frame.StartFrame) return false;
-        if(frames.Count == 1)
-        {  
-            if(frame.IsEmpty()) return false;
+        if (frameIndex != frame.StartFrame) return false;
+        if (frames.Count == 1)
+        {
+            if (frame.IsEmpty()) return false;
             frame.ClearElements();
             return true;
         }
-        if(index == 0)
+        if (index == 0)
         {
             Frame nextFrame = frames[index + 1];
             nextFrame.Duration = nextFrame.Duration + frame.Duration;
@@ -114,7 +114,7 @@ public class Layer
         RemoveKeyframe(index);
         return true;
     }
-    int GetKeyframeIndex(int frameIndex)
+    private int GetKeyframeIndex(int frameIndex)
     {
         // return the nth keyframe where n.StartFrame <= frameIndex < (n.StartFrame + n.Duration) with binary search
         int left = 0, right = frames.Count - 1;
@@ -175,8 +175,9 @@ public class Layer
     {
         return InsertKeyframe(frameIndex, true);
     }
-    public bool ConvertToKeyframes(int startFrame, int endFrame = int.MinValue) {
-        if (endFrame == int.MinValue) endFrame = startFrame;
+    public bool ConvertToKeyframes(int startFrame, int? endFrame = null)
+    {
+        endFrame ??= startFrame;
         int numConverted = 0;
         for (int i = startFrame; i <= endFrame; i++)
         {
@@ -188,5 +189,55 @@ public class Layer
             }
         }
         return numConverted > 0;
+    }
+    internal void InsertFrames(int numFrames, int frameIndex)
+    {
+        int index = GetKeyframeIndex(frameIndex);
+        Frame frame = frames[index];
+        frame.Duration += numFrames;
+        // increment startFrame for all frames after the insertion point
+        for (int i = index + 1; i < frames.Count; i++)
+        {
+            frames[i].StartFrame += numFrames;
+        }
+    }
+    internal void RemoveFrames(int numFrames, int frameIndex)
+    {
+        int framesRemaining = numFrames, currentFrameIndex = frameIndex;
+        while (framesRemaining > 0)
+        {
+            int index = GetKeyframeIndex(currentFrameIndex);
+            Frame frame = frames[index];
+            bool isStartFrame = frame.StartFrame == currentFrameIndex;
+            if (isStartFrame && framesRemaining >= frame.Duration)
+            {
+                RemoveKeyframe(index);
+                framesRemaining -= frame.Duration;
+                for (int i = index; i < frames.Count; i++)
+                {
+                    frames[i].StartFrame -= frame.Duration;
+                }
+            }
+            else if (isStartFrame)
+            {
+                frame.Duration -= framesRemaining;
+                framesRemaining = 0;
+                for (int i = index + 1; i < frames.Count; i++)
+                {
+                    frames[i].StartFrame -= framesRemaining;
+                }
+            }
+            else
+            {
+                // one-time case where not on a start frame
+                int startFrameDiff = currentFrameIndex - frame.StartFrame;
+                frame.Duration = startFrameDiff;
+                framesRemaining -= startFrameDiff;
+                for (int i = index + 1; i < frames.Count; i++)
+                {
+                    frames[i].StartFrame -= startFrameDiff;
+                }
+            }
+        }
     }
 }

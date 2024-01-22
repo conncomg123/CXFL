@@ -1,7 +1,7 @@
 namespace CsXFL;
-public interface ILibraryEventReceiver
+internal interface ILibraryEventReceiver
 {
-    void OnLibraryEvent(object sender, LibraryEventMessenger.LibraryEventArgs e);
+    internal void OnLibraryEvent(object sender, LibraryEventMessenger.LibraryEventArgs e);
 }
 public class LibraryEventMessenger
 {
@@ -29,7 +29,7 @@ public class LibraryEventMessenger
         ItemRenamed,
         ItemRemoved
     }
-    public void RegisterReceiver(string itemName, ILibraryEventReceiver receiver)
+    internal void RegisterReceiver(string itemName, ILibraryEventReceiver receiver)
     {
         if (!itemToReceiversMap.ContainsKey(itemName))
         {
@@ -37,7 +37,7 @@ public class LibraryEventMessenger
         }
         itemToReceiversMap[itemName].Add(new WeakReference<ILibraryEventReceiver>(receiver));
     }
-    public void UnregisterReceiver(string itemName, ILibraryEventReceiver receiver)
+    internal void UnregisterReceiver(string itemName, ILibraryEventReceiver receiver)
     {
         if (itemToReceiversMap.TryGetValue(itemName, out var receivers))
         {
@@ -48,7 +48,7 @@ public class LibraryEventMessenger
             }
         }
     }
-    public void NotifyItemRenamed(string oldName, string newName)
+    internal void NotifyItemRenamed(string oldName, string newName)
     {
         if (itemToReceiversMap.TryGetValue(oldName, out var receivers))
         {
@@ -63,7 +63,7 @@ public class LibraryEventMessenger
             itemToReceiversMap[newName] = receivers;
         }
     }
-    public void NotifyItemRemoved(string name)
+    internal void NotifyItemRemoved(string name)
     {
         if (itemToReceiversMap.TryGetValue(name, out var receivers))
         {
