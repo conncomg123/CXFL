@@ -10,7 +10,7 @@ public class Instance : Element, ILibraryEventReceiver
         {"DOMVideoInstance", "video"},
         {"DOMCompiledClipInstance", "compiled clip"}
     };
-    private static readonly List<string> AcceptableInstanceTypes = new List<string> {"symbol", "bitmap", "embedded video", "linked video", "video",  "compiled clip"};
+    private static readonly HashSet<string> AcceptableInstanceTypes = new HashSet<string> {"symbol", "bitmap", "embedded video", "linked video", "video",  "compiled clip"};
     private readonly string instanceType;
     private string libraryItemName;
     public string InstanceType { get { return instanceType; } }
@@ -24,7 +24,7 @@ public class Instance : Element, ILibraryEventReceiver
         }
     }
 
-    public Instance(in XElement elementNode) : base(elementNode, "instance")
+    internal Instance(in XElement elementNode) : base(elementNode, "instance")
     {
         instanceType = NodeNameToInstanceType[elementNode.Name.LocalName];
         if (!AcceptableInstanceTypes.Contains(instanceType))
@@ -34,7 +34,7 @@ public class Instance : Element, ILibraryEventReceiver
         libraryItemName = (string?)elementNode.Attribute("libraryItemName") ?? string.Empty;
         LibraryEventMessenger.Instance.RegisterReceiver(libraryItemName, this);
     }
-    public Instance(in Instance other) : base(other)
+    internal Instance(in Instance other) : base(other)
     {
         if (!AcceptableInstanceTypes.Contains(other.instanceType))
         {
@@ -44,7 +44,7 @@ public class Instance : Element, ILibraryEventReceiver
         libraryItemName = other.libraryItemName;
         LibraryEventMessenger.Instance.RegisterReceiver(libraryItemName, this);
     }
-    public Instance(in Item item, string instanceType, string nodeName) : base(item, "instance", nodeName)
+    internal Instance(in Item item, string instanceType, string nodeName) : base(item, "instance", nodeName)
     {
         if (!AcceptableInstanceTypes.Contains(instanceType))
         {
@@ -59,7 +59,7 @@ public class Instance : Element, ILibraryEventReceiver
     {
         LibraryEventMessenger.Instance.UnregisterReceiver(libraryItemName, this);
     }
-    public void OnLibraryEvent(object sender, LibraryEventMessenger.LibraryEventArgs e)
+    void ILibraryEventReceiver.OnLibraryEvent(object sender, LibraryEventMessenger.LibraryEventArgs e)
     {
         if (e.EventType == LibraryEventMessenger.LibraryEvent.ItemRenamed && libraryItemName == e.OldName)
         {

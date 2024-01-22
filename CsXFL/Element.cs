@@ -3,7 +3,7 @@ namespace CsXFL;
 public abstract class Element
 {
     private static readonly HashSet<string> AcceptableElementTypes = new HashSet<string> { "shape", "text", "tflText", "instance", "shapeObj" };
-    public static class DefaultValues
+    internal static class DefaultValues
     {
         public const double Width = double.NaN;
         public const double Height = double.NaN;
@@ -17,14 +17,14 @@ public abstract class Element
     protected bool selected;
     protected Matrix matrix;
     protected Point transformationPoint;
-    public XElement? Root { get { return root; } }
+    internal XElement? Root { get { return root; } }
     public string? ElementType { get { return elementType; } }
     public virtual double Width { get { return width; } set { width = value; root?.SetAttributeValue("width", value); } }
     public virtual double Height { get { return height; } set { height = value; root?.SetAttributeValue("height", value); } }
     public bool Selected { get { return selected; } set { selected = value; root?.SetOrRemoveAttribute("isSelected", value, DefaultValues.Selected); } }
     public Matrix Matrix { get { return matrix; } set { SetMatrix(value); } }
     public Point TransformationPoint { get { return transformationPoint; } }
-    public Element(XNamespace ns)
+    internal Element(XNamespace ns)
     {
         root = null;
         this.ns = ns;
@@ -35,7 +35,7 @@ public abstract class Element
         matrix = new Matrix(ns);
         transformationPoint = new Point(ns);
     }
-    public Element(in XElement elementNode, string elementType)
+    internal Element(in XElement elementNode, string elementType)
     {
         if (!AcceptableElementTypes.Contains(elementType))
         {
@@ -61,7 +61,7 @@ public abstract class Element
         matrix = new Matrix(root?.Element(ns + "matrix")!.Element(ns + "Matrix")!, root);
         transformationPoint = new Point(root?.Element(ns + "transformationPoint")!.Element(ns + "Point")!);
     }
-    public Element(Item item, string elementType, string nodeName) : this(item.Namespace)
+    internal Element(Item item, string elementType, string nodeName) : this(item.Namespace)
     {
         if (!AcceptableElementTypes.Contains(elementType))
         {

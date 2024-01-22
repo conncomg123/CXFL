@@ -176,7 +176,7 @@ public class Library
             }
         }
     }
-    public Library(in Document containingDocument)
+    internal Library(in Document containingDocument)
     {
         items = new Dictionary<string, Item>();
         unusedItems = new List<Item>();
@@ -256,7 +256,7 @@ public class Library
         LibraryEventMessenger.Instance.NotifyItemRemoved(itemPath);
         return true;
     }
-    public void SaveXFL(string filename)
+    internal void SaveXFL(string filename)
     {
         while (itemOperations.Count > 0 && itemOperations.Dequeue() is ItemOperation operation)
         {
