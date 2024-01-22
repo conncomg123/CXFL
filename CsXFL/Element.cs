@@ -1,10 +1,8 @@
-using System.Linq.Expressions;
-using System.Reflection.Metadata;
 using System.Xml.Linq;
 namespace CsXFL;
 public abstract class Element
 {
-    private static readonly List<string> AcceptableElementTypes = new List<string> {"shape", "text", "tflText", "instance", "shapeObj"};
+    private static readonly HashSet<string> AcceptableElementTypes = new HashSet<string> { "shape", "text", "tflText", "instance", "shapeObj" };
     public static class DefaultValues
     {
         public const double Width = double.NaN;
@@ -24,7 +22,7 @@ public abstract class Element
     public virtual double Width { get { return width; } set { width = value; root?.SetAttributeValue("width", value); } }
     public virtual double Height { get { return height; } set { height = value; root?.SetAttributeValue("height", value); } }
     public bool Selected { get { return selected; } set { selected = value; root?.SetOrRemoveAttribute("isSelected", value, DefaultValues.Selected); } }
-    public Matrix Matrix { get { return matrix; } }
+    public Matrix Matrix { get { return matrix; } set { SetMatrix(value); } }
     public Point TransformationPoint { get { return transformationPoint; } }
     public Element(XNamespace ns)
     {
@@ -75,5 +73,15 @@ public abstract class Element
         root.Element(ns + "transformationPoint")?.Add(transformationPoint.Root);
         this.elementType = elementType;
         matrix.SetParent(root);
+    }
+    private void SetMatrix(Matrix matrix)
+    {
+        // set values, not the matrix itself
+        this.matrix.A = matrix.A;
+        this.matrix.B = matrix.B;
+        this.matrix.C = matrix.C;
+        this.matrix.D = matrix.D;
+        this.matrix.Tx = matrix.Tx;
+        this.matrix.Ty = matrix.Ty;
     }
 }
