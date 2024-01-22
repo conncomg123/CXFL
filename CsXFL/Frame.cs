@@ -128,7 +128,7 @@ public class Frame : ILibraryEventReceiver
 
     public bool IsEmpty()
     {
-        return elements.Any();
+        return !elements.Any();
     }
     private void UnregisterFromInstanceLibraryEvents()
     {
