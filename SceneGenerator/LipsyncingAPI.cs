@@ -1,4 +1,6 @@
-﻿using CsXFL;
+﻿using System.Xml.Serialization;
+using CsXFL;
+
 class LipsyncAPI
 {
     static Document Doc = new("C:\\Stuff\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
@@ -236,12 +238,12 @@ class LipsyncAPI
 
         return 0;
     }
-
+    /*
     static void Main()
     {
         LipsyncAPI programInstance = new LipsyncAPI();
         programInstance.LipsyncSingle();
         Doc.Save("C:\\Stuff\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
     }
-
+    */
 };

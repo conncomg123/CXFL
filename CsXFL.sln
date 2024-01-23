@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CsXFL", "CsXFL\CsXFL.csproj
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CsXFL.Tests", "CsXFL.Tests\CsXFL.Tests.csproj", "{2C8BB7B2-19E0-4579-9CCA-7AF0540B17AD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SceneGenerator", "SceneGenerator\SceneGenerator.csproj", "{20CC5EAF-375A-46AA-AAE4-4CFC17519E9F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SceneGenerator", "SceneGenerator\SceneGenerator.csproj", "{20CC5EAF-375A-46AA-AAE4-4CFC17519E9F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
