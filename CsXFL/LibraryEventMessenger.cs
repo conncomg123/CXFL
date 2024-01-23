@@ -52,8 +52,9 @@ public class LibraryEventMessenger
     {
         if (itemToReceiversMap.TryGetValue(oldName, out var receivers))
         {
-            foreach (var receiverRef in receivers)
+            for (int i = receivers.Count - 1; i >= 0; i--)
             {
+                var receiverRef = receivers[i];
                 if (receiverRef.TryGetTarget(out var receiver))
                 {
                     receiver.OnLibraryEvent(this, new LibraryEventArgs { OldName = oldName, NewName = newName, EventType = LibraryEvent.ItemRenamed });
