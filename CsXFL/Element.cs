@@ -32,7 +32,7 @@ public abstract class Element
         width = double.NaN;
         height = double.NaN;
         selected = false;
-        matrix = new Matrix(ns);
+        matrix = new Matrix(ns, root);
         transformationPoint = new Point(ns);
     }
     internal Element(in XElement elementNode, string elementType)
@@ -47,10 +47,10 @@ public abstract class Element
         width = double.NaN;
         height = double.NaN;
         selected = (bool?)elementNode.Attribute("isSelected") ?? DefaultValues.Selected;
-        matrix = elementNode.Element(ns + "matrix")?.Element(ns + "Matrix") is not null ? new Matrix(elementNode.Element(ns + "matrix")!.Element(ns + "Matrix"), root) : new Matrix(ns);
+        matrix = elementNode.Element(ns + "matrix")?.Element(ns + "Matrix") is not null ? new Matrix(elementNode.Element(ns + "matrix")!.Element(ns + "Matrix"), root) : new Matrix(ns, root);
         transformationPoint = elementNode.Element(ns + "transformationPoint")?.Element(ns + "Point") is not null ? new Point(elementNode.Element(ns + "transformationPoint")!.Element(ns + "Point")!) : new Point(ns);
     }
-    public Element(in Element other)
+    internal Element(in Element other)
     {
         root = other.Root is null ? null : new XElement(other.Root);
         ns = other.ns;

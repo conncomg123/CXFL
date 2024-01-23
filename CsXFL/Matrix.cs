@@ -122,9 +122,11 @@ public class Matrix
     {
         this.parent = parent;
     }
-    internal Matrix(XNamespace ns)
+    internal Matrix(XNamespace ns, XElement? parent)
     {
         this.ns = ns;
+        root = null;
+        this.parent = parent;
         A = DefaultValues.A;
         B = DefaultValues.B;
         C = DefaultValues.C;
@@ -157,6 +159,7 @@ public class Matrix
     internal Matrix(in Matrix other)
     {
         root = other.Root is null ? null : new XElement(other.Root);
+        parent = other.Parent;
         ns = other.ns;
         a = other.A;
         b = other.B;
