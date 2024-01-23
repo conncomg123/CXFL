@@ -24,9 +24,9 @@ public class Matrix
         {
             if (!IsDefaultValue)
             {
-                Parent?.Add(new XElement(ns + "matrix"));
-                Parent?.Element(ns + "matrix")?.Add(new XElement(ns + "Matrix"));
-                Root = Parent?.Element(ns + "matrix")?.Element(ns + "Matrix");
+                parent?.Add(new XElement(ns + "matrix"));
+                parent?.Element(ns + "matrix")?.Add(new XElement(ns + "Matrix"));
+                Root = parent?.Element(ns + "matrix")?.Element(ns + "Matrix");
             }
             else return;
         }
@@ -52,7 +52,7 @@ public class Matrix
     {
         if (IsDefaultMatrix(this))
         {
-            Root?.Parent!.Element(ns + "matrix")?.Remove();
+            parent?.Element(ns + "matrix")?.Remove();
             Root = null;
         }
     }
@@ -117,7 +117,6 @@ public class Matrix
         }
     }
     internal ref XElement? Root { get { return ref root; } }
-    internal ref XElement? Parent { get { return ref parent; } }
     internal void SetParent(in XElement? parent)
     {
         this.parent = parent;
@@ -147,7 +146,7 @@ public class Matrix
     internal Matrix(in XElement? matrixNode, in XElement? parent)
     {
         root = matrixNode;
-        ns = (root is null) ? string.Empty : root.Name.Namespace;
+        ns = (root is null) ? (parent is null) ? string.Empty : parent.Name.Namespace : root.Name.Namespace;
         this.parent = parent;
         a = (double?)matrixNode?.Attribute("a") ?? DefaultValues.A;
         b = (double?)matrixNode?.Attribute("b") ?? DefaultValues.B;
@@ -159,7 +158,7 @@ public class Matrix
     internal Matrix(in Matrix other)
     {
         root = other.Root is null ? null : new XElement(other.Root);
-        parent = other.Parent;
+        parent = other.parent;
         ns = other.ns;
         a = other.A;
         b = other.B;
