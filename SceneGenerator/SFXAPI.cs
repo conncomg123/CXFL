@@ -73,7 +73,7 @@ class SFXAPI
 
         if (isSFXInShake)
         {
-            for (int i = FrameIndex; i < (FrameIndex + ShakeRange) - 1; i++)
+            for (int i = FrameIndex; i < FrameIndex + ShakeRange - 1; i++)
             {
                 double randomX = Random.Shared.NextDouble() - 0.5;
                 double randomY = Random.Shared.NextDouble() - 0.5;
@@ -83,13 +83,13 @@ class SFXAPI
 
                 if (TaperOff)
                 {
-                    deltaX = ((2 * ShakeItensity) * randomX) * (1 - (((i - FrameIndex) / ShakeRange)));
-                    deltaY = ((2 * ShakeItensity) * randomY) * (1 - (((i - FrameIndex) / ShakeRange)));
+                    deltaX = 2 * ShakeItensity * randomX * (1 - (i - FrameIndex) / (double)ShakeRange);
+                    deltaY = 2 * ShakeItensity * randomY * (1 - (i - FrameIndex) / (double)ShakeRange);
                 }
                 else
                 {
-                    deltaX = ((2 * ShakeItensity) * randomX);
-                    deltaY = ((2 * ShakeItensity) * randomY);
+                    deltaX = 2 * ShakeItensity * randomX;
+                    deltaY = 2 * ShakeItensity * randomY;
                 }
                 ShakeOffsets.Add(new Tuple<double, double> ( deltaX, deltaY ));
             }
@@ -99,18 +99,18 @@ class SFXAPI
                 if (CurrentTimeline.Layers[i].LayerType == "normal" && !ShakeIgnoreLayers.Contains(CurrentTimeline.Layers[i].Name) && !CurrentTimeline.Layers[i].GetFrame(FrameIndex).IsEmpty())    
                 {
                     Matrix modMatrix = CurrentTimeline.Layers[i].GetFrame(FrameIndex).Elements[0].Matrix;
-                    for (int j = 0; j < (FrameIndex + ShakeRange) - 1; j++)
+                    for (int j = 1; j < ShakeRange - 1; j++)
                     {
                         CurrentTimeline.Layers[i].ConvertToKeyframes(FrameIndex + j);
                         CurrentTimeline.Layers[i].GetFrame(FrameIndex + j).Elements[0].Matrix = modMatrix;
-                        CurrentTimeline.Layers[i].GetFrame(FrameIndex + j).Elements[0].Matrix.Tx += ShakeOffsets[i].Item1;
-                        CurrentTimeline.Layers[i].GetFrame(FrameIndex + j).Elements[0].Matrix.Ty += ShakeOffsets[i].Item2;
+                        CurrentTimeline.Layers[i].GetFrame(FrameIndex + j).Elements[0].Matrix.Tx += ShakeOffsets[j].Item1;
+                        CurrentTimeline.Layers[i].GetFrame(FrameIndex + j).Elements[0].Matrix.Ty += ShakeOffsets[j].Item2;
                     };
-                    CurrentTimeline.Layers[i].ConvertToKeyframes(FrameIndex + ShakeRange);
-                    CurrentTimeline.Layers[i].GetFrame(FrameIndex + ShakeRange).Elements[0].Matrix = modMatrix;
-                };
-            };
-        };
+                    CurrentTimeline.Layers[i].ConvertToKeyframes(FrameIndex + ShakeRange - 1);
+                    CurrentTimeline.Layers[i].GetFrame(FrameIndex + ShakeRange - 1).Elements[0].Matrix = modMatrix;
+                }
+            }
+        }
         return 0;
     }
 

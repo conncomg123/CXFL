@@ -58,7 +58,7 @@ public abstract class Element
         width = other.width;
         height = other.height;
         selected = other.selected;
-        matrix = new Matrix(root?.Element(ns + "matrix")!.Element(ns + "Matrix")!, root);
+        matrix = new Matrix(root?.Element(ns + "matrix")?.Element(ns + "Matrix")!, root);
         transformationPoint = new Point(root?.Element(ns + "transformationPoint")!.Element(ns + "Point")!);
     }
     internal Element(Item item, string elementType, string nodeName) : this(item.Namespace)

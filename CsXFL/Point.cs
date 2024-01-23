@@ -39,7 +39,7 @@ public class Point
     public Point(in Point other)
     {
         ns = other.ns;
-        root = other.Root;
+        root = new XElement(other.root);
         x = other.X;
         y = other.Y;
     }
