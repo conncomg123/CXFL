@@ -4,7 +4,7 @@ namespace CsXFL;
 public class Matrix
 {
     private const double Epsilon = 0.0001;
-    public static class DefaultValues
+    internal static class DefaultValues
     {
         public const double A = 1.0;
         public const double B = 0.0;
@@ -116,13 +116,13 @@ public class Matrix
             RemoveDefaultMatrix();
         }
     }
-    public ref XElement? Root { get { return ref root; } }
-    public ref XElement? Parent { get { return ref parent; } }
-    public void SetParent(in XElement? parent)
+    internal ref XElement? Root { get { return ref root; } }
+    internal ref XElement? Parent { get { return ref parent; } }
+    internal void SetParent(in XElement? parent)
     {
         this.parent = parent;
     }
-    public Matrix(XNamespace ns)
+    internal Matrix(XNamespace ns)
     {
         this.ns = ns;
         A = DefaultValues.A;
@@ -132,7 +132,7 @@ public class Matrix
         Tx = DefaultValues.Tx;
         Ty = DefaultValues.Ty;
     }
-    public Matrix(double a, double b, double c, double d, double tx, double ty)
+    internal Matrix(double a, double b, double c, double d, double tx, double ty)
     {
         ns = string.Empty;
         A = a;
@@ -142,7 +142,7 @@ public class Matrix
         Tx = tx;
         Ty = ty;
     }
-    public Matrix(in XElement? matrixNode, in XElement? parent)
+    internal Matrix(in XElement? matrixNode, in XElement? parent)
     {
         root = matrixNode;
         ns = (root is null) ? string.Empty : root.Name.Namespace;
@@ -154,7 +154,7 @@ public class Matrix
         tx = (double?)matrixNode?.Attribute("tx") ?? DefaultValues.Tx;
         ty = (double?)matrixNode?.Attribute("ty") ?? DefaultValues.Ty;
     }
-    public Matrix(in Matrix other)
+    internal Matrix(in Matrix other)
     {
         root = other.Root is null ? null : new XElement(other.Root);
         ns = other.ns;

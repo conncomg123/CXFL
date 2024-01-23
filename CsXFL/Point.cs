@@ -4,7 +4,7 @@ namespace CsXFL;
 public class Point
 {
     private const double Epsilon = 0.0001;
-    public static class DefaultValues
+    internal static class DefaultValues
     {
         public const double X = 0.0;
         public const double Y = 0.0;
@@ -14,7 +14,7 @@ public class Point
     private XElement root;
     public double X { get { return x; } set { x = value; root?.SetOrRemoveAttribute("x", value, DefaultValues.X); } }
     public double Y { get { return y; } set { y = value; root?.SetOrRemoveAttribute("y", value, DefaultValues.Y); } }
-    public ref XElement Root { get { return ref root; } }
+    internal ref XElement Root { get { return ref root; } }
     public Point(XNamespace ns)
     {
         this.ns = ns;

@@ -5,7 +5,7 @@ namespace CsXFL;
 public class BitmapItem : Item
 {
     public const int SUBPIXELS_PER_PIXEL = 20;
-    public static class DefaultValues
+    internal static class DefaultValues
     {
         public const string Href = "";
         public const bool AllowSmoothing = false;
@@ -34,7 +34,7 @@ public class BitmapItem : Item
     public string CompressionType { get { return compressionType; } set { compressionType = value; Root?.SetOrRemoveAttribute("compressionType", value, DefaultValues.CompressionType); } }
     public string OriginalCompressionType { get { return originalCompressionType; } }
     public string SourceFilePath { get { return sourceFilePath; } }
-    public BitmapItem() : base()
+    internal BitmapItem() : base()
     {
         href = DefaultValues.Href;
         allowSmoothing = DefaultValues.AllowSmoothing;
@@ -46,7 +46,7 @@ public class BitmapItem : Item
         originalCompressionType = DefaultValues.OriginalCompressionType;
         sourceFilePath = DefaultValues.SourceFilePath;
     }
-    public BitmapItem(in XElement bitmapItemNode) : base(bitmapItemNode, "bitmap")
+    internal BitmapItem(in XElement bitmapItemNode) : base(bitmapItemNode, "bitmap")
     {
         href = (string?)bitmapItemNode.Attribute("href") ?? DefaultValues.Href;
         allowSmoothing = (bool?)bitmapItemNode.Attribute("allowSmoothing") ?? DefaultValues.AllowSmoothing;
@@ -58,7 +58,7 @@ public class BitmapItem : Item
         originalCompressionType = (string?)bitmapItemNode.Attribute("originalCompressionType") ?? DefaultValues.OriginalCompressionType;
         sourceFilePath = (string?)bitmapItemNode.Attribute("sourceExternalFilepath") ?? DefaultValues.SourceFilePath;
     }
-    public BitmapItem(in BitmapItem other) : base(other)
+    internal BitmapItem(in BitmapItem other) : base(other)
     {
         href = other.href;
         allowSmoothing = other.allowSmoothing;
