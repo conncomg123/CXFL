@@ -18,7 +18,7 @@ public class Frame : ILibraryEventReceiver
         MotionTween = 8195,
         ShapeLayers = 8192
     }
-    public static class DefaultValues
+    internal static class DefaultValues
     {
         public const int StartFrame = 0;
         public const int Duration = 1;
@@ -34,7 +34,7 @@ public class Frame : ILibraryEventReceiver
     private int startFrame, duration, keyMode;
     private string labelType, name, soundName, soundSync;
     private bool registeredForSoundItem;
-    public XElement? Root { get { return root; } }
+    internal XElement? Root { get { return root; } }
     public int StartFrame { get { return startFrame; } set { startFrame = value; root?.SetAttributeValue("index", value); } }
     public int Duration { get { return duration; } set { duration = value; root?.SetOrRemoveAttribute("duration", value, DefaultValues.Duration); } }
     public int KeyMode { get { return keyMode; } set { keyMode = value; root?.SetOrRemoveAttribute("keyMode", value, DefaultValues.KeyMode); } }
@@ -84,7 +84,7 @@ public class Frame : ILibraryEventReceiver
 
         }
     }
-    public Frame(in XElement frameNode, bool isBlank = false)
+    internal Frame(in XElement frameNode, bool isBlank = false)
     {
         root = frameNode;
         ns = root.Name.Namespace;
@@ -101,7 +101,7 @@ public class Frame : ILibraryEventReceiver
         if (registeredForSoundItem) LibraryEventMessenger.Instance.RegisterReceiver(SoundName, this);
     }
 
-    public Frame(ref Frame other, bool isBlank = false)
+    internal Frame(ref Frame other, bool isBlank = false)
     {
         root = other.root is null ? null : new XElement(other.root);
         ns = other.ns;
@@ -148,7 +148,7 @@ public class Frame : ILibraryEventReceiver
         elements.Clear();
         root?.Element(ns + "elements")?.RemoveAll();
     }
-    public Instance? AddItem(Item item)
+    internal Instance? AddItem(Item item)
     {
         // need to create constructors that turn items into instances unless it's a soundItem
         if (item is SoundItem soundItem)
@@ -174,7 +174,7 @@ public class Frame : ILibraryEventReceiver
         }
         return null;
     }
-    public void OnLibraryEvent(object sender, LibraryEventMessenger.LibraryEventArgs e)
+    void ILibraryEventReceiver.OnLibraryEvent(object sender, LibraryEventMessenger.LibraryEventArgs e)
     {
         if (e.EventType == LibraryEventMessenger.LibraryEvent.ItemRenamed && soundName == e.OldName)
         {

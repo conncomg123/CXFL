@@ -14,7 +14,7 @@ public class Timeline
     private readonly List<Layer> layers;
     private string name;
     private int currentFrame;
-    public XElement? Root { get { return root; } }
+    internal XElement? Root { get { return root; } }
     public string Name { get { return name; } set { name = value; root?.SetAttributeValue("name", value); } }
     public int CurrentFrame { get { return currentFrame; } set { currentFrame = value; root?.SetAttributeValue("currentFrame", value); } }
     public int CurrentLayer { get { return layers.FindIndex(layer => layer.Current); } set { SetCurrentLayer(value); } }
@@ -28,7 +28,7 @@ public class Timeline
             layers.Add(new Layer(layerNode));
         }
     }
-    public Timeline(in XElement timelineNode)
+    internal Timeline(in XElement timelineNode)
     {
         root = timelineNode;
         ns = root.Name.Namespace;
@@ -37,8 +37,8 @@ public class Timeline
         layers = new List<Layer>();
         LoadLayers(root);
     }
-    public Timeline() : this(new XElement("timeline")) { }
-    public Timeline(Timeline other)
+    internal Timeline() : this(new XElement("timeline")) { }
+    internal Timeline(Timeline other)
     {
         root = other.root is null ? null : new XElement(other.root);
         ns = other.ns;
@@ -191,6 +191,41 @@ public class Timeline
             {
                 layers[i].ParentLayerIndex--;
             }
+        }
+    }
+    public void InsertFrames(int numFrames, bool allLayers = false, int? frameNumIndex = null, Layer? whereToInsert = null)
+    {
+        frameNumIndex ??= CurrentFrame;
+        whereToInsert ??= layers[CurrentLayer];
+        if(whereToInsert.LayerType == "folder") throw new ArgumentException("Cannot insert frames into a folder layer");
+        if (allLayers)
+        {
+            foreach (Layer layer in layers)
+            {
+                if(layer.LayerType == "folder") continue;
+                layer.InsertFrames(numFrames, frameNumIndex.Value);
+            }
+        }
+        else
+        {
+            whereToInsert.InsertFrames(numFrames, frameNumIndex.Value);
+        }
+    }
+    public void RemoveFrames(int numFrames, bool allLayers = false, int? frameNumIndex = null, Layer? whereToRemove = null)
+    {
+        frameNumIndex ??= CurrentFrame;
+        whereToRemove ??= layers[CurrentLayer];
+        if (allLayers)
+        {
+            foreach (Layer layer in layers)
+            {
+                if(layer.LayerType == "folder") continue;
+                layer.RemoveFrames(numFrames, frameNumIndex.Value);
+            }
+        }
+        else
+        {
+            whereToRemove.RemoveFrames(numFrames, frameNumIndex.Value);
         }
     }
 }

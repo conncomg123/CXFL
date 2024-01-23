@@ -1,5 +1,7 @@
 using System.Xml.Linq;
 using System.IO.Compression;
+using System.Runtime.CompilerServices;
+[assembly: InternalsVisibleTo("CsXFL.Tests")]
 namespace CsXFL;
 public class Document
 {
@@ -19,14 +21,14 @@ public class Document
     private readonly double frameRate;
     private readonly XNamespace ns;
     private XElement? root;
-    public XElement? Root { get { return root; } }
+    internal XElement? Root { get { return root; } }
     private readonly bool isXFL;
     public bool IsXFL { get { return isXFL; } }
     public Library Library { get { return library; } }
     public string Filename { get { return filename; } }
     public int CurrentTimeline { get { return currentTimeline - 1; } set { value++; currentTimeline = value; root?.SetAttributeValue("currentTimeline", value); } }
     public double FrameRate { get { return frameRate; } set { root?.SetAttributeValue("frameRate", value); } }
-    public List<Timeline> Timelines { get { return timelines; } }
+    internal List<Timeline> Timelines { get { return timelines; } }
     private void LoadFLA(string filename)
     {
         using ZipArchive archive = ZipFile.Open(filename, ZipArchiveMode.Read);
