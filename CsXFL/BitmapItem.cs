@@ -1,5 +1,5 @@
-using System.Runtime.CompilerServices;
 using System.Xml.Linq;
+using SixLabors.ImageSharp;
 
 namespace CsXFL;
 public class BitmapItem : Item
@@ -69,5 +69,15 @@ public class BitmapItem : Item
         compressionType = other.compressionType;
         originalCompressionType = other.originalCompressionType;
         sourceFilePath = other.sourceFilePath;
+    }
+    internal static BitmapItem FromFile(string path, XNamespace ns)
+    {
+        XElement bitmapItemNode = new(ns + "DOMBitmapItem");
+        bitmapItemNode.SetAttributeValue("href", path);
+        bitmapItemNode.SetAttributeValue("name", Path.GetFileName(path));
+        using Image image = Image.Load(path);
+        bitmapItemNode.SetAttributeValue("frameRight", image.Width * SUBPIXELS_PER_PIXEL);
+        bitmapItemNode.SetAttributeValue("frameBottom", image.Height * SUBPIXELS_PER_PIXEL);
+        return new BitmapItem(bitmapItemNode);
     }
 }

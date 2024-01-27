@@ -54,8 +54,8 @@ public class Document
     }
     private void SaveXFL(string filename)
     {
-        xflTree?.Save(filename);
         library.SaveXFL(filename);
+        xflTree?.Save(filename);
     }
     private void LoadTimelines(XElement documentNode)
     {
@@ -69,7 +69,7 @@ public class Document
 
     public Document(string filename)
     {
-        if(Path.GetExtension(filename) == ".xfl")
+        if (Path.GetExtension(filename) == ".xfl")
         {
             // find DOMDocument.xml in the same directory
             string domDocumentPath = Path.Combine(Path.GetDirectoryName(filename)!, "DOMDocument.xml");
@@ -79,7 +79,7 @@ public class Document
             LoadXFL(domDocumentPath);
             ns = root!.Name.Namespace;
             timelines = new List<Timeline>();
-            library = new Library(this);
+            library = new Library(this, ns);
             LoadTimelines(root!);
         }
         else if (Path.GetExtension(filename) == ".xml")
@@ -89,7 +89,7 @@ public class Document
             LoadXFL(filename);
             ns = root!.Name.Namespace;
             timelines = new List<Timeline>();
-            library = new Library(this);
+            library = new Library(this, ns);
             LoadTimelines(root!);
         }
         else if (Path.GetExtension(filename) == ".fla")
@@ -99,7 +99,7 @@ public class Document
             LoadFLA(filename);
             ns = root!.Name.Namespace;
             timelines = new List<Timeline>();
-            library = new Library(this);
+            library = new Library(this, ns);
             LoadTimelines(root!);
         }
         else
@@ -111,7 +111,7 @@ public class Document
         frameRate = (double?)root?.Attribute("frameRate") ?? DefaultValues.FrameRate;
         currentTimeline = (int?)root?.Attribute("currentTimeline") ?? DefaultValues.CurrentTimeline;
     }
-    public void Save(string filename)
+    public void Save()
     {
         if (Path.GetExtension(filename) == ".fla") SaveFLA(filename);
         else if (Path.GetExtension(filename) == ".xml") SaveXFL(filename);
@@ -120,5 +120,24 @@ public class Document
     public Timeline GetTimeline(int timelineIndex)
     {
         return timelines[timelineIndex];
+    }
+    public bool ImportFile(string filename, bool importToLibrary = true)
+    {
+        Item? imported = null;
+        try
+        {
+            imported = library.ImportItem(filename);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Failed to import file: " + filename);
+            Console.WriteLine(e.Message);
+            return false;
+        }
+        if(imported is not null && !importToLibrary)
+        {
+            library.AddItemToDocument(imported.Name);
+        }
+        return imported is not null;
     }
 }

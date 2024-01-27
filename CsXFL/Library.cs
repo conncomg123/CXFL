@@ -14,23 +14,28 @@ public class Library
         }
 
         public OperationType Type { get; }
+        public Item item { get; }
         public string ItemName { get; }
         public string? NewItemPath { get; }  // Only used for Add operations
         public string? NewItemName { get; }  // Only used for Rename operations
 
-        public ItemOperation(OperationType type, string itemName, string? newItemPath = null, string? newItemName = null)
+        public ItemOperation(Item item, OperationType type, string itemName, string? newItemPath = null, string? newItemName = null)
         {
+            this.item = item;
             Type = type;
             ItemName = itemName;
             NewItemPath = newItemPath;
             NewItemName = newItemName;
         }
     }
-    public const string LIBRARY_PATH = "LIBRARY";
+    public const string LIBRARY_PATH = "LIBRARY", BINARY_PATH = "bin";
+    private const int WAV_HEADER_SIZE = 44;
+    private static readonly HashSet<string> SYMBOL_FILE_EXTENSIONS = new() { ".xml" }, AUDIO_FILE_EXTENSIONS = new() { ".mp3", ".wav", ".flac" }, IMAGE_FILE_EXTENSIONS = new() { ".png", ".jpg", ".jpeg", ".gif" };
     private readonly Dictionary<string, Item> items;
     private readonly Queue<ItemOperation> itemOperations;
     private readonly List<Item> unusedItems;
     private readonly Document containingDocument;
+    private readonly XNamespace ns;
     public Dictionary<string, Item> Items { get { return items; } }
     public List<Item> UnusedItems { get { return unusedItems; } }
     private void LoadFolders(XElement foldersNode)
@@ -176,12 +181,13 @@ public class Library
             }
         }
     }
-    internal Library(in Document containingDocument)
+    internal Library(in Document containingDocument, XNamespace ns)
     {
         items = new Dictionary<string, Item>();
         unusedItems = new List<Item>();
         itemOperations = new();
         this.containingDocument = containingDocument;
+        this.ns = ns;
         if (containingDocument.IsXFL)
         {
             LoadXFLLibrary(containingDocument.Root!);
@@ -195,7 +201,7 @@ public class Library
     {
         return items.ContainsKey(namePath);
     }
-    public bool AddItemToDocument(double posX, double posY, string namePath, Frame? where = null)
+    public bool AddItemToDocument(string namePath, double posX = 0, double posY = 0, Frame? where = null)
     {
         if (where is null)
         {
@@ -214,6 +220,34 @@ public class Library
             added.Matrix.Ty = posY;
         }
         return true;
+    }
+    internal Item? ImportItem(string path)
+    {
+        // todo: create an XElement node from the path, construct an Item from that, then enqueue an Add operation
+        if (!File.Exists(path)) return null;
+        string itemName = Path.GetFileName(path);
+        string targetPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, itemName);
+        if (File.Exists(targetPath)) return null;
+        Item? imported = null;
+        if(SYMBOL_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
+        {
+            imported = SymbolItem.FromFile(path);
+            containingDocument.Root!.Element(ns + "symbols")!.Add((imported as SymbolItem)!.Include.Root);
+        }
+        else if(AUDIO_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
+        {
+            imported = SoundItem.FromFile(path, ns);
+            containingDocument.Root!.Element(ns + "media")!.Add(imported.Root);
+        }
+        else if(IMAGE_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
+        {
+            imported = BitmapItem.FromFile(path, ns);
+            containingDocument.Root!.Element(ns + "media")!.Add(imported.Root);
+        }
+        if(imported is null) return null;
+        items.Add(itemName, imported);
+        itemOperations.Enqueue(new ItemOperation(imported, ItemOperation.OperationType.Add, itemName, path));
+        return imported;
     }
     public bool RenameItem(string oldName, string newName)
     {
@@ -238,7 +272,7 @@ public class Library
         item.Name = newName;
         items.Remove(oldName);
         items.Add(newName, item);
-        itemOperations.Enqueue(new ItemOperation(ItemOperation.OperationType.Rename, oldName + (isSymbol ? ".xml" : ""), null, newName + (isSymbol ? ".xml" : "")));
+        itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Rename, oldName + (isSymbol ? ".xml" : ""), null, newName + (isSymbol ? ".xml" : "")));
         LibraryEventMessenger.Instance.NotifyItemRenamed(oldName, newName);
         return true;
     }
@@ -252,38 +286,96 @@ public class Library
         }
         item.Root?.Remove();
         items.Remove(itemPath);
-        itemOperations.Enqueue(new ItemOperation(ItemOperation.OperationType.Remove, itemPath));
+        itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Remove, itemPath));
         LibraryEventMessenger.Instance.NotifyItemRemoved(itemPath);
         return true;
     }
-    internal void SaveXFL(string filename)
+internal void SaveXFL(string filename)
+{
+    ProcessItemOperations(filename);
+    SaveSymbolItems(filename);
+}
+
+private void ProcessItemOperations(string filename)
+{
+    while (itemOperations.Count > 0 && itemOperations.Dequeue() is ItemOperation operation)
     {
-        while (itemOperations.Count > 0 && itemOperations.Dequeue() is ItemOperation operation)
+        string targetPath = Path.Combine(Path.GetDirectoryName(filename)!, LIBRARY_PATH, operation.ItemName);
+        switch (operation.Type)
         {
-            string targetPath = Path.Combine(Path.GetDirectoryName(filename)!, LIBRARY_PATH, operation.ItemName);
-            switch (operation.Type)
-            {
-                case ItemOperation.OperationType.Add:
-                    File.Copy(operation.NewItemPath!, targetPath);
-                    break;
-                case ItemOperation.OperationType.Remove:
-                    // File.Delete(targetPath); // This is commented out because it's dangerous, will add safety checks later
-                    Console.WriteLine("Removed File: " + targetPath);
-                    break;
-                case ItemOperation.OperationType.Rename:
-                    string renamedPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, operation.NewItemName!);
-                    File.Move(targetPath, renamedPath);
-                    break;
-            }
-        }
-        // now need to overwrite symbols, will add modified flag to symbol items for optimization later
-        foreach (var item in items.Values)
-        {
-            if (item is SymbolItem symbol)
-            {
-                string symbolPath = Path.Combine(Path.GetDirectoryName(filename)!, LIBRARY_PATH, symbol.Include.Href);
-                symbol.Root?.Save(symbolPath);
-            }
+            case ItemOperation.OperationType.Add:
+                ProcessAddOperation(operation, targetPath, filename);
+                break;
+            case ItemOperation.OperationType.Remove:
+                ProcessRemoveOperation(operation, targetPath, filename);
+                break;
+            case ItemOperation.OperationType.Rename:
+                ProcessRenameOperation(operation, targetPath);
+                break;
         }
     }
+}
+
+private void ProcessAddOperation(ItemOperation operation, string targetPath, string filename)
+{
+    File.Copy(operation.NewItemPath!, targetPath);
+    // update item's href
+    Item item = operation.item;
+    if (item is SymbolItem symbol)
+    {
+        symbol.Include.Href = operation.ItemName + ".xml";
+    }
+    if (item is SoundItem sound)
+    {
+        ProcessSoundItemAdd(sound, targetPath, filename, operation.ItemName);
+    }
+    if (item is BitmapItem bitmap)
+    {
+        bitmap.Href = operation.ItemName;
+    }
+}
+
+private void ProcessSoundItemAdd(SoundItem sound, string targetPath, string filename, string itemName)
+{
+    sound.Href = itemName;
+    if(sound.Name.EndsWith(".flac"))
+    {
+        byte[] wavData = SoundUtils.ConvertFlacToWav(targetPath);
+        long unixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        string datFileName = "M " + unixTime + ".dat";
+        string wavPath = Path.Combine(Path.GetDirectoryName(filename)!, BINARY_PATH, datFileName);
+        using FileStream fs = new(wavPath, FileMode.Create);
+        fs.Write(wavData, WAV_HEADER_SIZE, wavData.Length - WAV_HEADER_SIZE);
+        sound.SoundDataHRef = datFileName;
+    }
+}
+
+private void ProcessRemoveOperation(ItemOperation operation, string targetPath, string filename)
+{
+    SoundItem? soundItem = operation.item as SoundItem;
+    if (soundItem is not null)
+    {
+        File.Delete(Path.Combine(Path.GetDirectoryName(filename)!, BINARY_PATH, soundItem.SoundDataHRef));
+    }
+    File.Delete(targetPath);
+}
+
+private void ProcessRenameOperation(ItemOperation operation, string targetPath)
+{
+    string renamedPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, operation.NewItemName!);
+    File.Move(targetPath, renamedPath);
+}
+
+private void SaveSymbolItems(string filename)
+{
+    // now need to overwrite symbols, will add modified flag to symbol items for optimization later
+    foreach (var item in items.Values)
+    {
+        if (item is SymbolItem symbol)
+        {
+            string symbolPath = Path.Combine(Path.GetDirectoryName(filename)!, LIBRARY_PATH, symbol.Include.Href);
+            symbol.Root?.Save(symbolPath);
+        }
+    }
+}
 }
