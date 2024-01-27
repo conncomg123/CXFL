@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Xml.Linq;
 
 namespace CsXFL;
@@ -45,5 +44,16 @@ public class SymbolItem : Item
         symbolType = other.symbolType;
         timeline = new Timeline(other.timeline);
         include = new Include(other.include);
+    }
+    internal static SymbolItem FromFile(string path)
+    {
+        XDocument? xflTree = XDocument.Load(path);
+        if (xflTree.Root is null)
+        {
+            throw new InvalidDataException("Invalid XFL file: " + path);
+        }
+        XElement includeNode = new("Include");
+        includeNode.SetAttributeValue("href", path);
+        return new SymbolItem(xflTree.Root, includeNode);
     }
 }
