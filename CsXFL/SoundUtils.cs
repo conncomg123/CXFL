@@ -3,7 +3,7 @@ using NAudio.Flac;
 namespace CsXFL;
 public class SoundUtils
 {
-    public static byte[] ConvertFlacToWav(string flacFilePath)
+    public static ArraySegment<byte> ConvertFlacToWav(string flacFilePath)
     {
         using var memStream = new MemoryStream();
         using var reader = new FlacReader(flacFilePath);
@@ -16,7 +16,10 @@ public class SoundUtils
             reader.ReadExactly(buffer);
             writer.Write(buffer);
         }
-        return memStream.ToArray();
+        bool success = memStream.TryGetBuffer(out ArraySegment<byte> segment);
+        if (!success)
+            throw new InvalidOperationException("Failed to convert FLAC to WAV.");
+        return segment;
     }
     public static string GetSoundFormat(string soundFilePath)
     {
@@ -27,7 +30,7 @@ public class SoundUtils
     public static int GetSoundSampleCount(string soundFilePath)
     {
         using var file = TagLib.File.Create(soundFilePath);
-        int sampleCount = (int) Math.Round(file.Properties.AudioSampleRate * file.Properties.Duration.TotalSeconds);
+        int sampleCount = (int)Math.Round(file.Properties.AudioSampleRate * file.Properties.Duration.TotalSeconds);
         return sampleCount;
     }
     public static double GetSoundDuration(string soundFilePath)
