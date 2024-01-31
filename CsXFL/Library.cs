@@ -229,22 +229,22 @@ public class Library
         string targetPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, itemName);
         if (File.Exists(targetPath)) return null;
         Item? imported = null;
-        if(SYMBOL_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
+        if (SYMBOL_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
             imported = SymbolItem.FromFile(path);
             containingDocument.Root!.Element(ns + "symbols")!.Add((imported as SymbolItem)!.Include.Root);
         }
-        else if(AUDIO_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
+        else if (AUDIO_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
             imported = SoundItem.FromFile(path, ns);
             containingDocument.Root!.Element(ns + "media")!.Add(imported.Root);
         }
-        else if(IMAGE_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
+        else if (IMAGE_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
             imported = BitmapItem.FromFile(path, ns);
             containingDocument.Root!.Element(ns + "media")!.Add(imported.Root);
         }
-        if(imported is null) return null;
+        if (imported is null) return null;
         items.Add(itemName, imported);
         itemOperations.Enqueue(new ItemOperation(imported, ItemOperation.OperationType.Add, itemName, path));
         return imported;
@@ -255,17 +255,17 @@ public class Library
         if (ItemExists(newName)) return false;
         Item item = items[oldName];
         bool isSymbol = false;
-        if(item is SymbolItem symbol)
+        if (item is SymbolItem symbol)
         {
             symbol.Include.Href = newName + ".xml";
             symbol.Timeline.Name = newName;
             isSymbol = true;
         }
-        if(item is SoundItem sound)
+        if (item is SoundItem sound)
         {
             sound.Href = newName;
         }
-        if(item is BitmapItem bitmap)
+        if (item is BitmapItem bitmap)
         {
             bitmap.Href = newName;
         }
@@ -280,7 +280,7 @@ public class Library
     {
         if (!ItemExists(itemPath)) return false;
         Item item = items[itemPath];
-        if(item is SymbolItem symbolItem)
+        if (item is SymbolItem symbolItem)
         {
             symbolItem.Include.Root?.Remove();
         }
@@ -290,92 +290,93 @@ public class Library
         LibraryEventMessenger.Instance.NotifyItemRemoved(itemPath);
         return true;
     }
-internal void SaveXFL(string filename)
-{
-    ProcessItemOperations(filename);
-    SaveSymbolItems(filename);
-}
-
-private void ProcessItemOperations(string filename)
-{
-    while (itemOperations.Count > 0 && itemOperations.Dequeue() is ItemOperation operation)
+    internal void SaveXFL(string filename)
     {
-        string targetPath = Path.Combine(Path.GetDirectoryName(filename)!, LIBRARY_PATH, operation.ItemName);
-        switch (operation.Type)
+        ProcessItemOperations(filename);
+        SaveSymbolItems(filename);
+    }
+
+    private void ProcessItemOperations(string filename)
+    {
+        while (itemOperations.Count > 0 && itemOperations.Dequeue() is ItemOperation operation)
         {
-            case ItemOperation.OperationType.Add:
-                ProcessAddOperation(operation, targetPath, filename);
-                break;
-            case ItemOperation.OperationType.Remove:
-                ProcessRemoveOperation(operation, targetPath, filename);
-                break;
-            case ItemOperation.OperationType.Rename:
-                ProcessRenameOperation(operation, targetPath);
-                break;
+            string targetPath = Path.Combine(Path.GetDirectoryName(filename)!, LIBRARY_PATH, operation.ItemName);
+            switch (operation.Type)
+            {
+                case ItemOperation.OperationType.Add:
+                    ProcessAddOperation(operation, targetPath, filename);
+                    break;
+                case ItemOperation.OperationType.Remove:
+                    ProcessRemoveOperation(operation, targetPath, filename);
+                    break;
+                case ItemOperation.OperationType.Rename:
+                    ProcessRenameOperation(operation, targetPath);
+                    break;
+            }
         }
     }
-}
 
-private void ProcessAddOperation(ItemOperation operation, string targetPath, string filename)
-{
-    File.Copy(operation.NewItemPath!, targetPath);
-    // update item's href
-    Item item = operation.item;
-    if (item is SymbolItem symbol)
+    private void ProcessAddOperation(ItemOperation operation, string targetPath, string filename)
     {
-        symbol.Include.Href = operation.ItemName + ".xml";
-    }
-    if (item is SoundItem sound)
-    {
-        ProcessSoundItemAdd(sound, targetPath, filename, operation.ItemName);
-    }
-    if (item is BitmapItem bitmap)
-    {
-        bitmap.Href = operation.ItemName;
-    }
-}
-
-private void ProcessSoundItemAdd(SoundItem sound, string targetPath, string filename, string itemName)
-{
-    sound.Href = itemName;
-    if(sound.Name.EndsWith(".flac"))
-    {
-        byte[] wavData = SoundUtils.ConvertFlacToWav(targetPath);
-        long unixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        string datFileName = "M " + unixTime + ".dat";
-        string wavPath = Path.Combine(Path.GetDirectoryName(filename)!, BINARY_PATH, datFileName);
-        using FileStream fs = new(wavPath, FileMode.Create);
-        fs.Write(wavData, WAV_HEADER_SIZE, wavData.Length - WAV_HEADER_SIZE);
-        sound.SoundDataHRef = datFileName;
-    }
-}
-
-private void ProcessRemoveOperation(ItemOperation operation, string targetPath, string filename)
-{
-    SoundItem? soundItem = operation.item as SoundItem;
-    if (soundItem is not null)
-    {
-        File.Delete(Path.Combine(Path.GetDirectoryName(filename)!, BINARY_PATH, soundItem.SoundDataHRef));
-    }
-    File.Delete(targetPath);
-}
-
-private void ProcessRenameOperation(ItemOperation operation, string targetPath)
-{
-    string renamedPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, operation.NewItemName!);
-    File.Move(targetPath, renamedPath);
-}
-
-private void SaveSymbolItems(string filename)
-{
-    // now need to overwrite symbols, will add modified flag to symbol items for optimization later
-    foreach (var item in items.Values)
-    {
+        File.Copy(operation.NewItemPath!, targetPath);
+        // update item's href
+        Item item = operation.item;
         if (item is SymbolItem symbol)
         {
-            string symbolPath = Path.Combine(Path.GetDirectoryName(filename)!, LIBRARY_PATH, symbol.Include.Href);
-            symbol.Root?.Save(symbolPath);
+            symbol.Include.Href = operation.ItemName + ".xml";
+        }
+        if (item is SoundItem sound)
+        {
+            ProcessSoundItemAdd(sound, targetPath, filename, operation.ItemName);
+        }
+        if (item is BitmapItem bitmap)
+        {
+            bitmap.Href = operation.ItemName;
         }
     }
-}
+
+    private void ProcessSoundItemAdd(SoundItem sound, string targetPath, string filename, string itemName)
+    {
+        sound.Href = itemName;
+        if (sound.Name.EndsWith(".flac"))
+        {
+            // Animate converts flac files to wav and removes their header, then puts it in the bin folder. Really weird but we gotta do the same thing.
+            ArraySegment<byte> wavData = SoundUtils.ConvertFlacToWav(targetPath);
+            long unixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            string datFileName = "M " + unixTime + ".dat";
+            string wavPath = Path.Combine(Path.GetDirectoryName(filename)!, BINARY_PATH, datFileName);
+            using FileStream fs = new(wavPath, FileMode.Create);
+            fs.Write(wavData.Array!, WAV_HEADER_SIZE, wavData.Count - WAV_HEADER_SIZE);
+            sound.SoundDataHRef = datFileName;
+        }
+    }
+
+    private void ProcessRemoveOperation(ItemOperation operation, string targetPath, string filename)
+    {
+        SoundItem? soundItem = operation.item as SoundItem;
+        if (soundItem is not null)
+        {
+            File.Delete(Path.Combine(Path.GetDirectoryName(filename)!, BINARY_PATH, soundItem.SoundDataHRef));
+        }
+        File.Delete(targetPath);
+    }
+
+    private void ProcessRenameOperation(ItemOperation operation, string targetPath)
+    {
+        string renamedPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, operation.NewItemName!);
+        File.Move(targetPath, renamedPath);
+    }
+
+    private void SaveSymbolItems(string filename)
+    {
+        // now need to overwrite symbols, will add modified flag to symbol items for optimization later
+        foreach (var item in items.Values)
+        {
+            if (item is SymbolItem symbol)
+            {
+                string symbolPath = Path.Combine(Path.GetDirectoryName(filename)!, LIBRARY_PATH, symbol.Include.Href);
+                symbol.Root?.Save(symbolPath);
+            }
+        }
+    }
 }
