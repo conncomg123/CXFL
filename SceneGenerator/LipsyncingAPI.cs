@@ -1,14 +1,10 @@
-﻿using System.Xml.Serialization;
-using CsXFL;
-
-class LipsyncAPI
+﻿using CsXFL;
+static class LipsyncAPI
 {
-    static Document Doc = new("C:\\Stuff\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
+    const int END_INDEX = 0;
+    const int WORD_PHONEME_INDEX = 1;
 
-    int END_INDEX = 0;
-    int WORD_PHONEME_INDEX = 1;
-
-    Dictionary<string, int> OFFSET_MAP = new Dictionary<string, int>
+    static Dictionary<string, int> OFFSET_MAP = new Dictionary<string, int>
 {
     {"No Talking", 0},
     {"Closed Mouth No Teeth", 0},
@@ -22,7 +18,7 @@ class LipsyncAPI
     {"Ajar Mouth Teeth Seperate", 3}
 };
 
-    Dictionary<string, int> LENGTH_MAP = new Dictionary<string, int>
+    static Dictionary<string, int> LENGTH_MAP = new Dictionary<string, int>
 {
     {"No Talking", 1},
     {"Closed Mouth No Teeth", 1},
@@ -36,7 +32,7 @@ class LipsyncAPI
     {"Ajar Mouth Teeth Separate", 1}
 };
 
-    Dictionary<string, string> PHONEME_TO_MOUTH_SHAPE = new Dictionary<string, string>
+    static Dictionary<string, string> PHONEME_TO_MOUTH_SHAPE = new Dictionary<string, string>
 {
     {"AA", "Open Mouth Big"},
     {"AE", "Open Mouth Big"},
@@ -78,19 +74,19 @@ class LipsyncAPI
     {"sp", "No Talking"}
 };
 
-    Dictionary<string, List<string>> DIPHTHONG_ORDERING = new Dictionary<string, List<string>>
+    static Dictionary<string, List<string>> DIPHTHONG_ORDERING = new Dictionary<string, List<string>>
 {
     {"AW", new List<string> {"Open Mouth Big", "Open Mouth Round"}},
     {"AY", new List<string> {"Open Mouth Big", "Open Mouth Teeth"}},
     {"OY", new List<string> {"Open Mouth Round", "Open Mouth Teeth"}}
 };
 
-    string[] DIPHTHONGS = { "AW", "AY", "OY" };
-    string[] SINGLE_FRAME_MOUTH_SHAPES = { "Ajar Mouth Teeth Together", "Closed Mouth No Teeth", "Closed Mouth Teeth", "Ajar Mouth Tongue", "Ajar Mouth Teeth Seperate", "No Talking" };
+   static  string[] DIPHTHONGS = { "AW", "AY", "OY" };
+    static string[] SINGLE_FRAME_MOUTH_SHAPES = { "Ajar Mouth Teeth Together", "Closed Mouth No Teeth", "Closed Mouth Teeth", "Ajar Mouth Tongue", "Ajar Mouth Teeth Seperate", "No Talking" };
 
     //Hardcoded CFG
 
-    Dictionary<double, List<object>> words = new Dictionary<double, List<object>>
+   static  Dictionary<double, List<object>> words = new Dictionary<double, List<object>>
 {
     {0.0, new List<object> {0.22, ""}},
     {0.22, new List<object> {0.49, "oh"}},
@@ -104,7 +100,7 @@ class LipsyncAPI
     {2.62, new List<object> {5.10197, ""}}
 };
 
-    Dictionary<double, List<object>> phonemes = new Dictionary<double, List<object>>
+   static  Dictionary<double, List<object>> phonemes = new Dictionary<double, List<object>>
 {
     {0.0, new List<object> {0.22, ""}},
     {0.22, new List<object> {0.49, "OW1"}},
@@ -128,7 +124,7 @@ class LipsyncAPI
     {2.62, new List<object> {5.10197, ""}}
 };
 
-    int PlaceKeyframes(int StartFrame, int LayerIndex, int PoseStartFrame)
+    private static int PlaceKeyframes(Document Doc, Dictionary<double, List<object>> phonemes, int StartFrame, int LayerIndex, int PoseStartFrame)
     {
         Dictionary<int, string> DiphthongMap = new();
         Dictionary<int, string> MouthShapeMap = new();
@@ -141,7 +137,7 @@ class LipsyncAPI
 
             if (!IsKeyframe) Doc.GetTimeline(0).Layers[LayerIndex].ConvertToKeyframes(CurrentFrame);
 
-            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance).Loop = "play once";
+            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.Loop = "play once";
 
             foreach (var keyValuePair in phonemes)
             {
@@ -153,8 +149,8 @@ class LipsyncAPI
                 Console.WriteLine();
             }
 
-            var phoneme = phonemes[PhonemeStartTime][WORD_PHONEME_INDEX].ToString();
-            if (!string.IsNullOrEmpty(phoneme))  phoneme = phoneme.Length > 1 ? phoneme.Substring(0, 2) : phoneme;
+            string phoneme = phonemes[PhonemeStartTime][WORD_PHONEME_INDEX].ToString()!;
+            if (!string.IsNullOrEmpty(phoneme)) phoneme = phoneme.Length > 1 ? phoneme.Substring(0, 2) : phoneme;
 
             if (DIPHTHONGS.Contains(phoneme))
             {
@@ -163,7 +159,7 @@ class LipsyncAPI
             };
 
             // Some poses don't have the 'no talking' mouth shape defined. But is this still the case for Case 3 rigs?
-            if (PHONEME_TO_MOUTH_SHAPE[phoneme] == "No Talking" && OFFSET_MAP[PHONEME_TO_MOUTH_SHAPE[phoneme]] == null)
+            if (PHONEME_TO_MOUTH_SHAPE[phoneme!] == "No Talking" && !OFFSET_MAP.ContainsKey(PHONEME_TO_MOUTH_SHAPE[phoneme!]))
             {
                 Frame2 = OFFSET_MAP["Closed Mouth No Teeth"];
             }
@@ -172,14 +168,14 @@ class LipsyncAPI
                 Frame2 = OFFSET_MAP[PHONEME_TO_MOUTH_SHAPE[phoneme]];
             };
 
-            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance).FirstFrame = (uint)(PoseStartFrame + Frame2);
-            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance).LastFrame = (uint)(PoseStartFrame + Frame2 + LENGTH_MAP[PHONEME_TO_MOUTH_SHAPE[phoneme]] - 1);
-            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance).Loop = "play once";
+            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.FirstFrame = (uint)(PoseStartFrame + Frame2);
+            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.LastFrame = (uint)(PoseStartFrame + Frame2 + LENGTH_MAP[PHONEME_TO_MOUTH_SHAPE[phoneme]] - 1);
+            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.Loop = "play once";
 
             // [!] isEqual sillyness
             if (SINGLE_FRAME_MOUTH_SHAPES.Contains(PHONEME_TO_MOUTH_SHAPE[phoneme]))
             {
-                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance).Loop = "single frame";
+                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.Loop = "single frame";
             }
 
             MouthShapeMap[CurrentFrame] = PHONEME_TO_MOUTH_SHAPE[phoneme];
@@ -206,22 +202,22 @@ class LipsyncAPI
 
                 var MouthShape = DIPHTHONG_ORDERING[DiphthongMap[Frame3]][i];
                 var FirstFrame = OFFSET_MAP[MouthShape];
-                
-                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance).FirstFrame = (uint)(PoseStartFrame + FirstFrame);
-                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance).LastFrame = (uint)(PoseStartFrame + FirstFrame + LENGTH_MAP[MouthShape] - 1);
-                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance).Loop = "play once";
+
+                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.FirstFrame = (uint)(PoseStartFrame + FirstFrame);
+                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.LastFrame = (uint)(PoseStartFrame + FirstFrame + LENGTH_MAP[MouthShape] - 1);
+                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.Loop = "play once";
 
                 // [!] isEqual sillyness
                 if (SINGLE_FRAME_MOUTH_SHAPES.Contains(MouthShape))
                 {
-                    (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance).Loop = "single frame";
+                    (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.Loop = "single frame";
                 }
 
                 MouthShapeMap[CurFrame] = DIPHTHONG_ORDERING[DiphthongMap[Frame3]][i];
             };
 
             int CurrentFrame = (int)(StartFrame + Math.Round(phonemes.Keys.ToList()[phonemes.Keys.Count - 1] * Doc.FrameRate));
-            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance).Loop = "single frame";
+            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.Loop = "single frame";
 
         };
 
@@ -229,21 +225,19 @@ class LipsyncAPI
 
     }
 
-    int LipsyncSingle()
+    public static int LipsyncSingle(this Document doc, int startFrame, int layerIndex, int poseStartFrame, Dictionary<double, List<object>> phonemes)
     {
         //Do input validation later.
         //The original copy has xSheet logic. The way Case 3 rigs work, we may just round down to 100 and save some effort.
 
-        PlaceKeyframes(0, 0, 0);
+        PlaceKeyframes(doc, phonemes, startFrame, layerIndex, poseStartFrame);
 
         return 0;
     }
-    /*
-    static void Main()
-    {
-        LipsyncAPI programInstance = new LipsyncAPI();
-        programInstance.LipsyncSingle();
-        Doc.Save("C:\\Stuff\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
-    }
-    */
+    // static void Main(string[] args)
+    // {
+    //     Document Doc = new("C:\\Stuff\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
+    //     Doc.LipsyncSingle(0, 0, 99, phonemes);
+    //     Doc.Save();
+    // }
 };
