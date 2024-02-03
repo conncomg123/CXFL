@@ -234,10 +234,10 @@ static class LipsyncAPI
 
         return 0;
     }
-    // static void Main(string[] args)
-    // {
-    //     Document Doc = new("C:\\Stuff\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
-    //     Doc.LipsyncSingle(0, 0, 99, phonemes);
-    //     Doc.Save();
-    // }
+    static void Main(string[] args)
+    {
+        Document Doc = new("C:\\Stuff\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
+        Doc.LipsyncSingle(0, 0, 99, phonemes);
+        Doc.Save();
+    }
 };
