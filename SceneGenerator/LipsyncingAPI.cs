@@ -1,10 +1,12 @@
 ﻿using CsXFL;
+using System.Text.RegularExpressions;
+
+
 static class LipsyncAPI
 {
-    const int END_INDEX = 0;
-    const int WORD_PHONEME_INDEX = 1;
+    // Try-catch exception handling eventually
 
-    static Dictionary<string, int> OFFSET_MAP = new Dictionary<string, int>
+    private static Dictionary<string, int> OFFSET_MAP = new Dictionary<string, int>
 {
     {"No Talking", 0},
     {"Closed Mouth No Teeth", 0},
@@ -18,7 +20,7 @@ static class LipsyncAPI
     {"Ajar Mouth Teeth Seperate", 3}
 };
 
-    static Dictionary<string, int> LENGTH_MAP = new Dictionary<string, int>
+    private static Dictionary<string, int> LENGTH_MAP = new Dictionary<string, int>
 {
     {"No Talking", 1},
     {"Closed Mouth No Teeth", 1},
@@ -32,7 +34,7 @@ static class LipsyncAPI
     {"Ajar Mouth Teeth Separate", 1}
 };
 
-    static Dictionary<string, string> PHONEME_TO_MOUTH_SHAPE = new Dictionary<string, string>
+    private static Dictionary<string, string> PHONEME_TO_MOUTH_SHAPE = new Dictionary<string, string>
 {
     {"AA", "Open Mouth Big"},
     {"AE", "Open Mouth Big"},
@@ -74,33 +76,74 @@ static class LipsyncAPI
     {"sp", "No Talking"}
 };
 
-    static Dictionary<string, List<string>> DIPHTHONG_ORDERING = new Dictionary<string, List<string>>
+    private static Dictionary<string, List<string>> DIPHTHONG_ORDERING = new Dictionary<string, List<string>>
 {
     {"AW", new List<string> {"Open Mouth Big", "Open Mouth Round"}},
     {"AY", new List<string> {"Open Mouth Big", "Open Mouth Teeth"}},
     {"OY", new List<string> {"Open Mouth Round", "Open Mouth Teeth"}}
 };
 
-   static  string[] DIPHTHONGS = { "AW", "AY", "OY" };
-    static string[] SINGLE_FRAME_MOUTH_SHAPES = { "Ajar Mouth Teeth Together", "Closed Mouth No Teeth", "Closed Mouth Teeth", "Ajar Mouth Tongue", "Ajar Mouth Teeth Seperate", "No Talking" };
+    private static string[] DIPHTHONGS = { "AW", "AY", "OY" };
+    private static string[] SINGLE_FRAME_MOUTH_SHAPES = { "Ajar Mouth Teeth Together", "Closed Mouth No Teeth", "Closed Mouth Teeth", "Ajar Mouth Tongue", "Ajar Mouth Teeth Seperate", "No Talking" };
 
-    //Hardcoded CFG
+    static Dictionary<double, List<object>> ParseCFG(string filePath)
+    {
+        {
+            Dictionary<double, List<object>> dictionary = new Dictionary<double, List<object>>();
 
-   static  Dictionary<double, List<object>> words = new Dictionary<double, List<object>>
-{
-    {0.0, new List<object> {0.22, ""}},
-    {0.22, new List<object> {0.49, "oh"}},
-    {0.49, new List<object> {1.23, ""}},
-    {1.23, new List<object> {1.4, "you"}},
-    {1.4, new List<object> {1.53, "all"}},
-    {1.53, new List<object> {1.77, "seem"}},
-    {1.77, new List<object> {2.08, "lost"}},
-    {2.08, new List<object> {2.2, "in"}},
-    {2.2, new List<object> {2.62, "thought"}},
-    {2.62, new List<object> {5.10197, ""}}
-};
+            try
+            {
+                string targetVariable = "phonemes";
+                string fileContent = File.ReadAllText(filePath);
 
-   static  Dictionary<double, List<object>> phonemes = new Dictionary<double, List<object>>
+                // Extract the specific variable content using regex
+                string pattern = $@"var\s+{Regex.Escape(targetVariable)}\s*=\s*{{\s*(.*?)}};";
+                Match match = Regex.Match(fileContent, pattern, RegexOptions.Singleline);
+
+                if (match.Success)
+                {
+                    string variableContent = match.Groups[1].Value;
+
+                    // Parse variable content into dictionary
+                    pattern = @"(\d+\.\d+)\s*:\s*\[([^\]]*)\]";
+                    MatchCollection matches = Regex.Matches(variableContent, pattern);
+
+                    foreach (Match m in matches)
+                    {
+                        double key = double.Parse(m.Groups[1].Value);
+                        string[] values = m.Groups[2].Value.Split(',');
+
+                        List<object> entry = new List<object>();
+                        foreach (string value in values)
+                        {
+                            if (double.TryParse(value, out double numericValue))
+                            {
+                                entry.Add(numericValue);
+                            }
+                            else
+                            {
+                                entry.Add(value.Trim('"'));
+                            }
+                        }
+
+                        dictionary[key] = entry;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Variable '{targetVariable}' not found in the file.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+
+            return dictionary;
+        }
+    }
+
+    private static Dictionary<double, List<object>> phonemes2 = new Dictionary<double, List<object>>
 {
     {0.0, new List<object> {0.22, ""}},
     {0.22, new List<object> {0.49, "OW1"}},
@@ -124,7 +167,7 @@ static class LipsyncAPI
     {2.62, new List<object> {5.10197, ""}}
 };
 
-    private static int PlaceKeyframes(Document Doc, Dictionary<double, List<object>> phonemes, int StartFrame, int LayerIndex, int PoseStartFrame)
+    private static int PlaceKeyframes(Document Doc, int StartFrame, int LayerIndex, int PoseStartFrame, Dictionary<double, List<object>> phonemes)
     {
         Dictionary<int, string> DiphthongMap = new();
         Dictionary<int, string> MouthShapeMap = new();
@@ -139,6 +182,20 @@ static class LipsyncAPI
 
             (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.Loop = "play once";
 
+            Console.WriteLine("Phonemes2");
+
+            foreach (var keyValuePair in phonemes2)
+            {
+                Console.Write($"{keyValuePair.Key}: ");
+                foreach (var item in keyValuePair.Value)
+                {
+                    Console.Write($"{item} ");
+                }
+                Console.WriteLine();
+            }
+
+            Console.WriteLine("Phonemes1");
+
             foreach (var keyValuePair in phonemes)
             {
                 Console.Write($"{keyValuePair.Key}: ");
@@ -149,7 +206,7 @@ static class LipsyncAPI
                 Console.WriteLine();
             }
 
-            string phoneme = phonemes[PhonemeStartTime][WORD_PHONEME_INDEX].ToString()!;
+            string phoneme = phonemes[PhonemeStartTime][1].ToString()!;
             if (!string.IsNullOrEmpty(phoneme)) phoneme = phoneme.Length > 1 ? phoneme.Substring(0, 2) : phoneme;
 
             if (DIPHTHONGS.Contains(phoneme))
@@ -172,7 +229,6 @@ static class LipsyncAPI
             (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.LastFrame = (uint)(PoseStartFrame + Frame2 + LENGTH_MAP[PHONEME_TO_MOUTH_SHAPE[phoneme]] - 1);
             (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.Loop = "play once";
 
-            // [!] isEqual sillyness
             if (SINGLE_FRAME_MOUTH_SHAPES.Contains(PHONEME_TO_MOUTH_SHAPE[phoneme]))
             {
                 (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.Loop = "single frame";
@@ -182,7 +238,6 @@ static class LipsyncAPI
 
         };
 
-        // Diphthong Handling
         foreach (int Frame3 in DiphthongMap.Keys)
         {
             // For each Mouth Shape in the Diphthong:
@@ -194,7 +249,6 @@ static class LipsyncAPI
 
                 if (Frame3 != CurFrame && IsKeyframe)
                 {
-                    // Abort at the next keyframe.
                     break;
                 };
 
@@ -207,7 +261,6 @@ static class LipsyncAPI
                 (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.LastFrame = (uint)(PoseStartFrame + FirstFrame + LENGTH_MAP[MouthShape] - 1);
                 (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.Loop = "play once";
 
-                // [!] isEqual sillyness
                 if (SINGLE_FRAME_MOUTH_SHAPES.Contains(MouthShape))
                 {
                     (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.Loop = "single frame";
@@ -230,14 +283,15 @@ static class LipsyncAPI
         //Do input validation later.
         //The original copy has xSheet logic. The way Case 3 rigs work, we may just round down to 100 and save some effort.
 
-        PlaceKeyframes(doc, phonemes, startFrame, layerIndex, poseStartFrame);
+        PlaceKeyframes(doc, startFrame, layerIndex, poseStartFrame, phonemes);
 
         return 0;
     }
-    // static void Main(string[] args)
-    // {
-    //     Document Doc = new("C:\\Stuff\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
-    //     Doc.LipsyncSingle(0, 0, 99, phonemes);
-    //     Doc.Save();
-    // }
+
+    static void Main()
+    {
+         Document Doc = new("C:\\Users\\Administrator\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
+         Doc.LipsyncSingle(0, 0, 99, ParseCFG("C:\\Users\\Administrator\\Elements of Justice\\Dynamically_Linked_Scene\\SonataTest\\s1_048_sonata.cfg"));
+         Doc.Save();
+    }
 };
