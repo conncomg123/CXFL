@@ -231,18 +231,21 @@ public class Library
         Item? imported = null;
         if (SYMBOL_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
-            // symbolitems are special as they can depend on other items in the library, so we need to iterate through its timeline, find all dependencies, and add them to the library
+            // symbolitems are special as they can depend on other items in the library, so we need to iterate through its timeline, find all dependencies, and add them to the library recursively
             imported = SymbolItem.FromFile(path);
+            if(containingDocument.Root!.Element(ns + "symbols") is null) containingDocument.Root!.AddFirst(new XElement(ns + "symbols"));
             containingDocument.Root!.Element(ns + "symbols")!.Add((imported as SymbolItem)!.Include.Root);
         }
         else if (AUDIO_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
             imported = SoundItem.FromFile(path, ns);
+            if(containingDocument.Root!.Element(ns + "media") is null) containingDocument.Root!.AddFirst(new XElement(ns + "media"));
             containingDocument.Root!.Element(ns + "media")!.Add(imported.Root);
         }
         else if (IMAGE_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
             imported = BitmapItem.FromFile(path, ns);
+            if(containingDocument.Root!.Element(ns + "media") is null) containingDocument.Root!.AddFirst(new XElement(ns + "media"));
             containingDocument.Root!.Element(ns + "media")!.Add(imported.Root);
         }
         if (imported is null) return null;
@@ -345,14 +348,13 @@ public class Library
             ArraySegment<byte> wavData = SoundUtils.ConvertFlacToWav(targetPath);
             long unixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             int uniqueIndex = 0;
-            string datFileName = "M " + uniqueIndex + " " + unixTime + ".dat";
-            string wavPath = Path.Combine(Path.GetDirectoryName(filename)!, BINARY_PATH, datFileName);
-            while(File.Exists(wavPath))
+            string datFileName, wavPath;
+            do
             {
-                uniqueIndex++;
                 datFileName = "M " + uniqueIndex + " " + unixTime + ".dat";
                 wavPath = Path.Combine(Path.GetDirectoryName(filename)!, BINARY_PATH, datFileName);
-            }
+                uniqueIndex++;
+            } while (File.Exists(wavPath));
             using FileStream fs = new(wavPath, FileMode.Create);
             fs.Write(wavData.Array!, WAV_HEADER_SIZE, wavData.Count - WAV_HEADER_SIZE);
             sound.SoundDataHRef = datFileName;
