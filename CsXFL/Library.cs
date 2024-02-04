@@ -201,7 +201,7 @@ public class Library
     {
         return items.ContainsKey(namePath);
     }
-    public bool AddItemToDocument(string namePath, double posX = 0, double posY = 0, Frame? where = null)
+    public bool AddItemToDocument(string namePath, Frame? where = null, double posX = 0, double posY = 0)
     {
         if (where is null)
         {
