@@ -39,13 +39,17 @@ public class Document
     }
     private void SaveFLA(string filename)
     {
-        using ZipArchive archive = ZipFile.Open(filename, ZipArchiveMode.Update);
-        ZipArchiveEntry? xflEntry = archive.GetEntry("DOMDocument.xml");
-        if (xflEntry is null) throw new Exception("Invalid FLA file");
-        xflEntry.Delete();
-        ZipArchiveEntry newEntry = archive.CreateEntry("DOMDocument.xml");
-        using StreamWriter writer = new(newEntry.Open());
-        xflTree?.Save(writer);
+        // new approach: extract FLA into temp directory, delete original FLA, create new FLA, add temp directory contents to new FLA
+        string tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        Directory.CreateDirectory(tempDir);
+        using (ZipArchive archive = ZipFile.Open(filename, ZipArchiveMode.Read))
+        {
+            archive.ExtractToDirectory(tempDir);
+        }
+        SaveXFL(Path.Combine(tempDir, "DOMDocument.xml"));
+        File.Delete(filename);
+        ZipFile.CreateFromDirectory(tempDir, filename);
+        Directory.Delete(tempDir, true);
     }
     private void LoadXFL(string filename)
     {
@@ -54,7 +58,7 @@ public class Document
     }
     private void SaveXFL(string filename)
     {
-        library.SaveXFL(filename);
+        library.Save(filename);
         xflTree?.Save(filename);
     }
     private void LoadTimelines(XElement documentNode)
@@ -134,7 +138,7 @@ public class Document
             Console.WriteLine(e.Message);
             return false;
         }
-        if(imported is not null && !importToLibrary)
+        if (imported is not null && !importToLibrary)
         {
             library.AddItemToDocument(imported.Name);
         }
