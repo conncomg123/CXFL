@@ -60,13 +60,13 @@ class SFXAPI
         int SFXLayerIndex = Doc.GetTimeline(Doc.CurrentTimeline).FindLayerIndex("SFX")[0];
         int FlashLayerIndex = Doc.GetTimeline(Doc.CurrentTimeline).FindLayerIndex("FLASH")[0];
         CurrentTimeline.Layers[SFXLayerIndex].ConvertToKeyframes(FrameIndex);
-        Doc.Library.AddItemToDocument(SFXFolderPath + sfxName, 0, 0, CurrentTimeline.Layers[SFXLayerIndex].GetFrame(FrameIndex));
+        Doc.Library.AddItemToDocument(SFXFolderPath + sfxName, CurrentTimeline.Layers[SFXLayerIndex].GetFrame(FrameIndex), 0, 0);
         CurrentTimeline.Layers[SFXLayerIndex].GetFrame(FrameIndex).SoundSync = "stream";
 
         if (isSFXInFlash)
         {
             CurrentTimeline.Layers[FlashLayerIndex].ConvertToKeyframes(FrameIndex);
-            Doc.Library.AddItemToDocument(FlashPath, 1278.95, 718.95, CurrentTimeline.Layers[FlashLayerIndex].GetFrame(FrameIndex));
+            Doc.Library.AddItemToDocument(FlashPath, CurrentTimeline.Layers[FlashLayerIndex].GetFrame(FrameIndex), 1278.95, 718.95);
             CurrentTimeline.Layers[FlashLayerIndex].ConvertToKeyframes(FrameIndex + FlashRange);
             CurrentTimeline.Layers[FlashLayerIndex].GetFrame(FrameIndex + FlashRange).ClearElements();
         }

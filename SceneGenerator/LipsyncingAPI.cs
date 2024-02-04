@@ -1,7 +1,6 @@
 ﻿using CsXFL;
 using System.Text.RegularExpressions;
 
-
 static class LipsyncAPI
 {
     // Try-catch exception handling eventually
@@ -288,10 +287,10 @@ static class LipsyncAPI
         return 0;
     }
 
-    static void Main()
-    {
-         Document Doc = new("C:\\Users\\Administrator\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
-         Doc.LipsyncSingle(0, 0, 99, ParseCFG("C:\\Users\\Administrator\\Elements of Justice\\Dynamically_Linked_Scene\\SonataTest\\s1_048_sonata.cfg"));
-         Doc.Save();
-    }
+    //static void Main()
+    //{
+    //    Document Doc = new("C:\\Users\\Administrator\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
+    //    Doc.LipsyncSingle(0, 0, 99, ParseCFG("C:\\Users\\Administrator\\Elements of Justice\\Dynamically_Linked_Scene\\SonataTest\\s1_048_sonata.cfg"));
+    //    Doc.Save();
+    //}
 };
