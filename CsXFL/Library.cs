@@ -231,6 +231,7 @@ public class Library
         Item? imported = null;
         if (SYMBOL_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
+            // symbolitems are special as they can depend on other items in the library, so we need to iterate through its timeline, find all dependencies, and add them to the library
             imported = SymbolItem.FromFile(path);
             containingDocument.Root!.Element(ns + "symbols")!.Add((imported as SymbolItem)!.Include.Root);
         }
@@ -343,8 +344,15 @@ public class Library
             // Animate converts flac files to wav and removes their header, then puts it in the bin folder. Really weird but we gotta do the same thing.
             ArraySegment<byte> wavData = SoundUtils.ConvertFlacToWav(targetPath);
             long unixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            string datFileName = "M " + unixTime + ".dat";
+            int uniqueIndex = 0;
+            string datFileName = "M " + uniqueIndex + " " + unixTime + ".dat";
             string wavPath = Path.Combine(Path.GetDirectoryName(filename)!, BINARY_PATH, datFileName);
+            while(File.Exists(wavPath))
+            {
+                uniqueIndex++;
+                datFileName = "M " + uniqueIndex + " " + unixTime + ".dat";
+                wavPath = Path.Combine(Path.GetDirectoryName(filename)!, BINARY_PATH, datFileName);
+            }
             using FileStream fs = new(wavPath, FileMode.Create);
             fs.Write(wavData.Array!, WAV_HEADER_SIZE, wavData.Count - WAV_HEADER_SIZE);
             sound.SoundDataHRef = datFileName;
