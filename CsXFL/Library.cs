@@ -124,7 +124,7 @@ public class Library
             string symbolPath = (string)includeNode.Attribute("href")!;
             if (symbolPath == string.Empty) continue;
             // make symbolPath into relative path to the fla archive
-            symbolPath = Path.Combine(LIBRARY_PATH, symbolPath).Replace('\\', '/');
+            symbolPath = Path.Combine(LIBRARY_PATH, symbolPath);
             ZipArchiveEntry? symbolEntry = archive.GetEntry(symbolPath);
             if (symbolEntry is null) continue;
             XDocument? symbolTree = XDocument.Load(symbolEntry!.Open());
@@ -290,7 +290,7 @@ public class Library
         LibraryEventMessenger.Instance.NotifyItemRemoved(itemPath);
         return true;
     }
-    internal void SaveXFL(string filename)
+    internal void Save(string filename)
     {
         ProcessItemOperations(filename);
         SaveSymbolItems(filename);
