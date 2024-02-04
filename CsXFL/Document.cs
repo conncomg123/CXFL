@@ -28,7 +28,7 @@ public class Document
     public string Filename { get { return filename; } }
     public int CurrentTimeline { get { return currentTimeline - 1; } set { value++; currentTimeline = value; root?.SetAttributeValue("currentTimeline", value); } }
     public double FrameRate { get { return frameRate; } set { root?.SetAttributeValue("frameRate", value); } }
-    internal List<Timeline> Timelines { get { return timelines; } }
+    public List<Timeline> Timelines { get { return timelines; } }
     private void LoadFLA(string filename)
     {
         using ZipArchive archive = ZipFile.Open(filename, ZipArchiveMode.Read);
