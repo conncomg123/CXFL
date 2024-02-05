@@ -3,10 +3,10 @@ using System.Text.RegularExpressions;
 
 static class LipsyncAPI
 {
-    // Try-catch exception handling eventually
+    // <!> Try-catch exception handling eventually
 
     private static Dictionary<string, int> OFFSET_MAP = new Dictionary<string, int>
-{
+    {
     {"No Talking", 0},
     {"Closed Mouth No Teeth", 0},
     {"Open Mouth Big", 6},
@@ -17,10 +17,10 @@ static class LipsyncAPI
     {"Ajar Mouth Tongue", 26},
     {"Ajar Mouth Teeth Together", 21},
     {"Ajar Mouth Teeth Seperate", 3}
-};
+    };
 
     private static Dictionary<string, int> LENGTH_MAP = new Dictionary<string, int>
-{
+    {
     {"No Talking", 1},
     {"Closed Mouth No Teeth", 1},
     {"Open Mouth Big", 3},
@@ -31,10 +31,10 @@ static class LipsyncAPI
     {"Ajar Mouth Tongue", 1},
     {"Ajar Mouth Teeth Together", 1},
     {"Ajar Mouth Teeth Separate", 1}
-};
+    };
 
     private static Dictionary<string, string> PHONEME_TO_MOUTH_SHAPE = new Dictionary<string, string>
-{
+    {
     {"AA", "Open Mouth Big"},
     {"AE", "Open Mouth Big"},
     {"AH", "Open Mouth Big"},
@@ -73,14 +73,14 @@ static class LipsyncAPI
     {"ZH", "Ajar Mouth Teeth Together"},
     {"", "No Talking"},
     {"sp", "No Talking"}
-};
+    };
 
     private static Dictionary<string, List<string>> DIPHTHONG_ORDERING = new Dictionary<string, List<string>>
-{
+    {
     {"AW", new List<string> {"Open Mouth Big", "Open Mouth Round"}},
     {"AY", new List<string> {"Open Mouth Big", "Open Mouth Teeth"}},
     {"OY", new List<string> {"Open Mouth Round", "Open Mouth Teeth"}}
-};
+    };
 
     private static string[] DIPHTHONGS = { "AW", "AY", "OY" };
     private static string[] SINGLE_FRAME_MOUTH_SHAPES = { "Ajar Mouth Teeth Together", "Closed Mouth No Teeth", "Closed Mouth Teeth", "Ajar Mouth Tongue", "Ajar Mouth Teeth Seperate", "No Talking" };
@@ -143,7 +143,7 @@ static class LipsyncAPI
     }
 
     private static Dictionary<double, List<object>> phonemes2 = new Dictionary<double, List<object>>
-{
+    {
     {0.0, new List<object> {0.22, ""}},
     {0.22, new List<object> {0.49, "OW1"}},
     {0.49, new List<object> {1.23, ""}},
@@ -164,9 +164,9 @@ static class LipsyncAPI
     {2.24, new List<object> {2.47, "AO1"}},
     {2.47, new List<object> {2.62, "T"}},
     {2.62, new List<object> {5.10197, ""}}
-};
+    };
 
-    private static int PlaceKeyframes(Document Doc, int StartFrame, int LayerIndex, int PoseStartFrame, Dictionary<double, List<object>> phonemes)
+    private static void PlaceKeyframes(Document Doc, int StartFrame, int LayerIndex, int PoseStartFrame, Dictionary<double, List<object>> phonemes)
     {
         Dictionary<int, string> DiphthongMap = new();
         Dictionary<int, string> MouthShapeMap = new();
@@ -234,7 +234,6 @@ static class LipsyncAPI
             }
 
             MouthShapeMap[CurrentFrame] = PHONEME_TO_MOUTH_SHAPE[phoneme];
-
         };
 
         foreach (int Frame3 in DiphthongMap.Keys)
@@ -270,21 +269,15 @@ static class LipsyncAPI
 
             int CurrentFrame = (int)(StartFrame + Math.Round(phonemes.Keys.ToList()[phonemes.Keys.Count - 1] * Doc.FrameRate));
             (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.Loop = "single frame";
-
         };
-
-        return 0;
-
     }
 
-    public static int LipsyncSingle(this Document doc, int startFrame, int layerIndex, int poseStartFrame, Dictionary<double, List<object>> phonemes)
+    public static void LipsyncSingle(this Document doc, int startFrame, int layerIndex, int poseStartFrame, Dictionary<double, List<object>> phonemes)
     {
-        //Do input validation later.
-        //The original copy has xSheet logic. The way Case 3 rigs work, we may just round down to 100 and save some effort.
+        // <!> Do input validation later.
+        // <!> The original copy has xSheet logic. The way Case 3 rigs work, we may just round down to 100 and save some effort.
 
         PlaceKeyframes(doc, startFrame, layerIndex, poseStartFrame, phonemes);
-
-        return 0;
     }
 
     //static void Main()
