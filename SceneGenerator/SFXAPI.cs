@@ -4,19 +4,19 @@ using System.Text;
 using System.Xml.Linq;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
-class SFXAPI
+static class SFXAPI
 {
     static Document Doc = new("C:\\Users\\Administrator\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
 
-    string SFXFolderPath = "AUDIO/SFX/";
-    string FlashPath = "OTHER ASSETS/Standard_Flash";
-    bool TaperOff = true;
-    int FlashRange = 5;
-    int ShakeRange = 10;
-    int ShakeItensity = 20;
-    List<Tuple<double, double>> ShakeOffsets = new List<Tuple<double, double>>();
+    static string SFXFolderPath = "AUDIO/SFX/";
+    static string FlashPath = "OTHER ASSETS/Standard_Flash";
+    static bool TaperOff = true;
+    static int FlashRange = 5;
+    static int ShakeRange = 10;
+    static int ShakeItensity = 20;
+    static List<Tuple<double, double>> ShakeOffsets = new List<Tuple<double, double>>();
 
-    HashSet<string> Flash = new()
+    static HashSet<string> Flash = new()
         {
             "sfx-huh.wav", "sfx-high.wav", "sfx-higher.wav", "sfx-highest.wav", "sfx-low.wav",
             "sfx-lightbulb.wav", "sfx-damage.wav", "sfx-dramaticshock.wav", "sfx-hit1.wav",
@@ -24,7 +24,7 @@ class SFXAPI
             "sfx-stab.wav", "sfx-stab2.wav", "sfx-furious.wav"
         };
 
-    HashSet<string> Shake = new()
+    static HashSet<string> Shake = new()
         {
             "sfx-deskslam.wav", "sfx-thud.wav", "sfx-thud2.wav", "sfx-damage.wav",
             "sfx-dramaticshock.wav", "sfx-hit1.wav", "sfx-punch.wav", "sfx-punch2.wav",
@@ -32,14 +32,14 @@ class SFXAPI
             "sfx-furious.wav"
         };
 
-    HashSet<string> ShakeIgnoreLayers = new()
+    static HashSet<string> ShakeIgnoreLayers = new()
         {
             "FLASH", "INTERJECTION", "FADE", "GAVEL", "EVIDENCE", "TEXT"
         };
 
     // Will only "screenshake" if Layer_1 is layer 0
 
-    int PlaceSFX(string sfxName, int FrameIndex)
+    static void PlaceSFX(this Document Doc, string sfxName, int FrameIndex)
     {
 
         bool isSFXInFlash = Flash.Contains(sfxName);
@@ -111,7 +111,6 @@ class SFXAPI
                 }
             }
         }
-        return 0;
     }
 
     //static void Main()
