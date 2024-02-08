@@ -67,7 +67,7 @@ public class Text : Element
     public List<TextRun> TextRuns { get { return textRuns; } }
     public override double Width { get { return width; } set { width = value; root?.SetOrRemoveAttribute("width", value, double.NaN); } }
     public override double Height { get { return height; } set { height = value; root?.SetOrRemoveAttribute("height", value, double.NaN); } }
-    public Text(XElement textNode) : base(textNode, "text")
+    internal Text(XElement textNode) : base(textNode, "text")
     {
         width = (double?)root!.Attribute("width") ?? Element.DefaultValues.Width;
         height = (double?)root.Attribute("height") ?? Element.DefaultValues.Height;
@@ -84,7 +84,7 @@ public class Text : Element
         }
     }
     #pragma warning disable CS8618
-    public Text(Rectangle boundingRect, string characters, XNamespace ns) : base(ns)
+    internal Text(Rectangle boundingRect, string characters, XNamespace ns) : base(ns)
     {
         root = new XElement(ns + "DOMStaticText");
         root.Add(new XElement(ns + "transformationPoint"));
@@ -107,7 +107,7 @@ public class Text : Element
         root.Add(new XElement(ns + "textRuns", added.Root));
     }
     #pragma warning restore CS8618
-    public Text(in Text other) : base(other)
+    internal Text(in Text other) : base(other)
     {
         width = other.width;
         height = other.height;

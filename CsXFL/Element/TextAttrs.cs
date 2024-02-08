@@ -49,28 +49,30 @@ public class TextAttrs
     public int LineSpacing { get { return lineSpacing; } set { lineSpacing = value; root?.SetOrRemoveAttribute("lineSpacing", value, DefaultValues.LineSpacing); } }
     public int RightMargin { get { return rightMargin; } set { rightMargin = value; root?.SetOrRemoveAttribute("rightMargin", value, DefaultValues.RightMargin); } }
     public int Size { get { return size; } set { size = value; root?.SetOrRemoveAttribute("size", value, DefaultValues.Size); } }
-    public TextAttrs(XNamespace ns)
+    #pragma warning disable CS8618
+    internal TextAttrs(XNamespace ns)
     {
         root = new XElement(ns + "DOMTextAttrs");
-        aliasText = DefaultValues.AliasText;
-        autoKern = DefaultValues.AutoKern;
-        bold = DefaultValues.Bold;
-        italic = DefaultValues.Italic;
-        rotation = DefaultValues.Rotation;
-        alignment = DefaultValues.Alignment;
-        characterPosition = DefaultValues.CharacterPosition;
-        face = DefaultValues.Face;
-        fillColor = DefaultValues.FillColor;
-        target = DefaultValues.Target;
-        url = DefaultValues.Url;
-        indent = DefaultValues.Indent;
-        leftMargin = DefaultValues.LeftMargin;
-        letterSpacing = DefaultValues.LetterSpacing;
-        lineSpacing = DefaultValues.LineSpacing;
-        rightMargin = DefaultValues.RightMargin;
-        size = DefaultValues.Size;
+        AliasText = DefaultValues.AliasText;
+        AutoKern = DefaultValues.AutoKern;
+        Bold = DefaultValues.Bold;
+        Italic = DefaultValues.Italic;
+        Rotation = DefaultValues.Rotation;
+        Alignment = DefaultValues.Alignment;
+        CharacterPosition = DefaultValues.CharacterPosition;
+        Face = DefaultValues.Face;
+        FillColor = DefaultValues.FillColor;
+        Target = DefaultValues.Target;
+        Url = DefaultValues.Url;
+        Indent = DefaultValues.Indent;
+        LeftMargin = DefaultValues.LeftMargin;
+        LetterSpacing = DefaultValues.LetterSpacing;
+        LineSpacing = DefaultValues.LineSpacing;
+        RightMargin = DefaultValues.RightMargin;
+        Size = DefaultValues.Size;
     }
-    public TextAttrs(XElement textAttrsNode)
+    #pragma warning restore CS8618
+    internal TextAttrs(XElement textAttrsNode)
     {
         root = textAttrsNode;
         aliasText = (bool?)textAttrsNode.Attribute("aliasText") ?? DefaultValues.AliasText;
@@ -91,7 +93,7 @@ public class TextAttrs
         rightMargin = (int?)textAttrsNode.Attribute("rightMargin") ?? DefaultValues.RightMargin;
         size = (int?)textAttrsNode.Attribute("size") ?? DefaultValues.Size;
     }
-    public TextAttrs(TextAttrs other)
+    internal TextAttrs(TextAttrs other)
     {
         root = other.root == null ? null : new XElement(other.root);
         aliasText = other.aliasText;
