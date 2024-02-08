@@ -8,17 +8,20 @@ public abstract class Element
         public const double Width = double.NaN;
         public const double Height = double.NaN;
         public const bool Selected = false;
+        public const string Name = "";
 
     }
     protected XElement? root;
     protected XNamespace ns;
     protected string elementType;
+    protected string? name;
     protected double width, height;
     protected bool selected;
     protected Matrix matrix;
     protected Point transformationPoint;
     internal XElement? Root { get { return root; } }
-    public string? ElementType { get { return elementType; } }
+    public string ElementType { get { return elementType; } protected set { elementType = value ?? ""; root?.SetAttributeValue("elementType", value); } }
+    public string? Name { get { return name; } set { name = value; root?.SetOrRemoveAttribute("name", value, DefaultValues.Name); } }
     public virtual double Width { get { return width; } set { width = value; root?.SetAttributeValue("width", value); } }
     public virtual double Height { get { return height; } set { height = value; root?.SetAttributeValue("height", value); } }
     public bool Selected { get { return selected; } set { selected = value; root?.SetOrRemoveAttribute("isSelected", value, DefaultValues.Selected); } }

@@ -144,12 +144,19 @@ public class Frame : ILibraryEventReceiver
         elements.Clear();
         root?.Element(ns + "elements")?.RemoveAll();
     }
+    public Text AddNewText(Rectangle boundingRect, string characters = "")
+    {
+        Text text = new(boundingRect, characters, ns);
+        elements.Add(text);
+        root?.Element(ns + "elements")?.Add(text.Root);
+        return text;
+    }
     internal Instance? AddItem(Item item)
     {
         // need to create constructors that turn items into instances unless it's a soundItem
         if (item is SoundItem soundItem)
         {
-            this.SoundName = soundItem.Href;
+            SoundName = soundItem.Href;
             return null;
         }
         if (item is SymbolItem symbolItem)
