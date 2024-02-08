@@ -1,7 +1,7 @@
 using NAudio.Wave;
 using NAudio.Flac;
 namespace CsXFL;
-public class SoundUtils
+public static class SoundUtils
 {
     public static ArraySegment<byte> ConvertFlacToWav(string flacFilePath)
     {

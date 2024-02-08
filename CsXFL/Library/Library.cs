@@ -227,7 +227,7 @@ public class Library
         if (!File.Exists(path)) return null;
         string itemName = Path.GetFileName(path);
         string targetPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, itemName);
-        if (File.Exists(targetPath)) return null;
+        while (File.Exists(targetPath)) targetPath += " copy";
         Item? imported = null;
         if (SYMBOL_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
