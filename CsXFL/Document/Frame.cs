@@ -67,17 +67,23 @@ public class Frame : ILibraryEventReceiver
         if (elementNodes is null) return;
         foreach (XElement elementNode in elementNodes)
         {
-            if (elementNode.Name.ToString().Contains("SymbolInstance"))
+            string elementName = elementNode.Name.LocalName.ToString();
+            switch (elementName)
             {
-                elements.Add(new SymbolInstance(elementNode));
-                LibraryEventMessenger.Instance.RegisterReceiver((elements.Last() as SymbolInstance)!.LibraryItemName, this);
+                case "DOMBitmapInstance":
+                    elements.Add(new BitmapInstance(elementNode));
+                    LibraryEventMessenger.Instance.RegisterReceiver((elements.Last() as BitmapInstance)!.LibraryItemName, this);
+                    break;
+                case "DOMSymbolInstance":
+                    elements.Add(new SymbolInstance(elementNode));
+                    LibraryEventMessenger.Instance.RegisterReceiver((elements.Last() as SymbolInstance)!.LibraryItemName, this);
+                    break;
+                case "DOMStaticText":
+                case "DOMDynamicText":
+                case "DOMInputText":
+                    elements.Add(new Text(elementNode));
+                    break;
             }
-            else if (elementNode.Name.ToString().Contains("BitmapInstance"))
-            {
-                elements.Add(new BitmapInstance(elementNode));
-                LibraryEventMessenger.Instance.RegisterReceiver((elements.Last() as BitmapInstance)!.LibraryItemName, this);
-            }
-
         }
     }
     internal Frame(in XElement frameNode, bool isBlank = false)

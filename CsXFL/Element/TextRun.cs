@@ -10,14 +10,14 @@ public class TextRun
     public string Characters { get { return characters; } set { characters = value; root?.SetAttributeValue("characters", value); } }
     public TextAttrs TextAttrs { get { return textAttrs; } }
     public XElement Root { get { return root!; } }
-    public TextRun(in XElement elementNode)
+    internal TextRun(in XElement elementNode)
     {
         root = elementNode;
         ns = root.Name.Namespace;
         characters = (string?)elementNode.Attribute("characters") ?? string.Empty;
         textAttrs = new TextAttrs(elementNode.Element(ns + "textAttrs")!.Element(ns + "DOMTextAttrs")!);
     }
-    public TextRun(string characters, XNamespace ns)
+    internal TextRun(string characters, XNamespace ns)
     {
         root = new XElement(ns + "DOMTextRun");
         this.ns = ns;
@@ -26,7 +26,7 @@ public class TextRun
         root.Add(new XElement(ns + "characters", characters));
         root.Add(new XElement(ns + "textAttrs", textAttrs.Root));
     }
-    public TextRun(in TextRun other)
+    internal TextRun(in TextRun other)
     {
         root = other.root == null ? null : new XElement(other.root);
         ns = other.ns;
