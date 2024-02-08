@@ -74,7 +74,7 @@ public class Timeline
         }
         return frameCount;
     }
-    public int AddNewLayer(string name, string layerType)
+    public int AddNewLayer(string name, string layerType = "normal")
     {
         XElement newLayer = new(ns + "DOMLayer");
         newLayer.SetAttributeValue("name", name);
