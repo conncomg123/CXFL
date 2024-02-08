@@ -7,7 +7,7 @@ public class LibraryEventMessenger
 {
     private static LibraryEventMessenger? instance;
     private LibraryEventMessenger() { }
-    private Dictionary<string, List<WeakReference<ILibraryEventReceiver>>> itemToReceiversMap = new();
+    private readonly Dictionary<string, List<WeakReference<ILibraryEventReceiver>>> itemToReceiversMap = new();
     public static LibraryEventMessenger Instance
     {
         get
@@ -29,14 +29,15 @@ public class LibraryEventMessenger
         ItemRenamed,
         ItemRemoved
     }
-    internal void RegisterReceiver(string itemName, ILibraryEventReceiver receiver)
+internal void RegisterReceiver(string itemName, ILibraryEventReceiver receiver)
+{
+    if (!itemToReceiversMap.TryGetValue(itemName, out var receivers))
     {
-        if (!itemToReceiversMap.ContainsKey(itemName))
-        {
-            itemToReceiversMap[itemName] = new List<WeakReference<ILibraryEventReceiver>>();
-        }
-        itemToReceiversMap[itemName].Add(new WeakReference<ILibraryEventReceiver>(receiver));
+        receivers = new List<WeakReference<ILibraryEventReceiver>>();
+        itemToReceiversMap[itemName] = receivers;
     }
+    receivers.Add(new WeakReference<ILibraryEventReceiver>(receiver));
+}
     internal void UnregisterReceiver(string itemName, ILibraryEventReceiver receiver)
     {
         if (itemToReceiversMap.TryGetValue(itemName, out var receivers))

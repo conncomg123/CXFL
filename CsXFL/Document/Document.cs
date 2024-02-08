@@ -41,6 +41,10 @@ public class Document
     {
         // new approach: extract FLA into temp directory, delete original FLA, create new FLA, add temp directory contents to new FLA
         string tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        while(Directory.Exists(tempDir))
+        {
+            tempDir = Path.Combine(tempDir, Path.GetRandomFileName());
+        }
         Directory.CreateDirectory(tempDir);
         using (ZipArchive archive = ZipFile.Open(filename, ZipArchiveMode.Read))
         {
@@ -143,5 +147,15 @@ public class Document
             library.AddItemToDocument(imported.Name);
         }
         return imported is not null;
+    }
+    public Timeline AddNewScene(string? name = null)
+    {
+        XElement newTimeline = new(ns + "DOMTimeline");
+        newTimeline.SetAttributeValue("name", name ?? "Scene " + (timelines.Count + 1));
+        root?.Element(ns + "timelines")?.Add(newTimeline);
+        Timeline timeline = new(newTimeline);
+        timelines.Add(timeline);
+        timeline.AddNewLayer("Layer 1");
+        return timeline;
     }
 }
