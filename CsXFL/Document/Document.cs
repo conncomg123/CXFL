@@ -152,10 +152,11 @@ public class Document
     {
         XElement newTimeline = new(ns + "DOMTimeline");
         newTimeline.SetAttributeValue("name", name ?? "Scene " + (timelines.Count + 1));
+        if(root?.Element(ns + "timelines") is null) root?.Add(new XElement(ns + "timelines"));
         root?.Element(ns + "timelines")?.Add(newTimeline);
         Timeline timeline = new(newTimeline);
         timelines.Add(timeline);
-        timeline.AddNewLayer("Layer 1");
+        timeline.AddNewLayer("Layer_1");
         timeline.Layers[0].KeyFrames[0].Duration = 1;
         return timeline;
     }
