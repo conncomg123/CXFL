@@ -6,7 +6,7 @@ public abstract class Item
     private static readonly HashSet<string> AcceptableItemTypes = new HashSet<string> {"undefined",
     "component", "movie clip", "graphic", "button", "puppet", "puppetBase", "folder", "font", "sound", "bitmap", "compiled clip",
     "screen", "video"};
-    private readonly XElement? root;
+    protected XElement? root;
     protected XNamespace ns;
     private readonly string itemType;
     private string name;

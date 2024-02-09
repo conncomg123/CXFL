@@ -221,11 +221,19 @@ public class Library
         }
         return true;
     }
-    internal Item? ImportItem(string path)
+    internal Item? ImportItem(string path, bool isFromOtherDocument)
     {
         // todo: create an XElement node from the path, construct an Item from that, then enqueue an Add operation
         if (!File.Exists(path)) return null;
-        string itemName = path.Substring(path.IndexOf(LIBRARY_PATH) + LIBRARY_PATH.Length + 1);
+        string itemName;
+        if(isFromOtherDocument && path.Contains(LIBRARY_PATH))
+        {
+            itemName = path.Substring(path.IndexOf(LIBRARY_PATH) + LIBRARY_PATH.Length + 1);
+        }
+        else
+        {
+            itemName = Path.GetFileName(path);
+        }
         string targetPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, itemName);
         while (File.Exists(targetPath))
         {
@@ -298,6 +306,18 @@ public class Library
         LibraryEventMessenger.Instance.NotifyItemRemoved(itemPath);
         return true;
     }
+    public bool NewFolder(string folderName)
+    {
+        if (ItemExists(folderName)) return false;
+        FolderItem folder = new(ns)
+        {
+            Name = folderName
+        };
+        items.Add(folderName, folder);
+        if(containingDocument.Root!.Element(ns + "folders") is null) containingDocument.Root!.AddFirst(new XElement(ns + "folders"));
+        containingDocument.Root!.Element(ns + "folders")!.Add(folder.Root);
+        return true;
+    }
     internal void Save(string filename)
     {
         ProcessItemOperations(filename);
@@ -327,6 +347,13 @@ public class Library
     private void ProcessAddOperation(ItemOperation operation, string targetPath, string filename)
     {
         if(!Directory.Exists(Path.GetDirectoryName(targetPath)!)) Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+        // also create FolderItems for each
+        string relativePath = targetPath.Substring(targetPath.IndexOf(LIBRARY_PATH) + LIBRARY_PATH.Length + 1);
+        string[] folders = relativePath.Split(Path.DirectorySeparatorChar);
+        for(int i = 0; i < folders.Length - 1; i++)
+        {
+           NewFolder(folders[i]);
+        }
         File.Copy(operation.NewItemPath!, targetPath);
         // update item's href
         Item item = operation.item;
@@ -350,7 +377,7 @@ public class Library
         if (sound.Name.EndsWith(".flac"))
         {
             // Animate converts flac files to wav and removes their header, then puts it in the bin folder. Really weird but we gotta do the same thing.
-            ArraySegment<byte> wavData = SoundUtils.ConvertFlacToWav(targetPath);
+            ArraySegment<byte> wavData = SoundUtils.ConvertFlacToWav(targetPath, sound);
             long unixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             int uniqueIndex = 0;
             string datFileName, wavPath;
@@ -361,7 +388,7 @@ public class Library
                 uniqueIndex++;
             } while (File.Exists(wavPath));
             using FileStream fs = new(wavPath, FileMode.Create);
-            fs.Write(wavData.Array!, WAV_HEADER_SIZE, wavData.Count - WAV_HEADER_SIZE);
+            fs.Write(wavData.Array!, WAV_HEADER_SIZE, wavData.Array!.Length - WAV_HEADER_SIZE);
             sound.SoundDataHRef = datFileName;
         }
     }

@@ -37,7 +37,7 @@ public static class An
         foreach (string file in filesToImport)
         {
             if (!File.Exists(file)) return false;
-            doc.ImportFile(file);
+            doc.Library.ImportItem(file, true);
         }
         if (isFla)
         {
@@ -78,4 +78,5 @@ public static class An
         }
         return dependencies;
     }
+
 }
