@@ -161,7 +161,7 @@ public class Rectangle
     public double Right { get { return right; } set { right = value; } }
     public double Top { get { return top; } set { top = value; } }
     public double Bottom { get { return bottom; } set { bottom = value; } }
-    public Rectangle(double left, double right, double top, double bottom)
+    public Rectangle(double left, double top, double right, double bottom)
     {
         this.left = left;
         this.right = right;
