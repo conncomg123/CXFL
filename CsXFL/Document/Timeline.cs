@@ -90,6 +90,7 @@ public class Timeline
             XElement elements = new(ns + "elements");
             frame.Add(elements);
         }
+        if(root?.Element(ns + "layers") is null) root?.Add(new XElement(ns + "layers"));
         root?.Element(ns + "layers")?.Add(newLayer);
         layers.Add(new Layer(newLayer));
         return layers.Count - 1;
