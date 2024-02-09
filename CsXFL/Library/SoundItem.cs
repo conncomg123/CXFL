@@ -35,7 +35,7 @@ public class SoundItem : Item // all the properties are propietary bullshit exce
         XElement soundItemNode = new(ns + "DOMSoundItem");
         soundItemNode.SetAttributeValue("href", path);
         soundItemNode.SetAttributeValue("name", Path.GetFileName(path));
-        soundItemNode.SetAttributeValue("format", SoundUtils.GetSoundFormat(path));
+        soundItemNode.SetAttributeValue("format", SoundUtils.GetSoundFormatString(path));
         soundItemNode.SetAttributeValue("sampleCount", SoundUtils.GetSoundSampleCount(path));
         return new SoundItem(soundItemNode);
     }

@@ -129,12 +129,12 @@ public class Document
     {
         return timelines[timelineIndex];
     }
-    public bool ImportFile(string filename, bool importToLibrary = true)
+    public bool ImportFile(string filename, bool importToLibrary = true, bool isFromOtherDocument = false)
     {
         Item? imported = null;
         try
         {
-            imported = library.ImportItem(filename);
+            imported = library.ImportItem(filename, isFromOtherDocument);
         }
         catch (Exception e)
         {

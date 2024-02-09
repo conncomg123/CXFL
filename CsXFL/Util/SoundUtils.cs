@@ -1,30 +1,39 @@
-using NAudio.Wave;
-using NAudio.Flac;
+using CSCore;
 namespace CsXFL;
 public static class SoundUtils
 {
     public static ArraySegment<byte> ConvertFlacToWav(string flacFilePath)
     {
-        using var memStream = new MemoryStream();
-        using var reader = new FlacReader(flacFilePath);
-        using var writer = new WaveFileWriter(memStream, reader.WaveFormat);
-        Span<byte> buffer = new byte[8192];
-        while (reader.Position < reader.Length)
-        {
-            if (reader.Length - reader.Position < buffer.Length)
-                buffer = new byte[reader.Length - reader.Position];
-            reader.ReadExactly(buffer);
-            writer.Write(buffer);
-        }
+        using CSCore.Codecs.FLAC.FlacFile flacFile = new(flacFilePath);
+        MemoryStream memStream = new();
+        flacFile.ChangeSampleRate(44100).ToSampleSource().ToWaveSource(16).WriteToWaveStream(memStream);
         bool success = memStream.TryGetBuffer(out ArraySegment<byte> segment);
         if (!success)
             throw new InvalidOperationException("Failed to convert FLAC to WAV.");
         return segment;
     }
-    public static string GetSoundFormat(string soundFilePath)
+    public static ArraySegment<byte> ConvertFlacToWav(string flacFilePath, SoundItem itemToUpdate)
+    {
+        using CSCore.Codecs.FLAC.FlacFile flacFile = new(flacFilePath);
+        MemoryStream memStream = new();
+        var wavData = flacFile.ChangeSampleRate(44100).ToSampleSource().ToWaveSource(16);
+        wavData.WriteToWaveStream(memStream);
+        bool success = memStream.TryGetBuffer(out ArraySegment<byte> segment);
+        if (!success)
+            throw new InvalidOperationException("Failed to convert FLAC to WAV.");
+        string format = GetSoundFormatString(wavData.WaveFormat.SampleRate, wavData.WaveFormat.BitsPerSample, wavData.WaveFormat.Channels);
+        itemToUpdate.Format = format;
+        return segment;
+    }
+    public static string GetSoundFormatString(string soundFilePath)
     {
         using var file = TagLib.File.Create(soundFilePath);
         string format = $"{file.Properties.AudioSampleRate / 1000}kHz {file.Properties.BitsPerSample}bit {(file.Properties.AudioChannels == 1 ? "Mono" : "Stereo")}";
+        return format;
+    }
+    public static string GetSoundFormatString(int sampleRate, int bitsPerSample, int channels)
+    {
+        string format = $"{sampleRate / 1000}kHz {bitsPerSample}bit {(channels == 1 ? "Mono" : "Stereo")}";
         return format;
     }
     public static int GetSoundSampleCount(string soundFilePath)
