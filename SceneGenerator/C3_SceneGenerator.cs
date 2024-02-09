@@ -86,6 +86,21 @@ static class SceneGenerator
             }
         }
 
+        public string GetLibraryPathByName(string characterName)
+        {
+            foreach (var config in characterConfigs.Values)
+            {
+                foreach (var character in config.Characters)
+                {
+                    if (character.SimplifiedName == characterName)
+                    {
+                        return character.LibraryPath;
+                    }
+                }
+            }
+            throw new Exception($"Library path for {characterName}'s rig was not located.");
+        }
+
         public void AddNameswap(string originalName, string truncatedName)
         {
             nameswapConfigs[originalName] = new NameswapConfig(originalName, truncatedName);
@@ -109,7 +124,7 @@ static class SceneGenerator
         }
 
         public int GetLetterspacing(string referenceName)
-        { 
+        {
             if (letterspacingConfigs.ContainsKey(referenceName))
             {
                 return letterspacingConfigs[referenceName].CorrectedSpacing;
@@ -206,7 +221,7 @@ static class SceneGenerator
         config.SkipBlinks = false;
 
         //Paths
-        config.PathToOperatingDocument = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\UltimateCsXFLTest\\DOMDocument.xml";
+        config.PathToOperatingDocument = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\UltimateCsXFLTest.fla";
         config.PathToSceneData = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\303_Scene_1_Scene_Generation_S1.txt";
         config.PathToCFGs = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\CFGs\\Scene 1";
         config.PathToLines = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\SCENE 1";
@@ -215,6 +230,7 @@ static class SceneGenerator
         //<!> We kind of don't need an Investigation vs Courtroom profile, just throw it all into one
         config.AddCharacter("Investigation", "Fair Devotion", "RIGS/Fluttershy►/Fluttershy►PoseScaled");
         config.AddCharacter("Investigation", "Judge", "RIGS/Fluttershy►/Fluttershy►PoseScaled");
+        config.AddCharacter("Investigation", "Apollo", "RIGS/Trucy►/Trucy►ScaledPoses");
 
         //Nameswaps
         config.AddNameswap("Turning Page", "Turning");
@@ -253,11 +269,13 @@ static class SceneGenerator
         if (!config.SkipLines && config.SkipRigs) throw new Exception("Cannot generate when skipping rigs but not line placement.");
     }
 
-    static void CreateLayerIfDoesntExist(this Document Doc, string LayerName)
+    static void CreateLayerIfDoesntExist(this Document Doc, string LayerName, string LayerType = "normal")
     {
-        if (Doc.Timelines[0].FindLayerIndex(LayerName).Count == 0) { Doc.Timelines[0].AddNewLayer(LayerName); }
+        if (Doc.Timelines[Doc.CurrentTimeline].FindLayerIndex(LayerName).Count == 0) { Doc.Timelines[Doc.CurrentTimeline].AddNewLayer(LayerName, LayerType); }
     }
 
+
+    // <!> Ported bounding boxes from JSFL scene gen, bounding boxes seem to be slightly off from 3-1 to 3-3 scenes if you compare
     static void PlaceText(this Document Doc, string SceneData)
     {
         SingletonConfig config = SingletonConfig.Instance;
@@ -276,7 +294,6 @@ static class SceneGenerator
             string LineID = dialogueKey;
             string Character = dialogueLine.CharacterName;
             string Dialogue = dialogueLine.LineText;
-            string Emotion = dialogueLine.Emotion;
 
             int LineIndex = int.Parse(dialogueKey.Substring(3, 3));
             int SceneIndex = (int)Math.Ceiling((double)LineIndex / config.ChunkSize);
@@ -293,7 +310,6 @@ static class SceneGenerator
 
             int TextboxLayerIndex = CurrentTimeline.FindLayerIndex("TEXTBOX")[0];
             int TextLayerIndex = CurrentTimeline.FindLayerIndex("TEXT")[0];
-
             int OperatingFrameIndex = config.DefaultFrameDuration * (LineIndex - 1);
 
             if ((OperatingFrameIndex + config.DefaultFrameDuration) > CurrentTimeline.Layers[TextLayerIndex].GetFrameCount())
@@ -303,18 +319,23 @@ static class SceneGenerator
 
             CurrentTimeline.Layers[TextLayerIndex].ConvertToKeyframes(OperatingFrameIndex);
 
-            Doc.Library.AddItemToDocument("OTHER ASSETS/Textbox", CurrentTimeline.Layers[TextboxLayerIndex].GetFrame(OperatingFrameIndex), 0, 0);
+            if (CurrentTimeline.Layers[TextboxLayerIndex].GetFrame(0).Elements.Count == 0)
+            {
+                Doc.Library.AddItemToDocument("OTHER ASSETS/Textbox", CurrentTimeline.Layers[TextboxLayerIndex].GetFrame(OperatingFrameIndex), 0, 0);
+                SymbolInstance TextboxElement = CurrentTimeline.Layers[TextboxLayerIndex].GetFrame(OperatingFrameIndex).Elements[0] as SymbolInstance;
+                TextboxElement.Loop = "single frame";
+                TextboxElement.ScaleX = 1.34164876055;
+                TextboxElement.ScaleY = 1.34152669671;
+            }
 
-            SymbolInstance TextboxElement = CurrentTimeline.Layers[TextboxLayerIndex].GetFrame(OperatingFrameIndex).Elements[0] as SymbolInstance;
-            TextboxElement.Loop = "single frame";
-            //Do stuff here.
-            Text DialogueText = CurrentTimeline.Layers[TextLayerIndex].GetFrame(OperatingFrameIndex).AddNewText(DialogueBounding, Dialogue.Trim());
+            CurrentTimeline.Layers[TextLayerIndex].GetFrame(OperatingFrameIndex).ClearElements();
+            Text DialogueText = CurrentTimeline.Layers[TextLayerIndex].GetFrame(OperatingFrameIndex).AddNewText(DialogueBounding, Dialogue);
             Text SpeakerText = CurrentTimeline.Layers[TextLayerIndex].GetFrame(OperatingFrameIndex).AddNewText(SpeakerBounding, config.GetTruncatedName(Character).Trim());
 
             DialogueText.SetTextAttr("alignment", "left");
             DialogueText.SetTextAttr("face", "Suburga 2 Semi-condensed Regular");
             DialogueText.SetTextAttr("size", 80);
-            DialogueText.SetTextAttr("fillColor", "#0xffffff");
+            DialogueText.SetTextAttr("fillColor", "#ffffff");
             DialogueText.SetTextAttr("letterSpacing", 2);
             DialogueText.SetTextAttr("lineSpacing", 1);
             DialogueText.TextType = "dynamic";
@@ -333,7 +354,7 @@ static class SceneGenerator
             SpeakerText.SetTextAttr("alignment", "left");
             SpeakerText.SetTextAttr("face", "Suburga 2 Semi-condensed Regular");
             SpeakerText.SetTextAttr("size", 84);
-            SpeakerText.SetTextAttr("fillColor", "#ffffff#");
+            SpeakerText.SetTextAttr("fillColor", "#ffffff");
             SpeakerText.SetTextAttr("letterSpacing", 2);
             SpeakerText.SetTextAttr("lineSpacing", 1);
             SpeakerText.TextType = "dynamic";
@@ -341,12 +362,158 @@ static class SceneGenerator
             SpeakerText.Name = "SpeakerText";
             SpeakerText.FontRenderingMode = "standard";
 
-            if (config.GetLetterspacing(Character) != null)
-            {
-                SpeakerText.SetTextAttr("lineSpacing", config.GetLetterspacing(Character));
-            }
+            if (config.GetLetterspacing(Character) != null) { SpeakerText.SetTextAttr("lineSpacing", config.GetLetterspacing(Character)); }
 
             CurrentTimeline.Layers[TextLayerIndex].GetFrame(OperatingFrameIndex).Name = LineID;
+        }
+    }
+
+    static void PlaceRigs(this Document Doc, string SceneData)
+    {
+        SingletonConfig config = SingletonConfig.Instance;
+
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(SceneData, options);
+
+        foreach (var dialogueKey in deserializedJson["Dialogue"].Keys)
+        {
+            var dialogueLine = deserializedJson["Dialogue"][dialogueKey];
+            string Character = dialogueLine.CharacterName;
+            string CharacterLayerName = Character.ToUpper();
+            string Emotion = dialogueLine.Emotion;
+
+            int LineIndex = int.Parse(dialogueKey.Substring(3, 3));
+            int SceneIndex = (int)Math.Ceiling((double)LineIndex / config.ChunkSize);
+
+            Timeline CurrentTimeline = Doc.GetTimeline(SceneIndex - 1);
+
+            CreateLayerIfDoesntExist(Doc, "VECTOR_CHARACTERS", "folder");
+            CreateLayerIfDoesntExist(Doc, CharacterLayerName);
+
+            int CharacterLayerIndex = CurrentTimeline.FindLayerIndex(CharacterLayerName)[0];
+            int TextLayerIndex = CurrentTimeline.FindLayerIndex("TEXT")[0];
+            int OperatingFrameIndex = config.DefaultFrameDuration * (LineIndex - 1);
+
+            CurrentTimeline.Layers[CharacterLayerIndex].ConvertToKeyframes(OperatingFrameIndex);
+            CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex).ClearElements();
+
+            bool WasRigPlaced = Doc.Library.AddItemToDocument(config.GetLibraryPathByName(Character), CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex));
+            if (WasRigPlaced)
+            {
+                SymbolInstance CharacterRig = CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex).Elements[0] as SymbolInstance;
+                CharacterRig.TransformationPoint.X = 0;
+                CharacterRig.TransformationPoint.Y = 0;
+                CharacterRig.Loop = "single frame";
+                CharacterRig.FirstFrame = (uint)(PoseAutomation(Doc, config.GetLibraryPathByName(Character), Emotion));
+            }
+            else { throw new Exception("An error occured when attempting rig placement."); }
+
+            CurrentTimeline.Layers[CharacterLayerIndex].ParentLayerIndex = CurrentTimeline.FindLayerIndex("VECTOR_CHARACTERS")[0];
+        }
+    }
+    public class DoubleIntPair
+    {
+        public double DoubleValue { get; set; }
+        public int IntValue { get; set; }
+
+        public DoubleIntPair(double d, int i)
+        {
+            DoubleValue = d;
+            IntValue = i;
+        }
+    }
+    static double LevenshteinRatio(string s1, string s2)
+    {
+        int maxLen = Math.Max(s1.Length, s2.Length);
+        if (maxLen == 0)
+            return 1.0;
+
+        int distance = LevenshteinDistance(s1, s2);
+
+        return 1.0 - (double)distance / maxLen;
+    }
+
+    //Yeah a human wrote this
+    static int LevenshteinDistance(string s1, string s2)
+    {
+        int[,] matrix = new int[s1.Length + 1, s2.Length + 1];
+
+        for (int i = 0; i <= s1.Length; i++) { matrix[i, 0] = i; }
+
+        for (int j = 0; j <= s2.Length; j++) { matrix[0, j] = j; }
+
+        for (int i = 1; i <= s1.Length; i++)
+        {
+            for (int j = 1; j <= s2.Length; j++)
+            {
+                int cost = (s1[i - 1] == s2[j - 1]) ? 0 : 1;
+
+                matrix[i, j] = Math.Min(Math.Min(matrix[i - 1, j] + 1, matrix[i, j - 1] + 1),
+                                         matrix[i - 1, j - 1] + cost);
+            }
+        }
+
+        return matrix[s1.Length, s2.Length];
+    }
+    static DoubleIntPair FindMaxDouble(List<DoubleIntPair> pairs)
+    {
+        if (pairs.Count == 0)
+            throw new ArgumentException("List is empty");
+
+        DoubleIntPair maxPair = pairs[0];
+        foreach (var pair in pairs)
+        {
+            if (pair.DoubleValue > maxPair.DoubleValue)
+            {
+                maxPair = pair;
+            }
+        }
+        return maxPair;
+    }
+
+    static int PoseAutomation(this Document Doc, string LibraryPath, string Emotion)
+    {
+        SymbolItem RigSymbol = Doc.Library.Items[LibraryPath] as SymbolItem;
+        Layer RigEE_Data = RigSymbol.Timeline.Layers[RigSymbol.Timeline.Layers.Count - 1];
+
+        if (Emotion == "") { Emotion = "-"; }
+
+        List<DoubleIntPair> pairs = new List<DoubleIntPair>();
+
+        foreach (Frame ConsiderKeyframe in RigEE_Data.KeyFrames)
+        {
+            pairs.Add(new DoubleIntPair(LevenshteinRatio(Emotion, ConsiderKeyframe.Name), ConsiderKeyframe.StartFrame));
+        }
+
+        DoubleIntPair maxPair = FindMaxDouble(pairs);
+
+        return maxPair.IntValue;
+    }
+
+    static void OrganizeLayerStructure(this Document Doc, string[] DesiredLayerOrder)
+    {
+        for (int SceneIndex = 0; SceneIndex < Doc.Timelines.Count; SceneIndex++)
+        {
+            foreach (var LayerName in DesiredLayerOrder)
+            {
+                CreateLayerIfDoesntExist(Doc, LayerName);
+
+                int LayerIndex = Doc.Timelines[SceneIndex].FindLayerIndex(LayerName)[0];
+                int TargetIndex = Array.IndexOf(DesiredLayerOrder, LayerName);
+
+                if (LayerIndex != TargetIndex)
+                {
+                    // Determine the reference index for reordering
+                    int ReferenceIndex = TargetIndex > 0 ? Doc.Timelines[SceneIndex].FindLayerIndex(DesiredLayerOrder[TargetIndex - 1])[0] + 1 : 0;
+
+                    // Ensure the reference index is within bounds
+                    ReferenceIndex = Math.Min(ReferenceIndex, Doc.Timelines[SceneIndex].Layers.Count);
+
+                    bool AddBefore = true; // Always add before for correct ordering
+
+                    Doc.Timelines[SceneIndex].ReorderLayer(LayerIndex, ReferenceIndex, AddBefore);
+                }
+            }
         }
     }
 
@@ -372,11 +539,19 @@ static class SceneGenerator
            }
         }";
 
+        // <!> If you can figure out what type the deserialized JSON is, you can deserialize it here
+        // and pass it in to the required functions instead of deserializing at the start of each function.
+
         SetConfiguration();
         SingletonConfig config = SingletonConfig.Instance;
         Document Doc = new(config.PathToOperatingDocument);
         InputValidation(Doc);
         PlaceText(Doc, json);
+        if (!config.SkipRigs) { PlaceRigs(Doc, json); };
+
+        string[] LayerOrder = new string[] { "FLASH", "INTERJECTION", "FADE", "GAVEL", "TEXT", "TEXTBOX", "EVIDENCE", "DESKS", "JAM_MASK", "BACKGROUNDS" };
+        OrganizeLayerStructure(Doc, LayerOrder);
+
         Doc.Save();
     }
 }
