@@ -4,6 +4,9 @@ using System.Diagnostics;
 using System.Text.Json;
 using static SceneGenerator;
 
+// <!> Chunking does not work, this is a CurrentTimeline issue
+// <!> Undecided about keeping viewmode profiles for CharacterConfig
+
 static class SceneGenerator
 {
     public sealed class SingletonConfig
@@ -98,7 +101,16 @@ static class SceneGenerator
                     }
                 }
             }
-            throw new Exception($"Library path for {characterName}'s rig was not located.");
+            SingletonConfig readConfig = SingletonConfig.Instance;
+            if (characterName != readConfig.Defense)
+            {
+                throw new Exception($"Library path for {characterName}'s rig was not located.");
+            }
+            else
+            {
+                return "DefenseRig";
+            }
+
         }
 
         public void AddNameswap(string originalName, string truncatedName)
@@ -203,7 +215,7 @@ static class SceneGenerator
         config.ViewMode = "InvestigationMode";
         config.DefaultFrameDuration = 24;
 
-        config.Defense = "Sonata";
+        config.Defense = "Apollo";
         config.Prosecutor = "Luna";
         config.Judge = "Judge";
         config.Cocouncil = "Phoenix";
@@ -222,15 +234,16 @@ static class SceneGenerator
 
         //Paths
         config.PathToOperatingDocument = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\UltimateCsXFLTest.fla";
-        config.PathToSceneData = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\303_Scene_1_Scene_Generation_S1.txt";
+        config.PathToSceneData = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\303S1_output.json";
         config.PathToCFGs = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\CFGs\\Scene 1";
         config.PathToLines = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\SCENE 1";
 
         //Characters
-        //<!> We kind of don't need an Investigation vs Courtroom profile, just throw it all into one
-        config.AddCharacter("Investigation", "Fair Devotion", "RIGS/Fluttershy►/Fluttershy►PoseScaled");
-        config.AddCharacter("Investigation", "Judge", "RIGS/Fluttershy►/Fluttershy►PoseScaled");
-        config.AddCharacter("Investigation", "Apollo", "RIGS/Trucy►/Trucy►ScaledPoses");
+        config.AddCharacter("Investigation", "Trucy", "RIGS/Trucy►/Trucy►ScaledPoses");
+        config.AddCharacter("Investigation", "Rarity", "RIGS/RARITY►/Rarity►PoseScaled");
+        config.AddCharacter("Investigation", "Equity", "RIGS/EquityArmored►/EquityArmored►PoseScaled");
+        config.AddCharacter("Investigation", "Applejack", "RIGS/APPLEJACK►/APPLEJACK►PoseScaled");
+        config.AddCharacter("Investigation", "Guard", "RIGS/Trucy►/Trucy►ScaledPoses");
 
         //Nameswaps
         config.AddNameswap("Turning Page", "Turning");
@@ -244,10 +257,8 @@ static class SceneGenerator
     static void InputValidation(this Document Doc)
     {
         SingletonConfig config = SingletonConfig.Instance;
-        //<!> We kind of don't need an Investigation vs Courtroom profile, just throw it all into one
         CharacterConfig RigConfig = config.GetCharacterConfig("Investigation");
 
-        //<!> Can we more dynamically check for existing things by passing Doc into SymbolConfig & CharacterConfig?
         foreach (var character in RigConfig.Characters)
         {
             string simplifiedName = character.SimplifiedName;
@@ -303,14 +314,15 @@ static class SceneGenerator
                 Doc.AddNewScene("Scene " + SceneIndex);
             }
 
-            Timeline CurrentTimeline = Doc.GetTimeline(SceneIndex - 1);
+            Doc.CurrentTimeline = (SceneIndex - 1);
+            Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
 
             CreateLayerIfDoesntExist(Doc, "TEXTBOX");
             CreateLayerIfDoesntExist(Doc, "TEXT");
 
             int TextboxLayerIndex = CurrentTimeline.FindLayerIndex("TEXTBOX")[0];
             int TextLayerIndex = CurrentTimeline.FindLayerIndex("TEXT")[0];
-            int OperatingFrameIndex = config.DefaultFrameDuration * (LineIndex - 1);
+            int OperatingFrameIndex = config.DefaultFrameDuration * ((LineIndex - 1) % config.ChunkSize);
 
             if ((OperatingFrameIndex + config.DefaultFrameDuration) > CurrentTimeline.Layers[TextLayerIndex].GetFrameCount())
             {
@@ -368,6 +380,7 @@ static class SceneGenerator
         }
     }
 
+    // <!> Need logic to extend the last placed rig when config.Defense is the character
     static void PlaceRigs(this Document Doc, string SceneData)
     {
         SingletonConfig config = SingletonConfig.Instance;
@@ -385,16 +398,20 @@ static class SceneGenerator
             int LineIndex = int.Parse(dialogueKey.Substring(3, 3));
             int SceneIndex = (int)Math.Ceiling((double)LineIndex / config.ChunkSize);
 
-            Timeline CurrentTimeline = Doc.GetTimeline(SceneIndex - 1);
+            Doc.CurrentTimeline = (SceneIndex - 1);
+            Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
+
+            if (Character == config.Defense) { continue; } //Wow
 
             CreateLayerIfDoesntExist(Doc, "VECTOR_CHARACTERS", "folder");
             CreateLayerIfDoesntExist(Doc, CharacterLayerName);
 
             int CharacterLayerIndex = CurrentTimeline.FindLayerIndex(CharacterLayerName)[0];
             int TextLayerIndex = CurrentTimeline.FindLayerIndex("TEXT")[0];
-            int OperatingFrameIndex = config.DefaultFrameDuration * (LineIndex - 1);
+            int OperatingFrameIndex = config.DefaultFrameDuration * ((LineIndex - 1) % config.ChunkSize);
 
             CurrentTimeline.Layers[CharacterLayerIndex].ConvertToKeyframes(OperatingFrameIndex);
+            CurrentTimeline.Layers[CharacterLayerIndex].ConvertToKeyframes(OperatingFrameIndex + config.DefaultFrameDuration);
             CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex).ClearElements();
 
             bool WasRigPlaced = Doc.Library.AddItemToDocument(config.GetLibraryPathByName(Character), CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex));
@@ -404,7 +421,7 @@ static class SceneGenerator
                 CharacterRig.TransformationPoint.X = 0;
                 CharacterRig.TransformationPoint.Y = 0;
                 CharacterRig.Loop = "single frame";
-                CharacterRig.FirstFrame = (uint)(PoseAutomation(Doc, config.GetLibraryPathByName(Character), Emotion));
+                CharacterRig.FirstFrame = PoseAutomation(Doc, config.GetLibraryPathByName(Character), Emotion);
             }
             else { throw new Exception("An error occured when attempting rig placement."); }
 
@@ -471,6 +488,7 @@ static class SceneGenerator
         return maxPair;
     }
 
+    // <!> Want config.EE_Bias, unsure if/how to implement smoothing for transient emotions
     static int PoseAutomation(this Document Doc, string LibraryPath, string Emotion)
     {
         SymbolItem RigSymbol = Doc.Library.Items[LibraryPath] as SymbolItem;
@@ -494,6 +512,9 @@ static class SceneGenerator
     {
         for (int SceneIndex = 0; SceneIndex < Doc.Timelines.Count; SceneIndex++)
         {
+            Doc.CurrentTimeline = SceneIndex;
+            Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
+
             foreach (var LayerName in DesiredLayerOrder)
             {
                 CreateLayerIfDoesntExist(Doc, LayerName);
@@ -514,36 +535,23 @@ static class SceneGenerator
                     Doc.Timelines[SceneIndex].ReorderLayer(LayerIndex, ReferenceIndex, AddBefore);
                 }
             }
+            //Hi Connor
+            //CreateLayerIfDoesntExist(Doc, "Layer_1");
+            int DefaultLayerIndex = CurrentTimeline.FindLayerIndex("Layer 1")[0];
+            CurrentTimeline.DeleteLayer(DefaultLayerIndex);
+
         }
     }
 
     static void Main()
     {
-        string json = @"{
-           ""Dialogue"": {
-               ""s1_001_apollo"": {
-                   ""CharacterName"": ""Apollo"",
-                   ""LineText"": ""I just feel like I’m cursed, y’know?"",
-                   ""Emotion"": ""C""
-               },
-               ""s1_002_apollo"": {
-                   ""CharacterName"": ""Apollo"",
-                   ""LineText"": ""I can't shake this feeling of dread."",
-                   ""Emotion"": ""D""
-               },
-               ""s1_003_apollo"": {
-                   ""CharacterName"": ""Apollo"",
-                   ""LineText"": ""It's like the weight of the world is on my shoulders."",
-                   ""Emotion"": ""E""
-               }
-           }
-        }";
 
         // <!> If you can figure out what type the deserialized JSON is, you can deserialize it here
         // and pass it in to the required functions instead of deserializing at the start of each function.
 
         SetConfiguration();
         SingletonConfig config = SingletonConfig.Instance;
+        string json = File.ReadAllText(config.PathToSceneData);
         Document Doc = new(config.PathToOperatingDocument);
         InputValidation(Doc);
         PlaceText(Doc, json);
