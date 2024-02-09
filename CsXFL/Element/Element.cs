@@ -26,6 +26,8 @@ public abstract class Element
     public virtual double Height { get { return height; } set { height = value; root?.SetAttributeValue("height", value); } }
     public bool Selected { get { return selected; } set { selected = value; root?.SetOrRemoveAttribute("isSelected", value, DefaultValues.Selected); } }
     public Matrix Matrix { get { return matrix; } set { SetMatrix(value); } }
+    public double ScaleX { get { return matrix.A; } set { matrix.A = value; } }
+    public double ScaleY { get { return matrix.D; } set { matrix.D = value; } }
     public Point TransformationPoint { get { return transformationPoint; } }
     internal Element(XNamespace ns)
     {
