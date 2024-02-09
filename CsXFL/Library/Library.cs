@@ -225,9 +225,13 @@ public class Library
     {
         // todo: create an XElement node from the path, construct an Item from that, then enqueue an Add operation
         if (!File.Exists(path)) return null;
-        string itemName = Path.GetFileName(path);
+        string itemName = path.Substring(path.IndexOf(LIBRARY_PATH) + LIBRARY_PATH.Length + 1);
         string targetPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, itemName);
-        while (File.Exists(targetPath)) targetPath += " copy";
+        while (File.Exists(targetPath))
+        {
+            itemName = Path.GetFileNameWithoutExtension(itemName) + " copy" + Path.GetExtension(itemName);
+            targetPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, itemName);
+        } 
         Item? imported = null;
         if (SYMBOL_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
@@ -261,7 +265,7 @@ public class Library
         bool isSymbol = false;
         if (item is SymbolItem symbol)
         {
-            symbol.Include.Href = newName + ".xml";
+            symbol.Include.Href = newName;
             symbol.Timeline.Name = newName;
             isSymbol = true;
         }
@@ -322,12 +326,13 @@ public class Library
 
     private void ProcessAddOperation(ItemOperation operation, string targetPath, string filename)
     {
+        if(!Directory.Exists(Path.GetDirectoryName(targetPath)!)) Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
         File.Copy(operation.NewItemPath!, targetPath);
         // update item's href
         Item item = operation.item;
         if (item is SymbolItem symbol)
         {
-            symbol.Include.Href = operation.ItemName + ".xml";
+            symbol.Include.Href = operation.ItemName;
         }
         if (item is SoundItem sound)
         {

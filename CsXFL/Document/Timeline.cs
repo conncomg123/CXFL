@@ -195,8 +195,6 @@ public class Timeline
     public void InsertFrames(int numFrames, bool allLayers = false, int? frameNumIndex = null, Layer? whereToInsert = null)
     {
         frameNumIndex ??= CurrentFrame;
-        whereToInsert ??= layers[CurrentLayer];
-        if (whereToInsert.LayerType == "folder") throw new ArgumentException("Cannot insert frames into a folder layer");
         if (allLayers)
         {
             foreach (Layer layer in layers)
@@ -207,13 +205,14 @@ public class Timeline
         }
         else
         {
+            whereToInsert ??= layers[CurrentLayer];
+            if (whereToInsert.LayerType == "folder") throw new ArgumentException("Cannot insert frames into a folder layer");
             whereToInsert.InsertFrames(numFrames, frameNumIndex.Value);
         }
     }
     public void RemoveFrames(int numFrames, bool allLayers = false, int? frameNumIndex = null, Layer? whereToRemove = null)
     {
         frameNumIndex ??= CurrentFrame;
-        whereToRemove ??= layers[CurrentLayer];
         if (allLayers)
         {
             foreach (Layer layer in layers)
@@ -224,6 +223,7 @@ public class Timeline
         }
         else
         {
+            whereToRemove ??= layers[CurrentLayer];
             whereToRemove.RemoveFrames(numFrames, frameNumIndex.Value);
         }
     }
