@@ -156,6 +156,7 @@ public class Document
         Timeline timeline = new(newTimeline);
         timelines.Add(timeline);
         timeline.AddNewLayer("Layer 1");
+        timeline.Layers[0].KeyFrames[0].Duration = 1;
         return timeline;
     }
 }
