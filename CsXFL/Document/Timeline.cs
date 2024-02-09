@@ -196,12 +196,12 @@ public class Timeline
     {
         frameNumIndex ??= CurrentFrame;
         whereToInsert ??= layers[CurrentLayer];
-        if(whereToInsert.LayerType == "folder") throw new ArgumentException("Cannot insert frames into a folder layer");
+        if (whereToInsert.LayerType == "folder") throw new ArgumentException("Cannot insert frames into a folder layer");
         if (allLayers)
         {
             foreach (Layer layer in layers)
             {
-                if(layer.LayerType == "folder") continue;
+                if (layer.LayerType == "folder") continue;
                 layer.InsertFrames(numFrames, frameNumIndex.Value);
             }
         }
@@ -218,13 +218,34 @@ public class Timeline
         {
             foreach (Layer layer in layers)
             {
-                if(layer.LayerType == "folder") continue;
+                if (layer.LayerType == "folder") continue;
                 layer.RemoveFrames(numFrames, frameNumIndex.Value);
             }
         }
         else
         {
             whereToRemove.RemoveFrames(numFrames, frameNumIndex.Value);
+        }
+    }
+    public void ReorderLayer(int layerToMove, int layerToPutItBy, bool addBefore = true)
+    {
+        Layer layer = layers[layerToMove];
+        layers.RemoveAt(layerToMove);
+        layers.Insert(addBefore ? layerToPutItBy : layerToPutItBy + 1, layer);
+
+        XElement? layersElement = root?.Element(ns + "layers");
+        if (layersElement != null)
+        {
+            XElement? layerElement = layer.Root;
+            layerElement?.Remove();
+            if (addBefore)
+            {
+                layersElement.Elements().ElementAt(layerToPutItBy).AddBeforeSelf(layerElement);
+            }
+            else
+            {
+                layersElement.Elements().ElementAt(layerToPutItBy).AddAfterSelf(layerElement);
+            }
         }
     }
 }

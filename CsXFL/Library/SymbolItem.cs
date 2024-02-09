@@ -7,7 +7,7 @@ public class SymbolItem : Item
     {
         public const string SymbolType = "movie clip";
     }
-    private static readonly HashSet<string> AcceptableSymbolTypes = new HashSet<string> { "graphic", "button", "movie clip" };
+    private static readonly HashSet<string> AcceptableSymbolTypes = new HashSet<string> { "graphic", "button", "movie clip", "puppet", "puppetBase" };
     private Include include;
     private readonly string symbolType;
     private readonly Timeline timeline;
