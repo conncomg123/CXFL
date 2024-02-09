@@ -52,7 +52,8 @@ public class SymbolItem : Item
         {
             throw new InvalidDataException("Invalid XFL file: " + path);
         }
-        XElement includeNode = new("Include");
+        XNamespace ns = xflTree.Root.Name.Namespace;
+        XElement includeNode = new(ns + "Include");
         includeNode.SetAttributeValue("href", path);
         return new SymbolItem(xflTree.Root, includeNode);
     }
