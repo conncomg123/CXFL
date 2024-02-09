@@ -224,8 +224,8 @@ static class LipsyncAPI
                 Frame2 = OFFSET_MAP[PHONEME_TO_MOUTH_SHAPE[phoneme]];
             };
 
-            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.FirstFrame = (uint)(PoseStartFrame + Frame2);
-            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.LastFrame = (uint)(PoseStartFrame + Frame2 + LENGTH_MAP[PHONEME_TO_MOUTH_SHAPE[phoneme]] - 1);
+            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.FirstFrame = PoseStartFrame + Frame2;
+            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.LastFrame = PoseStartFrame + Frame2 + LENGTH_MAP[PHONEME_TO_MOUTH_SHAPE[phoneme]] - 1;
             (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.Loop = "play once";
 
             if (SINGLE_FRAME_MOUTH_SHAPES.Contains(PHONEME_TO_MOUTH_SHAPE[phoneme]))
@@ -255,8 +255,8 @@ static class LipsyncAPI
                 var MouthShape = DIPHTHONG_ORDERING[DiphthongMap[Frame3]][i];
                 var FirstFrame = OFFSET_MAP[MouthShape];
 
-                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.FirstFrame = (uint)(PoseStartFrame + FirstFrame);
-                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.LastFrame = (uint)(PoseStartFrame + FirstFrame + LENGTH_MAP[MouthShape] - 1);
+                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.FirstFrame = PoseStartFrame + FirstFrame;
+                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.LastFrame = PoseStartFrame + FirstFrame + LENGTH_MAP[MouthShape] - 1;
                 (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.Loop = "play once";
 
                 if (SINGLE_FRAME_MOUTH_SHAPES.Contains(MouthShape))
