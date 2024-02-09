@@ -535,9 +535,8 @@ static class SceneGenerator
                     Doc.Timelines[SceneIndex].ReorderLayer(LayerIndex, ReferenceIndex, AddBefore);
                 }
             }
-            //Hi Connor
-            //CreateLayerIfDoesntExist(Doc, "Layer_1");
-            int DefaultLayerIndex = CurrentTimeline.FindLayerIndex("Layer 1")[0];
+
+            int DefaultLayerIndex = CurrentTimeline.FindLayerIndex("Layer_1")[0];
             CurrentTimeline.DeleteLayer(DefaultLayerIndex);
 
         }
