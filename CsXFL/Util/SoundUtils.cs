@@ -44,7 +44,8 @@ public static class SoundUtils
     }
     public static double GetSoundDuration(string soundFilePath)
     {
-        using var file = TagLib.File.Create(soundFilePath);
-        return file.Properties.Duration.TotalSeconds;
+        using var file = CSCore.Codecs.CodecFactory.Instance.GetCodec(soundFilePath);
+        double duration = file.GetLength().TotalMilliseconds;
+        return duration;
     }
 }

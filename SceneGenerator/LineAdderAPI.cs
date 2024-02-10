@@ -2,10 +2,10 @@
 
 static class LineAdderAPI
 {
-    public static void ExtendVoiceLine(int Duration, int FrameReference, int SceneNumber, Document Doc)
+    public static void ExtendVoiceLine(double Duration, int FrameReference, int SceneNumber, Document Doc)
     {
         Timeline CurrentTimeline = Doc.GetTimeline(SceneNumber);
-        CurrentTimeline.InsertFrames(12 + (int)(Math.Ceiling(Doc.FrameRate * Duration / 1000)) - CurrentTimeline.Layers[Doc.GetTimeline(Doc.CurrentTimeline).FindLayerIndex("TEXT")[0]].GetFrame(FrameReference).Duration, true, FrameReference);
+        CurrentTimeline.InsertFrames(12 + (int)Math.Ceiling(Doc.FrameRate * Duration / 1000) - CurrentTimeline.Layers[Doc.GetTimeline(Doc.CurrentTimeline).FindLayerIndex("TEXT")[0]].GetFrame(FrameReference).Duration, true, FrameReference);
     }
 
     public static void PlaceLine(string AttemptFile, int FrameReference, int SceneNumber, Document Doc)
@@ -19,7 +19,7 @@ static class LineAdderAPI
         Doc.ImportFile(AttemptFile);
         CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex(LayerName)[0]].ConvertToKeyframes(FrameReference);
         Doc.Library.AddItemToDocument(FrameReferenceName + ".flac", CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex(LayerName)[0]].GetFrame(FrameReference));
-        ExtendVoiceLine((int)(SoundUtils.GetSoundDuration(AttemptFile)) * 1000, FrameReference, SceneNumber, Doc);
+        ExtendVoiceLine(SoundUtils.GetSoundDuration(AttemptFile), FrameReference, SceneNumber, Doc);
     }
 
     public static void InsertLinesChunked(this Document Doc, string FolderPath)
