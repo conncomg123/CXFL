@@ -1,16 +1,19 @@
 ﻿using CsXFL;
-
+namespace SceneGenerator.API;
 static class LineAdderAPI
 {
+
     public static void ExtendVoiceLine(double Duration, int FrameReference, int SceneNumber, Document Doc)
     {
-        Timeline CurrentTimeline = Doc.GetTimeline(SceneNumber);
-        CurrentTimeline.InsertFrames(12 + (int)Math.Ceiling(Doc.FrameRate * Duration / 1000) - CurrentTimeline.Layers[Doc.GetTimeline(Doc.CurrentTimeline).FindLayerIndex("TEXT")[0]].GetFrame(FrameReference).Duration, true, FrameReference);
+        Doc.CurrentTimeline = (SceneNumber);
+        Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
+        CurrentTimeline.InsertFrames(3 + (int)Math.Ceiling(Doc.FrameRate * Duration / 1000) - CurrentTimeline.Layers[Doc.GetTimeline(Doc.CurrentTimeline).FindLayerIndex("TEXT")[0]].GetFrame(FrameReference).Duration, true, FrameReference);
     }
 
     public static void PlaceLine(string AttemptFile, int FrameReference, int SceneNumber, Document Doc)
     {
-        Timeline CurrentTimeline = Doc.GetTimeline(SceneNumber);
+        Doc.CurrentTimeline = (SceneNumber);
+        Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
         string FrameReferenceName = CurrentTimeline.Layers[Doc.GetTimeline(Doc.CurrentTimeline).FindLayerIndex("TEXT")[0]].GetFrame(FrameReference).Name;
         string LayerName = FrameReferenceName.Substring(7).Replace(". ", "").Replace(" ", "_").ToUpper() + "_VOX";        
 
@@ -20,14 +23,16 @@ static class LineAdderAPI
         CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex(LayerName)[0]].ConvertToKeyframes(FrameReference);
         Doc.Library.AddItemToDocument(FrameReferenceName + ".flac", CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex(LayerName)[0]].GetFrame(FrameReference));
         ExtendVoiceLine(SoundUtils.GetSoundDuration(AttemptFile), FrameReference, SceneNumber, Doc);
+        CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex(LayerName)[0]].GetFrame(FrameReference).SoundSync = "stream";
+        ExtendVoiceLine(SoundUtils.GetSoundDuration(AttemptFile), FrameReference, SceneNumber, Doc);
     }
 
     public static void InsertLinesChunked(this Document Doc, string FolderPath)
     {
-
         for (int OperatingScene = 0; OperatingScene < Doc.Timelines.Count; OperatingScene++)
         {
-            Timeline CurrentTimeline = Doc.GetTimeline(OperatingScene);
+            Doc.CurrentTimeline = (OperatingScene);
+            Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
             int TextLayerIndex = CurrentTimeline.FindLayerIndex("TEXT")[0];
             foreach (Frame FrameToConsider in CurrentTimeline.Layers[TextLayerIndex].KeyFrames)
             {
@@ -46,11 +51,4 @@ static class LineAdderAPI
             }
         }
     }
-
-    //static void Main()
-    //{
-    //    Document Doc = new("C:\\Users\\Administrator\\CXFL\\SceneGenerator\\Gaster\\DOMDocument.xml");
-    //    Doc.InsertLinesChunked("C:\\Users\\Administrator\\Elements of Justice\\Dynamically_Linked_Scene\\SonataTest");
-    //    Doc.Save();
-    //}
 }
