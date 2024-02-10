@@ -162,7 +162,7 @@ public class Frame : ILibraryEventReceiver
         // need to create constructors that turn items into instances unless it's a soundItem
         if (item is SoundItem soundItem)
         {
-            SoundName = soundItem.Href;
+            SoundName = soundItem.Name;
             return null;
         }
         if (item is SymbolItem symbolItem)
