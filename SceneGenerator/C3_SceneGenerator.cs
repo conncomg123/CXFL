@@ -1,10 +1,9 @@
 ﻿using CsXFL;
-using Jint;
+using SceneGenerator.API;
 using System.Diagnostics;
 using System.Text.Json;
-using static SceneGenerator;
+namespace SceneGenerator;
 
-// <!> Chunking does not work, this is a CurrentTimeline issue
 // <!> Undecided about keeping viewmode profiles for CharacterConfig
 
 static class SceneGenerator
@@ -558,6 +557,11 @@ static class SceneGenerator
 
         string[] LayerOrder = new string[] { "FLASH", "INTERJECTION", "FADE", "GAVEL", "TEXT", "TEXTBOX", "EVIDENCE", "DESKS", "JAM_MASK", "BACKGROUNDS" };
         OrganizeLayerStructure(Doc, LayerOrder);
+
+        Doc.InsertLinesChunked(config.PathToLines);
+
+        string[] IgnoreLipsync = new string[] { config.Defense.ToUpper() };
+        Doc.LipsyncChunkedDocument(config.PathToCFGs, IgnoreLipsync);
 
         Doc.Save();
     }

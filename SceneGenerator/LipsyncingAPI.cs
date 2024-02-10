@@ -1,5 +1,6 @@
 ﻿using CsXFL;
 using System.Text.RegularExpressions;
+namespace SceneGenerator.API;
 
 static class LipsyncAPI
 {
@@ -30,7 +31,7 @@ static class LipsyncAPI
     {"Closed Mouth Teeth", 1},
     {"Ajar Mouth Tongue", 1},
     {"Ajar Mouth Teeth Together", 1},
-    {"Ajar Mouth Teeth Separate", 1}
+    {"Ajar Mouth Teeth Seperate", 1}
     };
 
     private static Dictionary<string, string> PHONEME_TO_MOUTH_SHAPE = new Dictionary<string, string>
@@ -171,39 +172,17 @@ static class LipsyncAPI
         Dictionary<int, string> DiphthongMap = new();
         Dictionary<int, string> MouthShapeMap = new();
 
+        Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
+
         foreach (var PhonemeStartTime in phonemes.Keys)
         {
             int Frame2;
             int CurrentFrame = (int)(StartFrame + Math.Round(PhonemeStartTime * Doc.FrameRate));
-            bool IsKeyframe = (CurrentFrame == Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).StartFrame);
+            bool IsKeyframe = (CurrentFrame == CurrentTimeline.Layers[LayerIndex].GetFrame(CurrentFrame).StartFrame);
 
-            if (!IsKeyframe) Doc.GetTimeline(0).Layers[LayerIndex].ConvertToKeyframes(CurrentFrame);
+            if (!IsKeyframe) CurrentTimeline.Layers[LayerIndex].ConvertToKeyframes(CurrentFrame);
 
-            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.Loop = "play once";
-
-            Console.WriteLine("Phonemes2");
-
-            foreach (var keyValuePair in phonemes2)
-            {
-                Console.Write($"{keyValuePair.Key}: ");
-                foreach (var item in keyValuePair.Value)
-                {
-                    Console.Write($"{item} ");
-                }
-                Console.WriteLine();
-            }
-
-            Console.WriteLine("Phonemes1");
-
-            foreach (var keyValuePair in phonemes)
-            {
-                Console.Write($"{keyValuePair.Key}: ");
-                foreach (var item in keyValuePair.Value)
-                {
-                    Console.Write($"{item} ");
-                }
-                Console.WriteLine();
-            }
+            (CurrentTimeline.Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.Loop = "play once";
 
             string phoneme = phonemes[PhonemeStartTime][1].ToString()!;
             if (!string.IsNullOrEmpty(phoneme)) phoneme = phoneme.Length > 1 ? phoneme.Substring(0, 2) : phoneme;
@@ -224,13 +203,13 @@ static class LipsyncAPI
                 Frame2 = OFFSET_MAP[PHONEME_TO_MOUTH_SHAPE[phoneme]];
             };
 
-            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.FirstFrame = PoseStartFrame + Frame2;
-            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.LastFrame = PoseStartFrame + Frame2 + LENGTH_MAP[PHONEME_TO_MOUTH_SHAPE[phoneme]] - 1;
-            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.Loop = "play once";
+            (CurrentTimeline.Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.FirstFrame = PoseStartFrame + Frame2;
+            (CurrentTimeline.Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.LastFrame = PoseStartFrame + Frame2 + LENGTH_MAP[PHONEME_TO_MOUTH_SHAPE[phoneme]] - 1;
+            (CurrentTimeline.Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.Loop = "play once";
 
             if (SINGLE_FRAME_MOUTH_SHAPES.Contains(PHONEME_TO_MOUTH_SHAPE[phoneme]))
             {
-                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.Loop = "single frame";
+                (CurrentTimeline.Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.Loop = "single frame";
             }
 
             MouthShapeMap[CurrentFrame] = PHONEME_TO_MOUTH_SHAPE[phoneme];
@@ -243,47 +222,61 @@ static class LipsyncAPI
             {
                 int CurFrame = Frame3 + i;
                 // If the current frame isn't the first frame in a frame sequence, make a note of that.
-                bool IsKeyframe = (CurFrame == Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).StartFrame);
+                bool IsKeyframe = (CurFrame == CurrentTimeline.Layers[LayerIndex].GetFrame(CurFrame).StartFrame);
 
                 if (Frame3 != CurFrame && IsKeyframe)
                 {
                     break;
                 };
 
-                if (!IsKeyframe) Doc.GetTimeline(0).Layers[LayerIndex].ConvertToKeyframes(CurFrame);
+                if (!IsKeyframe) CurrentTimeline.Layers[LayerIndex].ConvertToKeyframes(CurFrame);
 
                 var MouthShape = DIPHTHONG_ORDERING[DiphthongMap[Frame3]][i];
                 var FirstFrame = OFFSET_MAP[MouthShape];
 
-                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.FirstFrame = PoseStartFrame + FirstFrame;
-                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.LastFrame = PoseStartFrame + FirstFrame + LENGTH_MAP[MouthShape] - 1;
-                (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.Loop = "play once";
+                (CurrentTimeline.Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.FirstFrame = PoseStartFrame + FirstFrame;
+                (CurrentTimeline.Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.LastFrame = PoseStartFrame + FirstFrame + LENGTH_MAP[MouthShape] - 1;
+                (CurrentTimeline.Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.Loop = "play once";
 
                 if (SINGLE_FRAME_MOUTH_SHAPES.Contains(MouthShape))
                 {
-                    (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.Loop = "single frame";
+                    (CurrentTimeline.Layers[LayerIndex].GetFrame(CurFrame).Elements[0] as SymbolInstance)!.Loop = "single frame";
                 }
 
                 MouthShapeMap[CurFrame] = DIPHTHONG_ORDERING[DiphthongMap[Frame3]][i];
             };
 
             int CurrentFrame = (int)(StartFrame + Math.Round(phonemes.Keys.ToList()[phonemes.Keys.Count - 1] * Doc.FrameRate));
-            (Doc.GetTimeline(0).Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.Loop = "single frame";
+            (CurrentTimeline.Layers[LayerIndex].GetFrame(CurrentFrame).Elements[0] as SymbolInstance)!.Loop = "single frame";
         };
     }
 
-    public static void LipsyncSingle(this Document doc, int startFrame, int layerIndex, int poseStartFrame, Dictionary<double, List<object>> phonemes)
+    public static void LipsyncSingle(this Document Doc, int startFrame, int layerIndex, int poseStartFrame, Dictionary<double, List<object>> phonemes)
     {
         // <!> Do input validation later.
         // <!> The original copy has xSheet logic. The way Case 3 rigs work, we may just round down to 100 and save some effort.
 
-        PlaceKeyframes(doc, startFrame, layerIndex, poseStartFrame, phonemes);
+        PlaceKeyframes(Doc, startFrame, layerIndex, poseStartFrame, phonemes);
     }
 
-    //static void Main()
-    //{
-    //    Document Doc = new("C:\\Users\\Administrator\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
-    //    Doc.LipsyncSingle(0, 0, 99, ParseCFG("C:\\Users\\Administrator\\Elements of Justice\\Dynamically_Linked_Scene\\SonataTest\\s1_048_sonata.cfg"));
-    //    Doc.Save();
-    //}
+    public static void LipsyncChunkedDocument(this Document Doc, string PathToCFGs, string[] IgnoreCharacters)
+    {
+        for (int OperatingScene = 0; OperatingScene < Doc.Timelines.Count; OperatingScene++)
+        {
+            Doc.CurrentTimeline = (OperatingScene);
+            Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
+
+            foreach (Frame ConsiderKeyframe in CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("TEXT")[0]].KeyFrames)
+            {
+                string LineID = ConsiderKeyframe.Name;
+                string ExpectedCharacterLayerName = LineID.Substring(7).ToUpper();
+
+                if (!IgnoreCharacters.Contains(ExpectedCharacterLayerName))
+                {
+                    int ExpectedCharacterLayerIndex = CurrentTimeline.FindLayerIndex(ExpectedCharacterLayerName)[0];
+                    PlaceKeyframes(Doc, ConsiderKeyframe.StartFrame, ExpectedCharacterLayerIndex, (CurrentTimeline.Layers[ExpectedCharacterLayerIndex].GetFrame(ConsiderKeyframe.StartFrame).Elements[0] as SymbolInstance)!.FirstFrame, ParseCFG(PathToCFGs + "\\" + LineID + ".cfg"));
+                }
+            }
+        }
+    }
 };

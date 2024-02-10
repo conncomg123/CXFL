@@ -3,6 +3,7 @@ using System;
 using System.Text;
 using System.Xml.Linq;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+namespace SceneGenerator.API;
 
 static class SFXAPI
 {
@@ -112,11 +113,4 @@ static class SFXAPI
             }
         }
     }
-
-    //static void Main()
-    //{
-    //    SFXAPI sfx = new SFXAPI();
-    //    sfx.PlaceSFX("sfx-hit1.wav", 5);
-    //    Doc.Save();
-    //}
 }
