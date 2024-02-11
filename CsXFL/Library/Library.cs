@@ -235,18 +235,19 @@ public class Library
             itemName = Path.GetFileName(path);
         }
         string targetPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, itemName);
-        while (File.Exists(targetPath))
+        while (File.Exists(targetPath) || items.ContainsKey(itemName))
         {
-            itemName = Path.GetFileNameWithoutExtension(itemName) + " copy" + Path.GetExtension(itemName);
+            itemName = Path.Combine(Path.GetDirectoryName(itemName)!, Path.GetFileNameWithoutExtension(itemName) + " copy" + Path.GetExtension(itemName)).Replace('\\', '/');
             targetPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, itemName);
         } 
         Item? imported = null;
         if (SYMBOL_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
-            // symbolitems are special as they can depend on other items in the library, so we need to iterate through its timeline, find all dependencies, and add them to the library recursively
             imported = SymbolItem.FromFile(path);
             if(containingDocument.Root!.Element(ns + "symbols") is null) containingDocument.Root!.AddFirst(new XElement(ns + "symbols"));
             containingDocument.Root!.Element(ns + "symbols")!.Add((imported as SymbolItem)!.Include.Root);
+            imported.Name = itemName.Replace(".xml", "");
+            (imported as SymbolItem)!.Timeline.Name = Path.GetFileNameWithoutExtension(itemName);
         }
         else if (AUDIO_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
@@ -346,13 +347,19 @@ public class Library
 
     private void ProcessAddOperation(ItemOperation operation, string targetPath, string filename)
     {
+        if(File.Exists(targetPath)) return;
         if(!Directory.Exists(Path.GetDirectoryName(targetPath)!)) Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
         // also create FolderItems for each
-        string relativePath = targetPath.Substring(targetPath.IndexOf(LIBRARY_PATH) + LIBRARY_PATH.Length + 1);
-        string[] folders = relativePath.Split(Path.DirectorySeparatorChar);
+        string relativePath = targetPath.Substring(targetPath.IndexOf(LIBRARY_PATH) + LIBRARY_PATH.Length + 1).Replace('\\', '/');
+        string[] folders = relativePath.Split('/');
         for(int i = 0; i < folders.Length - 1; i++)
         {
-           NewFolder(folders[i]);
+            string folderPath = "";
+            for(int j = 0; j <= i; j++)
+            {
+                folderPath += folders[j] + "/";
+            }
+            NewFolder(folderPath.TrimEnd('/'));
         }
         File.Copy(operation.NewItemPath!, targetPath);
         // update item's href
