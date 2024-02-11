@@ -55,6 +55,7 @@ public static class An
         string toImport = Path.Combine(Path.GetDirectoryName(otherDocPath)!, Library.LIBRARY_PATH, symbolPath).Replace('\\', '/');
         if (Path.GetExtension(toImport) == string.Empty) toImport += ".xml";
         if (!filesToImport.Add(toImport)) return;
+        if(Path.GetExtension(toImport) != ".xml") return; // not a symbol
 
         HashSet<string> dependencies = ParseSymbolFile(toImport, filesToImport);
 
