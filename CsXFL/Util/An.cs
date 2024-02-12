@@ -5,13 +5,28 @@ namespace CsXFL;
 public static class An
 {
     private static Dictionary<string, string> extractedFlas = new();
+    private static List<Document> _documents = new();
     static An()
     {
         AppDomain.CurrentDomain.ProcessExit += (s, e) => Cleanup();
     }
+    public static async Task<Document> OpenDocumentAsync(string filepath)
+    {
+        Document doc = await Task.Run(() => new Document(filepath));
+        _documents.Add(doc);
+        return doc;
+    }
+    public static Document GetDocument(int index)
+    {
+        return _documents[index];
+    }
+    public static void CloseDocument(int index)
+    {
+        _documents.RemoveAt(index);
+    }
     public static void ImportFromOtherDocument(this Document doc, string otherDocPath, string itemName)
     {
-        if(!File.Exists(otherDocPath)) throw new FileNotFoundException("The file does not exist", otherDocPath);
+        if (!File.Exists(otherDocPath)) throw new FileNotFoundException("The file does not exist", otherDocPath);
         HashSet<string> filesToImport = new();
         bool isSymbol = Path.GetExtension(itemName) == ".xml", isFla = Path.GetExtension(otherDocPath) == ".fla";
         if (Path.GetExtension(itemName) == string.Empty)
@@ -55,7 +70,7 @@ public static class An
         string toImport = Path.Combine(Path.GetDirectoryName(otherDocPath)!, Library.LIBRARY_PATH, symbolPath).Replace('\\', '/');
         if (Path.GetExtension(toImport) == string.Empty) toImport += ".xml";
         if (!filesToImport.Add(toImport)) return;
-        if(Path.GetExtension(toImport) != ".xml") return; // not a symbol
+        if (Path.GetExtension(toImport) != ".xml") return; // not a symbol
 
         HashSet<string> dependencies = ParseSymbolFile(toImport, filesToImport);
 
@@ -86,7 +101,7 @@ public static class An
     }
     public static void ImportFolderFromOtherDocument(this Document doc, string otherDocPath, string folderName)
     {
-        if(!File.Exists(otherDocPath)) throw new FileNotFoundException("The file does not exist", otherDocPath);
+        if (!File.Exists(otherDocPath)) throw new FileNotFoundException("The file does not exist", otherDocPath);
         bool isFla = Path.GetExtension(otherDocPath) == ".fla";
         if (isFla)
         {
@@ -110,7 +125,7 @@ public static class An
         string otherFolderPath = Path.Combine(Path.GetDirectoryName(otherDocPath)!, Library.LIBRARY_PATH, folderName);
         if (!Directory.Exists(otherFolderPath)) throw new DirectoryNotFoundException($"The folder does not exist in the other document: {folderName}");
         HashSet<string> filesToImport = new();
-        foreach(string file in Directory.EnumerateFiles(otherFolderPath, "*", SearchOption.AllDirectories))
+        foreach (string file in Directory.EnumerateFiles(otherFolderPath, "*", SearchOption.AllDirectories))
         {
             string fileWithoutBackslashes = file.Replace('\\', '/');
             bool isSymbol = Path.GetExtension(fileWithoutBackslashes) == ".xml";
