@@ -1,19 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <Platforms>AnyCPU;x64</Platforms>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="CSCore" Version="1.2.1.2" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.2" />
     <PackageReference Include="taglib" Version="2.1.0" />
   </ItemGroup>
-
 </Project>
