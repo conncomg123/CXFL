@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CsXFL.Tests", "CsXFL.Tests\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SceneGenerator", "SceneGenerator\SceneGenerator.csproj", "{20CC5EAF-375A-46AA-AAE4-4CFC17519E9F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CXFLGUI", "CXFLGUI\CXFLGUI.csproj", "{DC0F4ADD-D8C1-48B7-BB65-71C8D2688B4E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CXFLGUI", "CXFLGUI\CXFLGUI.csproj", "{DC0F4ADD-D8C1-48B7-BB65-71C8D2688B4E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
