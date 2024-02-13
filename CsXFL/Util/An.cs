@@ -60,9 +60,10 @@ public static class An
             AddSymbolAndDependencies(otherItemPath, filesToImport, otherDocPath);
         }
         filesToImport.Add(otherItemPath);
+        string otherDocumentLibraryRoot = Path.Combine(Path.GetDirectoryName(otherDocPath)!, Library.LIBRARY_PATH).Replace('\\', '/');
         foreach (string file in filesToImport)
         {
-            doc.Library.ImportItem(file, true);
+            doc.Library.ImportItem(file, true, otherDocumentLibraryRoot);
         }
     }
     private static void AddSymbolAndDependencies(string symbolPath, HashSet<string> filesToImport, string otherDocPath)
@@ -135,9 +136,10 @@ public static class An
             }
             filesToImport.Add(fileWithoutBackslashes);
         }
+        string otherDocumentLibraryRoot = Path.Combine(Path.GetDirectoryName(otherDocPath)!, Library.LIBRARY_PATH).Replace('\\', '/');
         foreach (string file in filesToImport)
         {
-            doc.Library.ImportItem(file, true);
+            doc.Library.ImportItem(file, true, otherDocumentLibraryRoot);
         }
     }
     public static void Cleanup()
