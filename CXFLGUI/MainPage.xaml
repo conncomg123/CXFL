@@ -2,8 +2,11 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" 
              xmlns:local="clr-namespace:CXFLGUI"
-             x:Class="CXFLGUI.MainPage">
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             x:Class="CXFLGUI.MainPage"
+             Background="{StaticResource Primary}">
 
+    <!--Custom Menubar-->
     <ContentPage.MenuBarItems>
         <MenuBarItem Text="File">
             <MenuFlyoutItem Text="New"
@@ -26,45 +29,43 @@
         <MenuBarItem Text="View"/>
     </ContentPage.MenuBarItems>
 
-    <ScrollView>
-        <VerticalStackLayout
-            Spacing="25"
-            Padding="30,0"
-            VerticalOptions="Center">
+    <!-- Un-Functional Docking Layout -->
+    <toolkit:DockLayout>
+        <Frame
+    toolkit:DockLayout.DockPosition="Left"
+    Background="{DynamicResource PrimaryDarkBrush}"
+    BorderColor="{DynamicResource Gray500}"
+    CornerRadius="5"
+    HasShadow="True"
+    Padding="1"
+    HeightRequest="250"
+    WidthRequest="350">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="25" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid Background="{DynamicResource BlackBrush}" Grid.Row="0" />
+                <StackLayout
+            Grid.Row="1"
+            Margin="20"
+            Orientation="Vertical">
+                    <StackLayout
+                Spacing="15"
+                Margin="5"
+                Orientation="Horizontal"
+                HorizontalOptions="Center">
+                        <Button Text="These buttons"
+                    Style="{DynamicResource DefaultButton}" />
+                        <Button Text="are so very"
+                    Style="{DynamicResource DefaultButton}" />
+                        <Button Text="cool!"
+                    Style="{DynamicResource DefaultButton}" />
+                    </StackLayout>
+                    <Label Text="Sample Text!" />
+                </StackLayout>
+            </Grid>
+        </Frame>
+    </toolkit:DockLayout>
 
-            <Image
-                Source="dotnet_bot.png"
-                SemanticProperties.Description="Cute dot net bot waving hi to you!"
-                HeightRequest="200"
-                HorizontalOptions="Center" />
-
-            <Label
-                Text="Hello, World!"
-                SemanticProperties.HeadingLevel="Level1"
-                FontSize="32"
-                HorizontalOptions="Center" />
-
-            <Label
-                Text="Welcome to .NET Multi-platform App UI"
-                SemanticProperties.HeadingLevel="Level2"
-                SemanticProperties.Description="Welcome to dot net Multi platform App U I"
-                FontSize="18"
-                HorizontalOptions="Center" />
-
-            <Button
-                x:Name="CounterBtn"
-                Text="Click me"
-                SemanticProperties.Hint="Counts the number of times you click"
-                Clicked="OnCounterClicked"
-                HorizontalOptions="Center" />
-
-            <Button Text="These buttons"
-                Style="{DynamicResource DefaultButton}" />
-            <Button Text="are demonstrating"
-                Style="{DynamicResource DefaultButton}" />
-            <Button Text="application styles"
-                Style="{DynamicResource DefaultButton}" />
-
-        </VerticalStackLayout>
-    </ScrollView>
 </ContentPage>

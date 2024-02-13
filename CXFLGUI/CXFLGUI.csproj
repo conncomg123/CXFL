@@ -52,5 +52,11 @@
     <MauiXaml Update="Resources\Styles\DefaultButton.xaml">
       <Generator>MSBuild:Compile</Generator>
     </MauiXaml>
+    <MauiXaml Update="Resources\Styles\Styles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </MauiXaml>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Resources\Behaviors\" />
   </ItemGroup>
 </Project>

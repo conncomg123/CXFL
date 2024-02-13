@@ -10,11 +10,11 @@
             InitializeComponent();
         }
 
-        private void OnCounterClicked(object sender, EventArgs e)
-        {
-            CounterBtn.Text = doc.GetTimeline(0).GetFrameCount().ToString();
+        //private void OnCounterClicked(object sender, EventArgs e)
+        //{
+        //    CounterBtn.Text = doc.GetTimeline(0).GetFrameCount().ToString();
 
-            SemanticScreenReader.Announce(CounterBtn.Text);
-        }
+        //    SemanticScreenReader.Announce(CounterBtn.Text);
+        //}
     }
 }
