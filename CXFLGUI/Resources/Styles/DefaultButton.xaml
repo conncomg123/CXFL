@@ -5,20 +5,47 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
     
     <Style TargetType="Button">
+        <!--Base Visuals-->
         <Setter Property="BackgroundColor"
-							Value="DarkGray" />
+							Value="{DynamicResource Black}" />
         <Setter Property="BorderColor"
-							Value="White" />
+							Value="{DynamicResource Gray500}" />
         <Setter Property="BorderWidth"
-							Value="0.2" />
+							Value="1" />
         <Setter Property="CornerRadius"
-							Value="2" />
+							Value="5" />
         <Setter Property="LineBreakMode"
 							Value="WordWrap" />
         <Setter Property="Padding"
-							Value="5,5,5,5" />
+							Value="10,3,10,3" />
         <Setter Property="TextColor"
-							Value="White" />
+							Value="{DynamicResource Gray100}" />
+
+        <!--Reactive Visuals-->
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup Name="CommonStates">
+                    <VisualState Name="Normal">
+                        <VisualState.Setters>
+                            <Setter Property="BackgroundColor" Value="{DynamicResource Black}" />
+                            <Setter Property="Scale" Value="1" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState Name="PointerOver">
+                        <VisualState.Setters>
+                            <Setter Property="BackgroundColor" Value="{DynamicResource White}" />
+                            <Setter Property="Scale" Value="1.1" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState Name="Pressed">
+                        <VisualState.Setters>
+                            <Setter Property="BackgroundColor" Value="{DynamicResource Black}" />
+                            <Setter Property="Scale" Value="0.9" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
     </Style>
     
 </ResourceDictionary>
