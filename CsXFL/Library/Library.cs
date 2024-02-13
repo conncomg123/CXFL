@@ -221,14 +221,16 @@ public class Library
         }
         return true;
     }
-    internal Item? ImportItem(string path, bool isFromOtherDocument)
+    internal Item? ImportItem(string path, bool isFromOtherDocument, string? otherDocumentLibraryRoot = null)
     {
         // todo: create an XElement node from the path, construct an Item from that, then enqueue an Add operation
         if (!File.Exists(path)) return null;
         string itemName;
-        if(isFromOtherDocument && path.Contains(LIBRARY_PATH))
+        if (isFromOtherDocument)
         {
-            itemName = path.Substring(path.IndexOf(LIBRARY_PATH) + LIBRARY_PATH.Length + 1);
+            if (otherDocumentLibraryRoot is not null && path.StartsWith(otherDocumentLibraryRoot))
+                itemName = path.Substring(otherDocumentLibraryRoot.Length + 1);
+            else itemName = path.Substring(path.IndexOf(LIBRARY_PATH) + LIBRARY_PATH.Length + 1); // best guess
         }
         else
         {
@@ -239,12 +241,12 @@ public class Library
         {
             itemName = Path.Combine(Path.GetDirectoryName(itemName)!, Path.GetFileNameWithoutExtension(itemName) + " copy" + Path.GetExtension(itemName)).Replace('\\', '/');
             targetPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, itemName);
-        } 
+        }
         Item? imported = null;
         if (SYMBOL_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
             imported = SymbolItem.FromFile(path);
-            if(containingDocument.Root!.Element(ns + "symbols") is null) containingDocument.Root!.AddFirst(new XElement(ns + "symbols"));
+            if (containingDocument.Root!.Element(ns + "symbols") is null) containingDocument.Root!.AddFirst(new XElement(ns + "symbols"));
             containingDocument.Root!.Element(ns + "symbols")!.Add((imported as SymbolItem)!.Include.Root);
             imported.Name = itemName.Replace(".xml", "");
             (imported as SymbolItem)!.Timeline.Name = Path.GetFileNameWithoutExtension(itemName);
@@ -252,13 +254,13 @@ public class Library
         else if (AUDIO_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
             imported = SoundItem.FromFile(path, ns);
-            if(containingDocument.Root!.Element(ns + "media") is null) containingDocument.Root!.AddFirst(new XElement(ns + "media"));
+            if (containingDocument.Root!.Element(ns + "media") is null) containingDocument.Root!.AddFirst(new XElement(ns + "media"));
             containingDocument.Root!.Element(ns + "media")!.Add(imported.Root);
         }
         else if (IMAGE_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
             imported = BitmapItem.FromFile(path, ns);
-            if(containingDocument.Root!.Element(ns + "media") is null) containingDocument.Root!.AddFirst(new XElement(ns + "media"));
+            if (containingDocument.Root!.Element(ns + "media") is null) containingDocument.Root!.AddFirst(new XElement(ns + "media"));
             containingDocument.Root!.Element(ns + "media")!.Add(imported.Root);
         }
         if (imported is null) return null;
@@ -315,7 +317,7 @@ public class Library
             Name = folderName
         };
         items.Add(folderName, folder);
-        if(containingDocument.Root!.Element(ns + "folders") is null) containingDocument.Root!.AddFirst(new XElement(ns + "folders"));
+        if (containingDocument.Root!.Element(ns + "folders") is null) containingDocument.Root!.AddFirst(new XElement(ns + "folders"));
         containingDocument.Root!.Element(ns + "folders")!.Add(folder.Root);
         return true;
     }
@@ -347,15 +349,15 @@ public class Library
 
     private void ProcessAddOperation(ItemOperation operation, string targetPath, string filename)
     {
-        if(File.Exists(targetPath)) return;
-        if(!Directory.Exists(Path.GetDirectoryName(targetPath)!)) Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+        if (File.Exists(targetPath)) return;
+        if (!Directory.Exists(Path.GetDirectoryName(targetPath)!)) Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
         // also create FolderItems for each
         string relativePath = targetPath.Substring(targetPath.IndexOf(LIBRARY_PATH) + LIBRARY_PATH.Length + 1).Replace('\\', '/');
         string[] folders = relativePath.Split('/');
-        for(int i = 0; i < folders.Length - 1; i++)
+        for (int i = 0; i < folders.Length - 1; i++)
         {
             string folderPath = "";
-            for(int j = 0; j <= i; j++)
+            for (int j = 0; j <= i; j++)
             {
                 folderPath += folders[j] + "/";
             }
