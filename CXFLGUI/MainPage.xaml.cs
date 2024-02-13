@@ -6,7 +6,7 @@
         CsXFL.Document doc;
         public MainPage()
         {
-            doc = new("C:\\Stuff\\CXFL\\CsXFL.Tests\\TestAssets\\test.fla");
+            doc = new("C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\303_S1.fla");
             InitializeComponent();
         }
 

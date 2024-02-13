@@ -1,7 +1,30 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" 
+             xmlns:local="clr-namespace:CXFLGUI"
              x:Class="CXFLGUI.MainPage">
+
+    <ContentPage.MenuBarItems>
+        <MenuBarItem Text="File">
+            <MenuFlyoutItem Text="New"
+                            Command="{Binding NewDocumentCMD}" />
+            <MenuFlyoutItem Text="Open"
+                            Command="{Binding OpenDocumentCMD}" />
+            <MenuFlyoutItem Text="Save"
+                            Command="{Binding SaveDocumentCMD}" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem Text="Import"/>
+            <MenuFlyoutItem Text="Export"/>
+        </MenuBarItem>
+        <MenuBarItem Text="Edit">
+            <MenuFlyoutSubItem Text="Setting 1">
+                <MenuFlyoutItem Text="Subsetting 1"/>
+                <MenuFlyoutItem Text="Subsetting 2"/>
+                <MenuFlyoutItem Text="Subsetting 3"/>
+            </MenuFlyoutSubItem>
+        </MenuBarItem>
+        <MenuBarItem Text="View"/>
+    </ContentPage.MenuBarItems>
 
     <ScrollView>
         <VerticalStackLayout
@@ -35,7 +58,13 @@
                 Clicked="OnCounterClicked"
                 HorizontalOptions="Center" />
 
+            <Button Text="These buttons"
+                Style="{DynamicResource DefaultButton}" />
+            <Button Text="are demonstrating"
+                Style="{DynamicResource DefaultButton}" />
+            <Button Text="application styles"
+                Style="{DynamicResource DefaultButton}" />
+
         </VerticalStackLayout>
     </ScrollView>
-
 </ContentPage>

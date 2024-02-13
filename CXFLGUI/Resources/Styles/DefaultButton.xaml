@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<?xaml-comp compile="true" ?>
+<ResourceDictionary 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+    
+    <Style TargetType="Button">
+        <Setter Property="BackgroundColor"
+							Value="DarkGray" />
+        <Setter Property="BorderColor"
+							Value="White" />
+        <Setter Property="BorderWidth"
+							Value="0.2" />
+        <Setter Property="CornerRadius"
+							Value="2" />
+        <Setter Property="LineBreakMode"
+							Value="WordWrap" />
+        <Setter Property="Padding"
+							Value="5,5,5,5" />
+        <Setter Property="TextColor"
+							Value="White" />
+    </Style>
+    
+</ResourceDictionary>
