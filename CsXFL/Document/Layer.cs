@@ -174,14 +174,17 @@ public class Layer
     {
         return InsertKeyframe(frameIndex, true);
     }
+    public bool IsKeyFrame(int frameIndex)
+    {
+        return GetFrame(frameIndex).StartFrame == frameIndex;
+    }
     public bool ConvertToKeyframes(int startFrame, int? endFrame = null)
     {
         endFrame ??= startFrame;
         int numConverted = 0;
         for (int i = startFrame; i <= endFrame; i++)
         {
-            bool isKeyFrame = GetFrame(i).StartFrame == i;
-            if (!isKeyFrame)
+            if (!IsKeyFrame(i))
             {
                 InsertKeyframe(i);
                 numConverted++;

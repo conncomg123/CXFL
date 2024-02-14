@@ -120,4 +120,41 @@ public class LayerTests
             Assert.True(layer.GetFrame(i).StartFrame == i);
         }
     }
+
+    [Fact]
+    public void InsertFrames_ShouldInsertCorrectNumberOfFrames()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Timeline timeline = doc.GetTimeline(0);
+        Layer layer = timeline.Layers[0];
+        int numFrames = layer.GetFrameCount();
+
+        // Act
+        layer.InsertFrames(5,0);
+
+        // Assert
+        Assert.True(layer.GetFrameCount() == numFrames + 5);
+        Assert.True(layer.IsKeyFrame(6));   // new keyframe should be at 6
+        Assert.True(layer.IsKeyFrame(0));   // start keyframe still exists
+    }
+    
+    [Fact]
+    public void RemoveFrames_ShouldRemoveCorrectNumberOfFrames()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Timeline timeline = doc.GetTimeline(0);
+        Layer layer = timeline.Layers[0];
+        int numFrames = layer.GetFrameCount();
+        int keyFrames = layer.KeyFrames.Count;
+
+        // Act
+        layer.RemoveFrames(5,0);
+
+        // Assert
+        Assert.True(layer.GetFrameCount() == numFrames - 5);
+        Assert.True(layer.IsKeyFrame(0));   // start keyframe still exists
+        Assert.True(layer.KeyFrames.Count == keyFrames - 1); // 1 keyframe should be gone in this instance
+    }
 }
