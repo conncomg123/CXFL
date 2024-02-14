@@ -20,6 +20,7 @@ namespace CXFLGUI
                 });
 
             // Continue initializing your .NET MAUI App here
+            builder.Logging.AddDebug();
             return builder.Build();
         }
     }
