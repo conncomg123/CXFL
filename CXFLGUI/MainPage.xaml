@@ -29,26 +29,4 @@
         <MenuBarItem Text="View"/>
     </ContentPage.MenuBarItems>
 
-    <!-- Un-Functional Docking Layout -->
-    <toolkit:DockLayout>
-        <local:VanillaFrame toolkit:DockLayout.DockPosition="Left" x:Name="LeftFrame"/>
-        <local:VanillaFrame toolkit:DockLayout.DockPosition="Top" x:Name="MiddleFrame"/>
-        <local:VanillaFrame toolkit:DockLayout.DockPosition="Right" x:Name="RightFrame"/>
-    </toolkit:DockLayout>
-
-    <!--<local:VanillaFrame local:CursorBehavior.Cursor="Hand">
-            <StackLayout
-                        Spacing="15"
-                        Margin="5"
-                        Orientation="Horizontal"
-                        HorizontalOptions="Center">
-                <Button Text="These buttons"
-                    Style="{DynamicResource DefaultButton}" />
-                <Button Text="are so very"
-                    Style="{DynamicResource DefaultButton}" />
-                <Button Text="cool!"
-                    Style="{DynamicResource DefaultButton}" />
-            </StackLayout>
-        </local:VanillaFrame>-->
-
 </ContentPage>
