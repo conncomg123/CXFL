@@ -31,41 +31,7 @@
 
     <!-- Un-Functional Docking Layout -->
     <toolkit:DockLayout>
-        <Frame
-    toolkit:DockLayout.DockPosition="Left"
-    Background="{DynamicResource PrimaryDarkBrush}"
-    BorderColor="{DynamicResource Gray500}"
-    CornerRadius="5"
-    HasShadow="True"
-    Padding="1"
-    HeightRequest="250"
-    WidthRequest="350">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="25" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <Grid Background="{DynamicResource BlackBrush}" Grid.Row="0" />
-                <StackLayout
-            Grid.Row="1"
-            Margin="20"
-            Orientation="Vertical">
-                    <StackLayout
-                Spacing="15"
-                Margin="5"
-                Orientation="Horizontal"
-                HorizontalOptions="Center">
-                        <Button Text="These buttons"
-                    Style="{DynamicResource DefaultButton}" />
-                        <Button Text="are so very"
-                    Style="{DynamicResource DefaultButton}" />
-                        <Button Text="cool!"
-                    Style="{DynamicResource DefaultButton}" />
-                    </StackLayout>
-                    <Label Text="Sample Text!" />
-                </StackLayout>
-            </Grid>
-        </Frame>
+        <local:VanillaFrame local:CursorBehavior.Cursor="Hand"/>
     </toolkit:DockLayout>
 
 </ContentPage>
