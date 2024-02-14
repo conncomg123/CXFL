@@ -6,6 +6,7 @@ public static class An
 {
     private static Dictionary<string, string> extractedFlas = new();
     private static List<Document> _documents = new();
+    private static Document? activeDocument;
     static An()
     {
         AppDomain.CurrentDomain.ProcessExit += (s, e) => Cleanup();
@@ -14,11 +15,16 @@ public static class An
     {
         Document doc = await Task.Run(() => new Document(filepath));
         _documents.Add(doc);
+        activeDocument = doc;
         return doc;
     }
     public static Document GetDocument(int index)
     {
         return _documents[index];
+    }
+    public static Document GetActiveDocument()
+    {
+        return activeDocument ?? throw new InvalidOperationException("No active document");
     }
     public static void CloseDocument(int index)
     {
