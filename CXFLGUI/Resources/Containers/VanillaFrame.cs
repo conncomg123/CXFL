@@ -19,6 +19,11 @@ namespace CXFLGUI
 
         int ResizeTolerance = 15;
 
+        // Patented Soundman warning:
+        // If you get trapped in COMException hell, it is likely because you have made
+        // two of the same control in your Main Page Xaml Cs to debug this object.
+        // Don't do that! Right now we require unique tabs and content with unique
+        // identifiers, or else you will get sent to the shadow realm.
         public VanillaFrame()
         {
             Background = (Color)App.Fixed_ResourceDictionary["Colors"]["Primary"];
@@ -30,25 +35,109 @@ namespace CXFLGUI
             WidthRequest = InitialWidth;
 
             var grid = new Grid();
-            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(25, GridUnitType.Absolute) });
-            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Star });
+            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(25, GridUnitType.Absolute) }); // Row for tabs
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Star }); // Remaining space
 
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Star });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Star });
+            // Create a StackLayout for tabs
+            var tabStackLayout = new StackLayout
+            {
+                Orientation = StackOrientation.Horizontal,
+                HorizontalOptions = LayoutOptions.FillAndExpand,
+                Spacing = 0 // No spacing between tabs
+            };
 
-            var topBrush = new BoxView { Color = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryDark"] };
-            grid.Children.Add(topBrush);
-            Grid.SetRow(topBrush, 0);
-            Grid.SetColumnSpan(topBrush, 2);
+            // Add the StackLayout for tabs to the grid
+            grid.Children.Add(tabStackLayout);
+            Grid.SetRow(tabStackLayout, 0);
+            Grid.SetColumnSpan(tabStackLayout, 2);
 
-            Content = grid;
+            // Create a separate StackLayout for content views
+            var contentStackLayout = new StackLayout
+            {
+                Orientation = StackOrientation.Vertical,
+                HorizontalOptions = LayoutOptions.FillAndExpand,
+                VerticalOptions = LayoutOptions.FillAndExpand
+            };
+
+            // Add the StackLayout for content to the grid
+            grid.Children.Add(contentStackLayout);
+            Grid.SetRow(contentStackLayout, 1);
+            Grid.SetColumnSpan(contentStackLayout, 2);
 
             var panGesture = new PanGestureRecognizer();
             panGesture.PanUpdated += OnPanUpdated;
             this.GestureRecognizers.Add(panGesture);
 
+            Content = grid;
         }
 
+        // Tab-Content Pairing System
+        public void AddContent(View view)
+        {
+            var grid = (Grid)Content;
+            var contentStackLayout = (StackLayout)grid.Children[1]; // Access the content stack layout
+            contentStackLayout.Children.Add(view);
+        }
+
+        public void AddTab(string tabName)
+        {
+            var grid = (Grid)Content;
+            var tabStackLayout = (StackLayout)grid.Children[0]; // Access the tab stack layout
+            var tabButton = new Button
+            {
+                Text = tabName,
+            };
+
+            tabStackLayout.Children.Add(tabButton);
+        }
+
+        public void AddTabContentPair(string tabName, View content)
+        {
+            var grid = (Grid)Content;
+            var tabStackLayout = (StackLayout)grid.Children[0]; // Access the tab stack layout
+            var contentStackLayout = (StackLayout)grid.Children[1]; // Access the content stack layout
+
+            // Create the tab button
+            var tabButton = new Button
+            {
+                Text = tabName,
+            };
+            // Assign the event handler
+            tabButton.Clicked += (sender, e) => ShowContent(content);
+
+            // Add the tab button to the tab stack
+            tabStackLayout.Children.Add(tabButton);
+
+            // Add the content initially hidden
+            content.IsVisible = false;
+            contentStackLayout.Children.Add(content);
+
+            // Show the content of the first tab
+            if (tabStackLayout.Children.Count == 1)
+            {
+                ShowContent(content);
+            }
+        }
+
+        private void ShowContent(View content)
+        {
+            var grid = (Grid)Content;
+            var contentStackLayout = (StackLayout)grid.Children[1]; // Access the content stack layout
+
+            // Hide all content views except the selected one
+            foreach (var child in contentStackLayout.Children)
+            {
+                if (child is View view && view != content)
+                {
+                    view.IsVisible = false;
+                }
+            }
+
+            // Show the selected content
+            content.IsVisible = true;
+        }
+
+        // Resizable Behavior
         private void OnPanUpdated(object sender, PanUpdatedEventArgs e)
         {
             switch (e.StatusType)
@@ -74,22 +163,6 @@ namespace CXFLGUI
                 case GestureStatus.Canceled:
                     isResizing = false;
                     break;
-            }
-        }
-
-        private void VanillaFrame_PointerEntered(object sender, PointerEventArgs e)
-        {
-            if (sender is VisualElement visualElement)
-            {
-                CursorBehavior.SetCursor(visualElement, CursorIcon.Cross);
-            }
-        }
-
-        private void VanillaFrame_PointerExited(object sender, PointerEventArgs e)
-        {
-            if (sender is VisualElement visualElement)
-            {
-                CursorBehavior.SetCursor(visualElement, CursorIcon.Hand);
             }
         }
 
