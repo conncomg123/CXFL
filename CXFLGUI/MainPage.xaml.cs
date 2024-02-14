@@ -1,31 +1,28 @@
-﻿namespace CXFLGUI
+﻿using CommunityToolkit.Maui;
+using Microsoft.Extensions.Logging;
+using System.Diagnostics;
+
+namespace CXFLGUI
 {
-    public partial class MainPage : ContentPage
+    public static class MauiProgram
     {
-        int count = 0;
-        CsXFL.Document doc;
-        public MainPage()
+        public static MauiApp CreateMauiApp()
         {
-            doc = new("C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\303_S1.fla");
-            InitializeComponent();
+            var builder = MauiApp.CreateBuilder();
+            builder.Logging.AddDebug();
+            builder
+                .UseMauiApp<App>()
+                // Initialize the .NET MAUI Community Toolkit by adding the below line of code
+                .UseMauiCommunityToolkit()
+                // After initializing the .NET MAUI Community Toolkit, optionally add additional fonts
+                .ConfigureFonts(fonts =>
+                {
+                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+                    fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                });
+
+            // Continue initializing your .NET MAUI App here
+            return builder.Build();
         }
-        //private void Panel1Button_Clicked(object sender, EventArgs e)
-        //{
-        //    Frame1.IsVisible = true;
-        //    Frame2.IsVisible = false;
-        //}
-
-        //private void Panel2Button_Clicked(object sender, EventArgs e)
-        //{
-        //    Frame1.IsVisible = false;
-        //    Frame2.IsVisible = true;
-        //}
-
-        //private void OnCounterClicked(object sender, EventArgs e)
-        //{
-        //    CounterBtn.Text = doc.GetTimeline(0).GetFrameCount().ToString();
-
-        //    SemanticScreenReader.Announce(CounterBtn.Text);
-        //}
     }
 }

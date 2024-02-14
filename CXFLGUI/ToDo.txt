@@ -20,3 +20,5 @@ I want to continue having "DefaultElement.xaml" styles instead of having one big
 collection. It will make it easier to go through and change styling.
 
 I need drop shadows for buttons, GPT recommends putting them in a frame and adding a shadow.
+
+Create new document handling (default constructors...)
