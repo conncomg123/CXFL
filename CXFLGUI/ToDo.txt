@@ -1,0 +1,22 @@
+View:
+
+Create a dynamic theme constructor based off a single primary color. All other elements
+should calculate accent/secondary/tertiary colors based off an appropriate amount of
+contrast from the primary color. For instance, if the primary color is dark enough,
+the global text color should automatically map to white. If the primary color is light
+enough, the text color should map to black.
+
+Gradient brushes are fucking infuriating, they should work for MainPage's background, and
+did for a couple minutes when being hardcoded. I do not think they can be stored in a resource
+dictionary, even though I get the impression they should.
+
+Need to figure out what to do about a docking system. GestureRecognition for panning, and
+some kind of custom behavior for the WIP taskbar area so we can add/pop taskbar tabs as needed.
+That would allow adding/removing taskbar tabs, but we'd also need something to allow creating
+DockLayouts based on the cursor position where a taskbar tab is dropped. AKA this is gonna
+be fun.
+
+I want to continue having "DefaultElement.xaml" styles instead of having one big style
+collection. It will make it easier to go through and change styling.
+
+I need drop shadows for buttons, GPT recommends putting them in a frame and adding a shadow.
