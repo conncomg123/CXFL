@@ -26,7 +26,7 @@ static class SceneGenerator
         public string Prosecutor { get; set; }
         public string Judge { get; set; }
         public string Cocouncil { get; set; }
-        public Array Witnesses { get; set; }
+        public List<string> Witnesses { get; set; }
 
         public string EEBias { get; set; }
         public int ChunkSize { get; set; }
@@ -218,7 +218,7 @@ static class SceneGenerator
         config.Prosecutor = "Luna";
         config.Judge = "Judge";
         config.Cocouncil = "Phoenix";
-        config.Witnesses = "Witness 1, Witness 2, Witness 3".Split(',');
+        config.Witnesses = new List<string> { "Witness 1, Witness 2, Witness 3" };
 
         config.EEBias = "";
         config.ChunkSize = 70;
@@ -541,6 +541,77 @@ static class SceneGenerator
         }
     }
 
+    static void PlaceDesks(this Document doc, string sceneData)
+    {
+        var characterToDeskMap = new Dictionary<string, SymbolConfig?>
+        {
+            { SingletonConfig.Instance.Defense, SingletonConfig.Instance.DefenseDesk },
+            {SingletonConfig.Instance.Prosecutor, SingletonConfig.Instance.ProsecutorDesk },
+            {SingletonConfig.Instance.Judge, SingletonConfig.Instance.JudgeDesk },
+            {SingletonConfig.Instance.Cocouncil, null }
+        };
+        foreach (string witness in SingletonConfig.Instance.Witnesses)
+        {
+            characterToDeskMap.Add(witness, SingletonConfig.Instance.WitnessDesk);
+        }
+        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(sceneData, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        for (int i = 0; i < deserializedJson.Count; i++)
+        {
+            if (i % SingletonConfig.Instance.ChunkSize == 0)
+            {
+                doc.CurrentTimeline = i / SingletonConfig.Instance.ChunkSize;
+                doc.Timelines[doc.CurrentTimeline].CurrentFrame = 0;
+                doc.CreateLayerIfDoesntExist("DESKS");
+            }
+            var currentTimeline = doc.Timelines[doc.CurrentTimeline];
+            var currentLayer = currentTimeline.Layers[currentTimeline.FindLayerIndex("DESKS")[0]];
+            if (currentTimeline.CurrentFrame != 0)
+            {
+                currentLayer.InsertBlankKeyframe(currentTimeline.CurrentFrame);
+            }
+            string character = deserializedJson["Dialogue"].Values.ElementAt(i).CharacterName!;
+            SymbolConfig? desk = characterToDeskMap[character];
+            if (desk != null)
+            {
+                doc.Library.AddItemToDocument(desk.LibraryPath, currentLayer.GetFrame(currentTimeline.CurrentFrame), desk.Tx, desk.Ty);
+            }
+            currentTimeline.CurrentFrame += SingletonConfig.Instance.DefaultFrameDuration;
+        }
+    }
+    static void PlaceBGs(this Document doc, string sceneData)
+    {
+        var characterToBgMap = new Dictionary<string, SymbolConfig>
+        {
+            { SingletonConfig.Instance.Defense, SingletonConfig.Instance.DefenseBackground },
+            {SingletonConfig.Instance.Prosecutor, SingletonConfig.Instance.ProsecutorBackground },
+            {SingletonConfig.Instance.Judge, SingletonConfig.Instance.JudgeBackground },
+            {SingletonConfig.Instance.Cocouncil, SingletonConfig.Instance.CocouncilBackground }
+        };
+        foreach (string witness in SingletonConfig.Instance.Witnesses)
+        {
+            characterToBgMap.Add(witness, SingletonConfig.Instance.WitnessBackground);
+        }
+        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(sceneData, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        for (int i = 0; i < deserializedJson.Count; i++)
+        {
+            if (i % SingletonConfig.Instance.ChunkSize == 0)
+            {
+                doc.CurrentTimeline = i / SingletonConfig.Instance.ChunkSize;
+                doc.Timelines[doc.CurrentTimeline].CurrentFrame = 0;
+                doc.CreateLayerIfDoesntExist("BACKGROUNDS");
+            }
+            var currentTimeline = doc.Timelines[doc.CurrentTimeline];
+            var currentLayer = currentTimeline.Layers[currentTimeline.FindLayerIndex("BACKGROUNDS")[0]];
+            if (currentTimeline.CurrentFrame != 0)
+            {
+                currentLayer.InsertBlankKeyframe(currentTimeline.CurrentFrame);
+            }
+            string character = deserializedJson["Dialogue"].Values.ElementAt(i).CharacterName!;
+            SymbolConfig bg = characterToBgMap[character];
+            doc.Library.AddItemToDocument(bg.LibraryPath, currentLayer.GetFrame(currentTimeline.CurrentFrame), bg.Tx, bg.Ty);
+            currentTimeline.CurrentFrame += SingletonConfig.Instance.DefaultFrameDuration;
+        }
+    }
     static void Main()
     {
 
