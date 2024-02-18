@@ -23,6 +23,7 @@ public static class SoundUtils
             throw new InvalidOperationException("Failed to convert FLAC to WAV.");
         string format = GetSoundFormatString(wavData.WaveFormat.SampleRate, wavData.WaveFormat.BitsPerSample, wavData.WaveFormat.Channels);
         itemToUpdate.Format = format;
+        itemToUpdate.SampleCount = (int)Math.Round(wavData.Length / (wavData.WaveFormat.BitsPerSample / 8.0) / wavData.WaveFormat.Channels);
         return segment;
     }
     public static string GetSoundFormatString(string soundFilePath)
