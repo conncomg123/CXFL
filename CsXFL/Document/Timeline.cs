@@ -232,6 +232,10 @@ public class Timeline
     {
         Layer layer = layers[layerToMove];
         layers.RemoveAt(layerToMove);
+        if (layerToMove < layerToPutItBy)
+        {
+            layerToPutItBy--;
+        }
         layers.Insert(addBefore ? layerToPutItBy : layerToPutItBy + 1, layer);
 
         XElement? layersElement = root?.Element(ns + "layers");

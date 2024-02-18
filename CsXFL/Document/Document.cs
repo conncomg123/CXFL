@@ -41,7 +41,7 @@ public class Document
     {
         // new approach: extract FLA into temp directory, delete original FLA, create new FLA, add temp directory contents to new FLA
         string tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        while(Directory.Exists(tempDir))
+        while (Directory.Exists(tempDir))
         {
             tempDir = Path.Combine(tempDir, Path.GetRandomFileName());
         }
@@ -152,12 +152,38 @@ public class Document
     {
         XElement newTimeline = new(ns + "DOMTimeline");
         newTimeline.SetAttributeValue("name", name ?? "Scene " + (timelines.Count + 1));
-        if(root?.Element(ns + "timelines") is null) root?.Add(new XElement(ns + "timelines"));
+        if (root?.Element(ns + "timelines") is null) root?.Add(new XElement(ns + "timelines"));
         root?.Element(ns + "timelines")?.Add(newTimeline);
         Timeline timeline = new(newTimeline);
         timelines.Add(timeline);
         timeline.AddNewLayer("Layer_1");
         timeline.Layers[0].KeyFrames[0].Duration = 1;
         return timeline;
+    }
+    public void ReorderScene(int sceneToMove, int sceneToPutItBy, bool addBefore = true)
+    {
+        Timeline timeline = timelines[sceneToMove];
+        timelines.RemoveAt(sceneToMove);
+
+        if (sceneToMove < sceneToPutItBy)
+        {
+            sceneToPutItBy--;
+        }
+
+        timelines.Insert(addBefore ? sceneToPutItBy : sceneToPutItBy + 1, timeline);
+        XElement timelinesElement = root?.Element(ns + "timelines")!;
+        if (timelinesElement != null)
+        {
+            XElement? timelineElement = timeline.Root;
+            timelineElement?.Remove();
+            if (addBefore)
+            {
+                timelinesElement.Elements().ElementAt(sceneToPutItBy).AddBeforeSelf(timelineElement);
+            }
+            else
+            {
+                timelinesElement.Elements().ElementAt(sceneToPutItBy).AddAfterSelf(timelineElement);
+            }
+        }
     }
 }
