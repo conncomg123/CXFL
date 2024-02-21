@@ -16,7 +16,7 @@ public class Document
     private XDocument? xflTree;
     private readonly List<Timeline> timelines;
     private readonly Library library;
-    private readonly int width, height;
+    private int width, height;
     private int currentTimeline;
     private readonly double frameRate;
     private readonly XNamespace ns;
@@ -25,6 +25,8 @@ public class Document
     private readonly bool isXFL;
     public bool IsXFL { get { return isXFL; } }
     public Library Library { get { return library; } }
+    public int Width { get { return width; } set { width = value; root?.SetAttributeValue("width", value); } }
+    public int Height { get { return height; } set { height = value; root?.SetAttributeValue("height", value); } }
     public string Filename { get { return filename; } }
     public int CurrentTimeline { get { return currentTimeline - 1; } set { value++; currentTimeline = value; root?.SetAttributeValue("currentTimeline", value); } }
     public double FrameRate { get { return frameRate; } set { root?.SetAttributeValue("frameRate", value); } }
