@@ -7,8 +7,6 @@ namespace SceneGenerator.API;
 
 static class SFXAPI
 {
-    static Document Doc = new("C:\\Users\\Administrator\\CXFL\\SceneGenerator\\LipsyncingTest\\DOMDocument.xml");
-
     static string SFXFolderPath = "AUDIO/SFX/";
     static string FlashPath = "OTHER ASSETS/Standard_Flash";
     static bool TaperOff = true;
@@ -40,7 +38,7 @@ static class SFXAPI
 
     // Will only "screenshake" if Layer_1 is layer 0
 
-    static void PlaceSFX(this Document Doc, string sfxName, int FrameIndex)
+    public static void PlaceSFX(this Document Doc, string sfxName, int FrameIndex)
     {
 
         bool isSFXInFlash = Flash.Contains(sfxName);
