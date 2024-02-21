@@ -635,26 +635,34 @@ static class SceneGenerator
         }
     }
 
-    static void TypewriterFormat(this Document Doc, Text TextOp)
+    static void TypewriterFormat(this Document Doc, Text TextOp, int LetterSpacing)
     {
         TextOp.SetTextAttr("face", "Suburga 2 Semi-condensed Regular");
         TextOp.SetTextAttr("size", 80);
         TextOp.SetTextAttr("fillColor", "#00FF33");
-        TextOp.SetTextAttr("letterSpacing", 2);
+        TextOp.SetTextAttr("letterSpacing", LetterSpacing);
         TextOp.SetTextAttr("lineSpacing", 2);
         TextOp.SetTextAttr("alignment", "left");
         TextOp.FontRenderingMode = "standard";
         TextOp.TextType = "static";
-        // No Distribute...
     }
 
     static void PlaceIntroTypewriter(this Document Doc, string SceneData)
     {
         SingletonConfig config = SingletonConfig.Instance;
-        Font font = SystemFonts.CreateFont("Suburga 2 Semi-condensed Regular", 80, FontStyle.Regular);
-        TextOptions textOptions = new TextOptions(font);
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, TypewriterData>>>(SceneData, options);
+
+        // Kid named D drive
+        FontCollection fonts = new FontCollection();
+        string fontsFolder = "C:\\Users\\" + Environment.UserName + "\\AppData\\Local\\Microsoft\\Windows\\Fonts\\";
+        string fontPath = Path.Combine(fontsFolder, "suburga-2-semi-condensed-regular.otf");
+        fonts.Add(fontPath);
+
+        FontFamily family = fonts.Families.First();
+        Font font = family.CreateFont(80f, FontStyle.Regular);
+
+        TextOptions textOptions = new TextOptions(font);
 
         foreach (var typewriterIntroKey in deserializedJson["Typewriter"].Keys)
         {
@@ -662,14 +670,25 @@ static class SceneGenerator
             string Time = dialogueLine.Time!;
             string Location = dialogueLine.Location!;
 
-            CsXFL.Rectangle DialogueBounding = new(40.05 * 2, 549.5 * 2, 1212.95 * 2, 708.92 * 2);
+            int FRAMES_BETWEEN_LETTERS = 3;
+            int FRAMES_BETWEEN_WORDS = 6;
+            int LETTER_SPACING = 2;
+            int BOUNDING_CUSHION = 5;
+
+            string TYPEWRITER_SFX = "AUDIO/SFX/sfx-typewriter.wav";
+
             CsXFL.Rectangle TimeBounding = TextMeasurer.MeasureSize(Time, textOptions);
             CsXFL.Rectangle LocationBounding = TextMeasurer.MeasureSize(Location, textOptions);
 
-            int FRAMES_BETWEEN_LETTERS = 3;
-            int FRAMES_BETWEEN_WORDS = 6;
+            TimeBounding.Left = ((Doc.Width - TimeBounding.Right) / 2) - BOUNDING_CUSHION;
+            TimeBounding.Right += (TimeBounding.Left + (Time.Length * LETTER_SPACING)) + BOUNDING_CUSHION;
+            TimeBounding.Top = 560 * 2; 
+            TimeBounding.Bottom = 620 * 2;
 
-            string TYPEWRITER_SFX = "AUDIO/SFX/sfx-typewriter.wav";
+            LocationBounding.Left = ((Doc.Width - LocationBounding.Right) / 2) - BOUNDING_CUSHION;
+            LocationBounding.Right += (LocationBounding.Left + (Location.Length * LETTER_SPACING)) + BOUNDING_CUSHION;
+            LocationBounding.Top = 620 * 2;
+            LocationBounding.Bottom = 670 * 2;
 
             Doc.AddNewScene("Typewriter Intro");
 
@@ -710,10 +729,13 @@ static class SceneGenerator
                 CurrentFrame += FrameOp;
 
                 Text TimeText = CurrentTimeline.Layers[TEXT1_LAYER_INDEX].GetFrame(CurrentFrame).AddNewText(TimeBounding, CurrentCharacter);
-                TypewriterFormat(Doc, TimeText);
+                TypewriterFormat(Doc, TimeText, LETTER_SPACING);
 
-                Doc.Library.AddItemToDocument(TYPEWRITER_SFX, CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame), 0, 0);
-                CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame).SoundSync = "stream";
+                if (!CurrentCharacter.EndsWith(" "))
+                {
+                    Doc.Library.AddItemToDocument(TYPEWRITER_SFX, CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame), 0, 0);
+                    CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame).SoundSync = "stream";
+                }
             }
 
             CurrentTimeline.InsertFrames(12, true, CurrentFrame);
@@ -729,16 +751,18 @@ static class SceneGenerator
                 CurrentFrame += FrameOp;
 
                 Text LocationText = CurrentTimeline.Layers[TEXT2_LAYER_INDEX].GetFrame(CurrentFrame).AddNewText(LocationBounding, CurrentCharacter);
-                TypewriterFormat(Doc, LocationText);
+                TypewriterFormat(Doc, LocationText, LETTER_SPACING);
 
-                Doc.Library.AddItemToDocument(TYPEWRITER_SFX, CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame), 0, 0);
-                CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame).SoundSync = "stream";
+                if (!CurrentCharacter.EndsWith(" "))
+                {
+                    Doc.Library.AddItemToDocument(TYPEWRITER_SFX, CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame), 0, 0);
+                    CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame).SoundSync = "stream";
+                }
             }
 
             CurrentTimeline.InsertFrames(45, true, CurrentFrame);
+            CurrentTimeline.ReorderLayer(TEXTBOX_LAYER_INDEX, 2, false);
             CurrentTimeline.DeleteLayer(CurrentTimeline.FindLayerIndex("Layer_1")[0]);
-            CurrentTimeline.ReorderLayer(TEXTBOX_LAYER_INDEX, TEXT1_LAYER_INDEX, true);
-            CurrentTimeline.ReorderLayer(TEXTBOX_LAYER_INDEX, TEXT2_LAYER_INDEX, true);
 
         }
     }
