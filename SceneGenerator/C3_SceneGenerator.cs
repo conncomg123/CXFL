@@ -3,6 +3,7 @@ using SceneGenerator.API;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using SixLabors.Fonts;
 namespace SceneGenerator;
 
 // <!> Undecided about keeping viewmode profiles for CharacterConfig
@@ -303,8 +304,8 @@ static class SceneGenerator
     {
         SingletonConfig config = SingletonConfig.Instance;
 
-        Rectangle DialogueBounding = new Rectangle(40.05 * 2, 549.5 * 2, 1212.95 * 2, 708.92 * 2);
-        Rectangle SpeakerBounding = new Rectangle(20.05 * 2, 482.5 * 2, 254.4 * 2, 540.2 * 2);
+        CsXFL.Rectangle DialogueBounding = new(40.05 * 2, 549.5 * 2, 1212.95 * 2, 708.92 * 2);
+        CsXFL.Rectangle SpeakerBounding = new(20.05 * 2, 482.5 * 2, 254.4 * 2, 540.2 * 2);
 
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
@@ -626,7 +627,7 @@ static class SceneGenerator
 
             foreach (Frame FrameToConsider in CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("TEXT")[0]].KeyFrames)
             {
-                if (FrameToConsider.Name == dialogueKey) { StartingPosition = FrameToConsider.StartFrame;}
+                if (FrameToConsider.Name == dialogueKey) { StartingPosition = FrameToConsider.StartFrame; }
             }
 
             Doc.PlaceSFX(SFX + ".wav", (int)(StartingPosition + (SFX_Offset * Doc.FrameRate)));
@@ -650,19 +651,20 @@ static class SceneGenerator
     static void PlaceIntroTypewriter(this Document Doc, string SceneData)
     {
         SingletonConfig config = SingletonConfig.Instance;
-
+        Font font = SystemFonts.CreateFont("Suburga 2 Semi-condensed Regular", 80, FontStyle.Regular);
+        TextOptions textOptions = new TextOptions(font);
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, TypewriterData>>>(SceneData, options);
 
         foreach (var typewriterIntroKey in deserializedJson["Typewriter"].Keys)
         {
             var dialogueLine = deserializedJson["Typewriter"][typewriterIntroKey];
-            string Time = dialogueLine.Time;
-            string Location = dialogueLine.Location;
+            string Time = dialogueLine.Time!;
+            string Location = dialogueLine.Location!;
 
-            Rectangle DialogueBounding = new Rectangle(40.05 * 2, 549.5 * 2, 1212.95 * 2, 708.92 * 2);
-            Rectangle TimeBounding = new Rectangle(69 * 2, 560 * 2, 420 * 2, 620 * 2);
-            Rectangle LocationBounding = new Rectangle(69 * 2, 620 * 2, 420 * 2, 670 * 2);
+            CsXFL.Rectangle DialogueBounding = new(40.05 * 2, 549.5 * 2, 1212.95 * 2, 708.92 * 2);
+            CsXFL.Rectangle TimeBounding = TextMeasurer.MeasureSize(Time, textOptions);
+            CsXFL.Rectangle LocationBounding = TextMeasurer.MeasureSize(Location, textOptions);
 
             int FRAMES_BETWEEN_LETTERS = 3;
             int FRAMES_BETWEEN_WORDS = 6;

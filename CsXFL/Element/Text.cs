@@ -83,13 +83,13 @@ public class Text : Element
             textRuns.Add(new TextRun(textRunNode));
         }
     }
-    #pragma warning disable CS8618
+#pragma warning disable CS8618
     internal Text(Rectangle boundingRect, string characters, XNamespace ns) : base(ns)
     {
         root = new XElement(ns + "DOMStaticText");
         root.Add(new XElement(ns + "transformationPoint"));
         root.Element(ns + "transformationPoint")!.Add(transformationPoint.Root);
-        matrix.SetParent(root); 
+        matrix.SetParent(root);
         elementType = "text";
         this.ns = ns;
         Width = boundingRect.Right - boundingRect.Left;
@@ -106,7 +106,7 @@ public class Text : Element
         textRuns = new List<TextRun> { added };
         root.Add(new XElement(ns + "textRuns", added.Root));
     }
-    #pragma warning restore CS8618
+#pragma warning restore CS8618
     internal Text(in Text other) : base(other)
     {
         width = other.width;
@@ -167,5 +167,9 @@ public class Rectangle
         this.right = right;
         this.top = top;
         this.bottom = bottom;
+    }
+    public static implicit operator Rectangle(SixLabors.Fonts.FontRectangle rect)
+    {
+        return new Rectangle(rect.Left, rect.Top, rect.Right, rect.Bottom);
     }
 }
