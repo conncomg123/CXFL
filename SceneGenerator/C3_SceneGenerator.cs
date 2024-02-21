@@ -2,7 +2,6 @@
 using SceneGenerator.API;
 using System.Diagnostics;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 namespace SceneGenerator;
 
 // <!> Undecided about keeping viewmode profiles for CharacterConfig
@@ -207,18 +206,6 @@ static class SceneGenerator
         public string? Emotion { get; set; }
     }
 
-    public class SFXLine
-    {
-        public string? Alignment { get; set; }
-        public string? SFX { get; set; }
-    }
-
-    public class TypewriterData
-    {
-        public string? Time { get; set; }
-        public string? Location { get; set; }
-    }
-
     static void SetConfiguration()
     {
         SingletonConfig config = SingletonConfig.Instance;
@@ -350,8 +337,6 @@ static class SceneGenerator
                 TextboxElement.Loop = "single frame";
                 TextboxElement.ScaleX = 1.34164876055;
                 TextboxElement.ScaleY = 1.34152669671;
-                TextboxElement.Matrix.Tx = -7.3;
-                TextboxElement.Matrix.Ty = -6.9;
             }
 
             CurrentTimeline.Layers[TextLayerIndex].GetFrame(OperatingFrameIndex).ClearElements();
@@ -556,191 +541,6 @@ static class SceneGenerator
         }
     }
 
-    static double ReturnSFXAlignmentOffset(string filePath, string Alignment)
-    {
-        double offset = 0;
-
-        try
-        {
-            string targetVariable = "words";
-            string fileContent = File.ReadAllText(filePath);
-
-            // Extract the specific variable content using regex
-            string pattern = $@"var\s+{Regex.Escape(targetVariable)}\s*=\s*{{\s*(.*?)}};";
-            Match match = Regex.Match(fileContent, pattern, RegexOptions.Singleline);
-
-            if (match.Success)
-            {
-                string variableContent = match.Groups[1].Value;
-
-                // Parse variable content into dictionary
-                pattern = @"(\d+\.\d+)\s*:\s*\[([^\]]*)\]";
-                MatchCollection matches = Regex.Matches(variableContent, pattern);
-
-                foreach (Match m in matches)
-                {
-                    double key = double.Parse(m.Groups[1].Value);
-                    string[] values = m.Groups[2].Value.Split(',');
-
-                    if (values.Length >= 2 && values[1].Trim('"') == Alignment)
-                    {
-                        offset = key;
-                        break; // Stop searching after finding the first instance
-                    }
-                }
-            }
-            else
-            {
-                Console.WriteLine($"Variable '{targetVariable}' not found in the file.");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
-        }
-
-        return offset;
-    }
-
-    static void ParseSFX(this Document Doc, string SFXData)
-    {
-        SingletonConfig config = SingletonConfig.Instance;
-
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, SFXLine>>>(SFXData, options);
-
-        foreach (var dialogueKey in deserializedJson["SFX"].Keys)
-        {
-            var dialogueLine = deserializedJson["SFX"][dialogueKey];
-            string Alignment = dialogueLine.Alignment;
-            string SFX = dialogueLine.SFX;
-
-            int LineIndex = int.Parse(dialogueKey.Substring(3, 3));
-            int SceneIndex = (int)Math.Ceiling((double)LineIndex / config.ChunkSize);
-
-            Doc.CurrentTimeline = (SceneIndex - 1);
-            Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
-
-            double SFX_Offset = ReturnSFXAlignmentOffset(config.PathToCFGs + "\\" + dialogueKey + ".cfg", Alignment);
-            int StartingPosition = 0;
-
-            foreach (Frame FrameToConsider in CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("TEXT")[0]].KeyFrames)
-            {
-                if (FrameToConsider.Name == dialogueKey) { StartingPosition = FrameToConsider.StartFrame;}
-            }
-
-            Doc.PlaceSFX(SFX + ".wav", (int)(StartingPosition + (SFX_Offset * Doc.FrameRate)));
-
-        }
-    }
-
-    static void TypewriterFormat(this Document Doc, Text TextOp)
-    {
-        TextOp.SetTextAttr("face", "Suburga 2 Semi-condensed Regular");
-        TextOp.SetTextAttr("size", 80);
-        TextOp.SetTextAttr("fillColor", "#00FF33");
-        TextOp.SetTextAttr("letterSpacing", 2);
-        TextOp.SetTextAttr("lineSpacing", 2);
-        TextOp.SetTextAttr("alignment", "left");
-        TextOp.FontRenderingMode = "standard";
-        TextOp.TextType = "static";
-        // No Distribute...
-    }
-
-    static void PlaceIntroTypewriter(this Document Doc, string SceneData)
-    {
-        SingletonConfig config = SingletonConfig.Instance;
-
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, TypewriterData>>>(SceneData, options);
-
-        foreach (var typewriterIntroKey in deserializedJson["Typewriter"].Keys)
-        {
-            var dialogueLine = deserializedJson["Typewriter"][typewriterIntroKey];
-            string Time = dialogueLine.Time;
-            string Location = dialogueLine.Location;
-
-            Rectangle DialogueBounding = new Rectangle(40.05 * 2, 549.5 * 2, 1212.95 * 2, 708.92 * 2);
-            Rectangle TimeBounding = new Rectangle(69 * 2, 560 * 2, 420 * 2, 620 * 2);
-            Rectangle LocationBounding = new Rectangle(69 * 2, 620 * 2, 420 * 2, 670 * 2);
-
-            int FRAMES_BETWEEN_LETTERS = 3;
-            int FRAMES_BETWEEN_WORDS = 6;
-
-            string TYPEWRITER_SFX = "AUDIO/SFX/sfx-typewriter.wav";
-
-            Doc.AddNewScene("Typewriter Intro");
-
-            Doc.CurrentTimeline = (Doc.Timelines.Count - 1);
-            Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
-
-            CreateLayerIfDoesntExist(Doc, "TEXTBOX");
-            CreateLayerIfDoesntExist(Doc, "TEXT1");
-            CreateLayerIfDoesntExist(Doc, "TEXT2");
-            CreateLayerIfDoesntExist(Doc, "SFX");
-
-            int TEXTBOX_LAYER_INDEX = CurrentTimeline.FindLayerIndex("TEXTBOX")[0];
-            int TEXT1_LAYER_INDEX = CurrentTimeline.FindLayerIndex("TEXT1")[0];
-            int TEXT2_LAYER_INDEX = CurrentTimeline.FindLayerIndex("TEXT2")[0];
-            int SFX_LAYER_INDEX = CurrentTimeline.FindLayerIndex("SFX")[0];
-
-            if (CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("TEXTBOX")[0]].GetFrame(0).Elements.Count == 0)
-            {
-                Doc.Library.AddItemToDocument("OTHER ASSETS/Textbox", CurrentTimeline.Layers[TEXTBOX_LAYER_INDEX].GetFrame(0), 0, 0);
-                SymbolInstance TextboxElement = CurrentTimeline.Layers[TEXTBOX_LAYER_INDEX].GetFrame(0).Elements[0] as SymbolInstance;
-                TextboxElement.Loop = "single frame";
-                TextboxElement.FirstFrame = 1;
-                TextboxElement.ScaleX = 1.34164876055;
-                TextboxElement.ScaleY = 1.34152669671;
-                TextboxElement.Matrix.Tx = -7.3;
-                TextboxElement.Matrix.Ty = -6.9;
-            }
-
-            int CurrentFrame = 0;
-
-            for (var OperatingCharacter = 1; OperatingCharacter <= Time.Length; OperatingCharacter++)
-            {
-                string CurrentCharacter = Time.Substring(0, OperatingCharacter);
-                int FrameOp = CurrentCharacter.EndsWith(" ") ? FRAMES_BETWEEN_WORDS : FRAMES_BETWEEN_LETTERS;
-                CurrentTimeline.InsertFrames(CurrentCharacter.EndsWith(" ") ? FRAMES_BETWEEN_WORDS : FRAMES_BETWEEN_LETTERS, true, CurrentFrame);
-                CurrentTimeline.Layers[TEXT1_LAYER_INDEX].InsertBlankKeyframe(CurrentFrame);
-                CurrentTimeline.Layers[SFX_LAYER_INDEX].InsertBlankKeyframe(CurrentFrame);
-                CurrentFrame += FrameOp;
-
-                Text TimeText = CurrentTimeline.Layers[TEXT1_LAYER_INDEX].GetFrame(CurrentFrame).AddNewText(TimeBounding, CurrentCharacter);
-                TypewriterFormat(Doc, TimeText);
-
-                Doc.Library.AddItemToDocument(TYPEWRITER_SFX, CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame), 0, 0);
-                CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame).SoundSync = "stream";
-            }
-
-            CurrentTimeline.InsertFrames(12, true, CurrentFrame);
-            CurrentFrame += 12;
-
-            for (var OperatingCharacter = 1; OperatingCharacter <= Location.Length; OperatingCharacter++)
-            {
-                string CurrentCharacter = Location.Substring(0, OperatingCharacter);
-                int FrameOp = CurrentCharacter.EndsWith(" ") ? (FRAMES_BETWEEN_WORDS) : (FRAMES_BETWEEN_LETTERS);
-                CurrentTimeline.InsertFrames(CurrentCharacter.EndsWith(" ") ? FRAMES_BETWEEN_WORDS : FRAMES_BETWEEN_LETTERS, true, CurrentFrame);
-                CurrentTimeline.Layers[TEXT2_LAYER_INDEX].InsertBlankKeyframe(CurrentFrame);
-                CurrentTimeline.Layers[SFX_LAYER_INDEX].InsertBlankKeyframe(CurrentFrame);
-                CurrentFrame += FrameOp;
-
-                Text LocationText = CurrentTimeline.Layers[TEXT2_LAYER_INDEX].GetFrame(CurrentFrame).AddNewText(LocationBounding, CurrentCharacter);
-                TypewriterFormat(Doc, LocationText);
-
-                Doc.Library.AddItemToDocument(TYPEWRITER_SFX, CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame), 0, 0);
-                CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame).SoundSync = "stream";
-            }
-
-            CurrentTimeline.InsertFrames(45, true, CurrentFrame);
-            CurrentTimeline.DeleteLayer(CurrentTimeline.FindLayerIndex("Layer_1")[0]);
-            CurrentTimeline.ReorderLayer(TEXTBOX_LAYER_INDEX, TEXT1_LAYER_INDEX, true);
-            CurrentTimeline.ReorderLayer(TEXTBOX_LAYER_INDEX, TEXT2_LAYER_INDEX, true);
-
-        }
-    }
-
     static void PlaceDesks(this Document doc, string sceneData)
     {
         var characterToDeskMap = new Dictionary<string, SymbolConfig?>
@@ -826,16 +626,13 @@ static class SceneGenerator
         PlaceText(Doc, json);
         if (!config.SkipRigs) { PlaceRigs(Doc, json); };
 
+        string[] LayerOrder = new string[] { "FLASH", "INTERJECTION", "FADE", "GAVEL", "TEXT", "TEXTBOX", "EVIDENCE", "DESKS", "JAM_MASK", "BACKGROUNDS" };
+        OrganizeLayerStructure(Doc, LayerOrder);
+
         Doc.InsertLinesChunked(config.PathToLines);
 
         string[] IgnoreLipsync = new string[] { config.Defense.ToUpper() };
         Doc.LipsyncChunkedDocument(config.PathToCFGs, IgnoreLipsync);
-        ParseSFX(Doc, json);
-
-        string[] LayerOrder = new string[] { "FLASH", "INTERJECTION", "FADE", "GAVEL", "TEXT", "TEXTBOX", "EVIDENCE", "DESKS", "JAM_MASK", "BACKGROUNDS" };
-        OrganizeLayerStructure(Doc, LayerOrder);
-        PlaceIntroTypewriter(Doc, json);
-        Doc.ReorderScene(Doc.Timelines.Count - 1, 0, true);
 
         Doc.Save();
     }
