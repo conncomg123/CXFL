@@ -7,6 +7,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Jint" Version="3.0.0" />
+    <PackageReference Include="SixLabors.Fonts" Version="2.0.2" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CsXFL\CsXFL.csproj" />
