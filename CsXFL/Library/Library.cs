@@ -221,7 +221,7 @@ public class Library
         }
         return true;
     }
-    internal Item? ImportItem(string path, bool isFromOtherDocument, string? otherDocumentLibraryRoot = null)
+    internal Item? ImportItem(string path, bool isFromOtherDocument = false, string? otherDocumentLibraryRoot = null)
     {
         // todo: create an XElement node from the path, construct an Item from that, then enqueue an Add operation
         if (!File.Exists(path)) return null;
