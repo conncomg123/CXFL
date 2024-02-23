@@ -7,15 +7,11 @@ using SixLabors.Fonts;
 namespace SceneGenerator;
 
 // <!> Todo:
-// 1. Investigation mode should have previous character on screen if POV character is speaking.
 // 2. Evidence API (Soundman will do this)
 // 3. Fade API (Soundman will do this)
 // 4. Jam Fade API (Soundman will do this)
-// 5. Last frame of a chunk with character on screen is an empty frame
 // 6. Dynamic rig importing (Soundman will do this)
 // 7. More elegant logging
-// 8. Blinking API is being seely
-// 9. SFX API is being seely
 
 static class SceneGenerator
 {
@@ -255,10 +251,10 @@ static class SceneGenerator
         config.SkipBlinks = false;
 
         //Paths
-        config.PathToOperatingDocument = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\UltimateCsXFLTest.fla";
-        config.PathToSceneData = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\303S1_output.json";
-        config.PathToCFGs = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\CFGs\\Scene 1";
-        config.PathToLines = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\SCENE 1";
+        config.PathToOperatingDocument = "E:\\My stuff\\SceneGenTest\\UltimateCsXFLTest.fla";
+        config.PathToSceneData = "E:\\My stuff\\SceneGenTest\\303S1_output.json";
+        config.PathToCFGs = "E:\\My stuff\\SceneGenTest\\cfg";
+        config.PathToLines = "E:\\My stuff\\SceneGenTest\\vox";
 
         //Characters
         config.AddCharacter("Investigation", "Trucy", "RIGS/Trucy►/Trucy►ScaledPoses");
@@ -402,6 +398,13 @@ static class SceneGenerator
 
             CurrentTimeline.Layers[TextLayerIndex].GetFrame(OperatingFrameIndex).Name = LineID;
         }
+        // remove one frame from the end of each chunk
+        for (int i = 0; i < Doc.Timelines.Count; i++)
+        {
+            Timeline CurrentTimeline = Doc.GetTimeline(i);
+            int LastFrameIndex = CurrentTimeline.Layers[0].GetFrameCount() - 1;
+            CurrentTimeline.RemoveFrames(1, true, LastFrameIndex);
+        }
     }
 
     // <!> Need logic to extend the last placed rig when config.Defense is the character
@@ -411,13 +414,18 @@ static class SceneGenerator
 
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(SceneData, options);
-
+        string previousCharacter = "";
         var keys = deserializedJson["Dialogue"].Keys.ToList();
         for (int i = 0; i < keys.Count; i++)
         {
             var dialogueKey = keys[i];
             var dialogueLine = deserializedJson["Dialogue"][dialogueKey];
             string Character = dialogueLine.CharacterName;
+            if (Character == config.Defense)
+            {
+                if(string.IsNullOrEmpty(previousCharacter)) continue;
+                Character = previousCharacter;
+            }
             string CharacterLayerName = Character.ToUpper();
             string Emotion = dialogueLine.Emotion;
 
@@ -427,7 +435,6 @@ static class SceneGenerator
             Doc.CurrentTimeline = (SceneIndex - 1);
             Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
 
-            if (Character == config.Defense) { continue; } //Wow
 
             CreateLayerIfDoesntExist(Doc, "VECTOR_CHARACTERS", "folder");
             CreateLayerIfDoesntExist(Doc, CharacterLayerName);
@@ -440,7 +447,8 @@ static class SceneGenerator
             CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex).ClearElements();
 
             // Do some logic here to fix end caps for defense
-            CurrentTimeline.Layers[CharacterLayerIndex].ConvertToKeyframes(OperatingFrameIndex + config.DefaultFrameDuration);
+            if (i != keys.Count - 1 && i % config.ChunkSize != config.ChunkSize - 1)
+                CurrentTimeline.Layers[CharacterLayerIndex].ConvertToKeyframes(OperatingFrameIndex + config.DefaultFrameDuration);
 
             bool WasRigPlaced = Doc.Library.AddItemToDocument(config.GetLibraryPathByName(Character), CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex));
             if (WasRigPlaced)
@@ -454,6 +462,7 @@ static class SceneGenerator
             else { throw new Exception("An error occured when attempting rig placement."); }
 
             CurrentTimeline.Layers[CharacterLayerIndex].ParentLayerIndex = CurrentTimeline.FindLayerIndex("VECTOR_CHARACTERS")[0];
+            previousCharacter = Character;
         }
     }
 
@@ -666,9 +675,9 @@ static class SceneGenerator
             int SceneIndex = (int)Math.Ceiling((double)LineIndex / config.ChunkSize);
 
             // Skip non-scenes like Typewriters
-            if (!Doc.GetTimeline(SceneIndex - 1).Name.Contains("Scene")) SceneIndex++;
+            if (!Doc.GetTimeline(SceneIndex).Name.Contains("Scene")) SceneIndex++;
 
-            Doc.CurrentTimeline = (SceneIndex - 1);
+            Doc.CurrentTimeline = SceneIndex;
             Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
 
             double SFX_Offset = ReturnSFXAlignmentOffset(config.PathToCFGs + "\\" + dialogueKey + ".cfg", Alignment);
@@ -731,7 +740,7 @@ static class SceneGenerator
 
             TimeBounding.Left = ((Doc.Width - TimeBounding.Right) / 2) - BOUNDING_CUSHION;
             TimeBounding.Right += (TimeBounding.Left + (Time.Length * LETTER_SPACING)) + BOUNDING_CUSHION;
-            TimeBounding.Top = 560 * 2; 
+            TimeBounding.Top = 560 * 2;
             TimeBounding.Bottom = 620 * 2;
 
             LocationBounding.Left = ((Doc.Width - LocationBounding.Right) / 2) - BOUNDING_CUSHION;
@@ -958,6 +967,7 @@ static class SceneGenerator
         Trace.WriteLine("Layer Organization took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
 
+
         // Typewriter Intro
         stpw.Start();
         PlaceIntroTypewriter(Doc, json);
@@ -965,7 +975,6 @@ static class SceneGenerator
         stpw.Stop();
         Trace.WriteLine("Typewriter Automation took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
-
         // BG Placement
         stpw.Start();
         PlaceInvestigationBG(Doc);
@@ -973,16 +982,16 @@ static class SceneGenerator
         Trace.WriteLine("Background Placement took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
 
-        //SFX Automation
-        //stpw.Start();
-        //ParseSFX(Doc, json);
-        //stpw.Stop();
-        //Trace.WriteLine("SFX Placement took " + stpw.ElapsedMilliseconds + " ms.");
-        //stpw.Reset();
+        // //SFX Automation
+        // stpw.Start();
+        // ParseSFX(Doc, json);
+        // stpw.Stop();
+        // Trace.WriteLine("SFX Placement took " + stpw.ElapsedMilliseconds + " ms.");
+        // stpw.Reset();
 
         // Blink Automation
         stpw.Start();
-        Doc.AutomaticBlinking(5);
+        Doc.AutomaticBlinking(3);
         stpw.Stop();
         Trace.WriteLine("Automatic Blinking took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
