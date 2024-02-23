@@ -54,7 +54,7 @@ public class Document
         }
         SaveXFL(Path.Combine(tempDir, "DOMDocument.xml"));
         File.Delete(filename);
-        ZipFile.CreateFromDirectory(tempDir, filename);
+        ZipFile.CreateFromDirectory(tempDir, filename, CompressionLevel.Fastest, false);
         Directory.Delete(tempDir, true);
     }
     private void LoadXFL(string filename)
