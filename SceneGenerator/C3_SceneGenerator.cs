@@ -6,7 +6,15 @@ using System.Text.RegularExpressions;
 using SixLabors.Fonts;
 namespace SceneGenerator;
 
-// <!> Undecided about keeping viewmode profiles for CharacterConfig
+// <!> Todo:
+// 1. Investigation mode should have previous character on screen if POV character is speaking.
+// 2. Evidence API
+// 3. Fade API
+// 4. Jam Fade API
+// 5. Last frame of a chunk with character on screen is an empty frame
+// 6. Dynamic rig importing
+// 7. More elegant logging
+// 8. Blinking is weird
 
 static class SceneGenerator
 {
@@ -840,29 +848,88 @@ static class SceneGenerator
     }
     static void Main()
     {
-
         // <!> If you can figure out what type the deserialized JSON is, you can deserialize it here
         // and pass it in to the required functions instead of deserializing at the start of each function.
+        
+        Trace.Listeners.Add(new ConsoleTraceListener());
+        Trace.AutoFlush = true;
+        Stopwatch stpw = new Stopwatch();
 
+        stpw.Start();
         SetConfiguration();
         SingletonConfig config = SingletonConfig.Instance;
         string json = File.ReadAllText(config.PathToSceneData);
         Document Doc = new(config.PathToOperatingDocument);
         InputValidation(Doc);
+        stpw.Stop();
+        Trace.WriteLine("Setup took " + stpw.ElapsedMilliseconds + " ms.");
+        stpw.Reset();
+
+        // Text Placement
+        stpw.Start();
         PlaceText(Doc, json);
+        stpw.Stop();
+        Trace.WriteLine("Text Placement took " + stpw.ElapsedMilliseconds + " ms.");
+        stpw.Reset();
+
+        // Rig Placement
+        stpw.Start();
         if (!config.SkipRigs) { PlaceRigs(Doc, json); };
+        stpw.Stop();
+        Trace.WriteLine("Rig Placement took " + stpw.ElapsedMilliseconds + " ms.");
+        stpw.Reset();
 
+        // Line Insertion
+        stpw.Start();
         Doc.InsertLinesChunked(config.PathToLines);
+        stpw.Stop();
+        Trace.WriteLine("Line Insertion took " + stpw.ElapsedMilliseconds + " ms.");
+        stpw.Reset();
 
+        // Automatic Lipsyncing
+        stpw.Start();
         string[] IgnoreLipsync = new string[] { config.Defense.ToUpper() };
         Doc.LipsyncChunkedDocument(config.PathToCFGs, IgnoreLipsync);
-        ParseSFX(Doc, json);
+        stpw.Stop();
+        Trace.WriteLine("Lipsyncing took " + stpw.ElapsedMilliseconds + " ms.");
+        stpw.Reset();
 
+        // SFX Automation
+        stpw.Start();
+        ParseSFX(Doc, json);
+        stpw.Stop();
+        Trace.WriteLine("SFX Placement took " + stpw.ElapsedMilliseconds + " ms.");
+        stpw.Reset();
+
+        // Blink Automation
+        stpw.Start();
+        Doc.AutomaticBlinking(5);
+        stpw.Stop();
+        Trace.WriteLine("Automatic Blinking took " + stpw.ElapsedMilliseconds + " ms.");
+        stpw.Reset();
+
+        // Organize Layers
+        stpw.Start();
         string[] LayerOrder = new string[] { "FLASH", "INTERJECTION", "FADE", "GAVEL", "TEXT", "TEXTBOX", "EVIDENCE", "DESKS", "JAM_MASK", "BACKGROUNDS" };
         OrganizeLayerStructure(Doc, LayerOrder);
+        stpw.Stop();
+        Trace.WriteLine("Layer Organization took " + stpw.ElapsedMilliseconds + " ms.");
+        stpw.Reset();
+
+        // Typewriter Intro
+        stpw.Start();
         PlaceIntroTypewriter(Doc, json);
         Doc.ReorderScene(Doc.Timelines.Count - 1, 0, true);
+        stpw.Stop();
+        Trace.WriteLine("Typewriter Automation took " + stpw.ElapsedMilliseconds + " ms.");
+        stpw.Reset();
 
+        stpw.Start();
         Doc.Save();
+        stpw.Stop();
+        Trace.WriteLine("Document Saving took " + stpw.ElapsedMilliseconds + " ms.");
+        stpw.Reset();
+
+        Trace.Close();
     }
 }
