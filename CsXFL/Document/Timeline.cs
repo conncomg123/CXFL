@@ -228,56 +228,44 @@ public class Timeline
             whereToRemove.RemoveFrames(numFrames, frameNumIndex.Value);
         }
     }
-    private void UpdateParentLayerIndex(int layerIndex, int newParentLayerIndex)
-    {
-        Layer layer = layers[layerIndex];
-        layer.ParentLayerIndex = newParentLayerIndex;
-
-        // If the layer is a folder, recursively update the ParentLayerIndex of all layers within the folder
-        if (layer.LayerType == "folder")
-        {
-            // foreach layer that has a parentLayerIndex equal to the index of the folder, set the parentLayerIndex to the new index
-            for (int i = layerIndex + 1; i < layers.Count; i++)
-            {
-                if (layers[i].ParentLayerIndex == layerIndex)
-                {
-                    UpdateParentLayerIndex(i, newParentLayerIndex);
-                }
-            }
-        }
-    }
     private void ReorderLayerSingle(int layerToMove, int layerToPutItBy, bool addBefore)
     {
         Layer layer = layers[layerToMove], layerToPutItByLayer = layers[layerToPutItBy];
         layerToPutItBy += addBefore ? 0 : 1;
         if (layerToMove == layerToPutItBy) return;
-        int? originalParentLayerIndex = layer.ParentLayerIndex;
         layers.RemoveAt(layerToMove);
+        layer.Root?.Remove();
         if (layerToMove < layerToPutItBy)
         {
             layerToPutItBy--;
         }
-        layers.Insert(layerToPutItBy, layer);
-
-        XElement? layersElement = root?.Element(ns + "layers");
-        if (layersElement != null)
+        // update parentLayerIndices of all layers after the removal point
+        for (int i = layerToMove; i < layers.Count; i++)
         {
-            XElement? layerElement = layer.Root;
-            layerElement?.Remove();
-            if (addBefore) layersElement.Elements().ElementAt(layerToPutItBy).AddBeforeSelf(layerElement);
-            else layersElement.Elements().ElementAt(layerToPutItBy - 1).AddAfterSelf(layerElement);
+            if (layers[i].ParentLayerIndex is not null && layers[i].ParentLayerIndex > layerToMove)
+            {
+                layers[i].ParentLayerIndex--;
+            }
         }
+        layers.Insert(layerToPutItBy, layer);
         if (layerToPutItByLayer.LayerType == "folder" && !addBefore)
             layer.ParentLayerIndex = layerToPutItBy - 1;
         else
             layer.ParentLayerIndex = layerToPutItByLayer.ParentLayerIndex;
-        int start = Math.Min(layerToMove, layerToPutItBy), end = Math.Max(layerToMove, layerToPutItBy);
-        int increment = Math.Sign(layerToMove - layerToPutItBy);
-        for (int i = start; i <= end; i++)
+        XElement? layersElement = root?.Element(ns + "layers");
+        if (layersElement != null)
+        {
+            XElement? layerElement = layer.Root;
+            if (addBefore) layersElement.Elements().ElementAt(layerToPutItBy).AddBeforeSelf(layerElement);
+            else layersElement.Elements().ElementAt(layerToPutItBy - 1).AddAfterSelf(layerElement);
+        }
+        for (int i = layerToPutItBy + 1; i < layers.Count; i++)
         {
             Layer currentLayer = layers[i];
-            if (currentLayer.ParentLayerIndex is not null && currentLayer.ParentLayerIndex != originalParentLayerIndex)
-                UpdateParentLayerIndex(i, currentLayer.ParentLayerIndex.Value + increment);
+            if (currentLayer.ParentLayerIndex is not null && currentLayer.ParentLayerIndex != layer.ParentLayerIndex)
+            {
+                currentLayer.ParentLayerIndex++;
+            }
         }
         return;
     }
@@ -297,7 +285,7 @@ public class Timeline
                 lastItemInFolder = i;
             }
         }
-        if((layerToPutItBy - (addBefore ? 0 : 1)) <= lastItemInFolder && layerToPutItBy > folderIndex)
+        if ((layerToPutItBy - (addBefore ? 0 : 1)) <= lastItemInFolder && layerToPutItBy > folderIndex)
         {
             return;
         }
@@ -347,7 +335,7 @@ public class Timeline
             Layer currentLayer = layers[i];
             if (currentLayer.ParentLayerIndex is not null && currentLayer.ParentLayerIndex != layer.ParentLayerIndex)
             {
-                UpdateParentLayerIndex(i, currentLayer.ParentLayerIndex.Value + layersToMove.Count);
+                currentLayer.ParentLayerIndex += layersToMove.Count;
             }
         }
     }
