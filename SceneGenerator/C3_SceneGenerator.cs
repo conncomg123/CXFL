@@ -8,13 +8,14 @@ namespace SceneGenerator;
 
 // <!> Todo:
 // 1. Investigation mode should have previous character on screen if POV character is speaking.
-// 2. Evidence API
-// 3. Fade API
-// 4. Jam Fade API
+// 2. Evidence API (Soundman will do this)
+// 3. Fade API (Soundman will do this)
+// 4. Jam Fade API (Soundman will do this)
 // 5. Last frame of a chunk with character on screen is an empty frame
-// 6. Dynamic rig importing
+// 6. Dynamic rig importing (Soundman will do this)
 // 7. More elegant logging
-// 8. Blinking is weird
+// 8. Blinking API is being seely
+// 9. SFX API is being seely
 
 static class SceneGenerator
 {
@@ -411,8 +412,10 @@ static class SceneGenerator
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(SceneData, options);
 
-        foreach (var dialogueKey in deserializedJson["Dialogue"].Keys)
+        var keys = deserializedJson["Dialogue"].Keys.ToList();
+        for (int i = 0; i < keys.Count; i++)
         {
+            var dialogueKey = keys[i];
             var dialogueLine = deserializedJson["Dialogue"][dialogueKey];
             string Character = dialogueLine.CharacterName;
             string CharacterLayerName = Character.ToUpper();
@@ -434,8 +437,10 @@ static class SceneGenerator
             int OperatingFrameIndex = config.DefaultFrameDuration * ((LineIndex - 1) % config.ChunkSize);
 
             CurrentTimeline.Layers[CharacterLayerIndex].ConvertToKeyframes(OperatingFrameIndex);
-            CurrentTimeline.Layers[CharacterLayerIndex].ConvertToKeyframes(OperatingFrameIndex + config.DefaultFrameDuration);
             CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex).ClearElements();
+
+            // Do some logic here to fix end caps for defense
+            CurrentTimeline.Layers[CharacterLayerIndex].ConvertToKeyframes(OperatingFrameIndex + config.DefaultFrameDuration);
 
             bool WasRigPlaced = Doc.Library.AddItemToDocument(config.GetLibraryPathByName(Character), CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex));
             if (WasRigPlaced)
@@ -451,6 +456,7 @@ static class SceneGenerator
             CurrentTimeline.Layers[CharacterLayerIndex].ParentLayerIndex = CurrentTimeline.FindLayerIndex("VECTOR_CHARACTERS")[0];
         }
     }
+
     public class DoubleIntPair
     {
         public double DoubleValue { get; set; }
@@ -559,6 +565,38 @@ static class SceneGenerator
                 }
             }
 
+            // Create an AUDIO layer if it doesn't exist
+            CreateLayerIfDoesntExist(Doc, "AUDIO", "folder");
+            int audioLayerIndex = Doc.Timelines[SceneIndex].FindLayerIndex("AUDIO")[0];
+
+            // Define the array to store the Layer names
+            List<string> layerNames = new List<string>();
+
+            // Iterate through the layers and add the names to the array
+            foreach (var CurrentLayer in CurrentTimeline.Layers)
+            {
+                string LayerName = CurrentLayer.Name;
+                if (LayerName.Contains("_VOX") || LayerName.Contains("SFX"))
+                {
+                    layerNames.Add(LayerName);
+                }
+            }
+
+            // Move the Background layer above the Audio layer
+            int backgroundLayerIndex = CurrentTimeline.FindLayerIndex("BACKGROUNDS")[0];
+            audioLayerIndex = CurrentTimeline.FindLayerIndex("AUDIO")[0];
+            CurrentTimeline.ReorderLayer(backgroundLayerIndex, audioLayerIndex, true);
+
+            // Iterate through the array and reorder the layers
+            foreach (var LayerName in layerNames)
+            {
+                // Get the index of the layer using FindLayerIndex and reorder it
+                int layerIndex = CurrentTimeline.FindLayerIndex(LayerName)[0];
+                CurrentTimeline.ReorderLayer(layerIndex, audioLayerIndex, false);
+                audioLayerIndex = CurrentTimeline.FindLayerIndex("AUDIO")[0];
+            }
+
+            // Delete the default Layer_1
             int DefaultLayerIndex = CurrentTimeline.FindLayerIndex("Layer_1")[0];
             CurrentTimeline.DeleteLayer(DefaultLayerIndex);
 
@@ -626,6 +664,9 @@ static class SceneGenerator
 
             int LineIndex = int.Parse(dialogueKey.Substring(3, 3));
             int SceneIndex = (int)Math.Ceiling((double)LineIndex / config.ChunkSize);
+
+            // Skip non-scenes like Typewriters
+            if (!Doc.GetTimeline(SceneIndex - 1).Name.Contains("Scene")) SceneIndex++;
 
             Doc.CurrentTimeline = (SceneIndex - 1);
             Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
@@ -707,6 +748,7 @@ static class SceneGenerator
             CreateLayerIfDoesntExist(Doc, "TEXT1");
             CreateLayerIfDoesntExist(Doc, "TEXT2");
             CreateLayerIfDoesntExist(Doc, "SFX");
+            CreateLayerIfDoesntExist(Doc, "BACKGROUNDS");
 
             int TEXTBOX_LAYER_INDEX = CurrentTimeline.FindLayerIndex("TEXTBOX")[0];
             int TEXT1_LAYER_INDEX = CurrentTimeline.FindLayerIndex("TEXT1")[0];
@@ -769,7 +811,7 @@ static class SceneGenerator
             }
 
             CurrentTimeline.InsertFrames(45, true, CurrentFrame);
-            CurrentTimeline.ReorderLayer(TEXTBOX_LAYER_INDEX, 2, false);
+            CurrentTimeline.ReorderLayer(TEXTBOX_LAYER_INDEX, CurrentTimeline.FindLayerIndex("SFX")[0], true);
             CurrentTimeline.DeleteLayer(CurrentTimeline.FindLayerIndex("Layer_1")[0]);
 
         }
@@ -812,7 +854,21 @@ static class SceneGenerator
             currentTimeline.CurrentFrame += SingletonConfig.Instance.DefaultFrameDuration;
         }
     }
-    static void PlaceBGs(this Document doc, string sceneData)
+
+    static void PlaceInvestigationBG(this Document Doc)
+    {
+        string PATH_TO_DEFAULT_BACKGROUND = "BACKGROUNDS/Background";
+
+        for (int SceneIndex = 0; SceneIndex < Doc.Timelines.Count; SceneIndex++)
+        {
+            Doc.CurrentTimeline = SceneIndex;
+            Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
+            CreateLayerIfDoesntExist(Doc, "BACKGROUNDS");
+            Doc.Library.AddItemToDocument(PATH_TO_DEFAULT_BACKGROUND, CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("BACKGROUNDS")[0]].GetFrame(0), 1280, 720);
+        }
+    }
+
+    static void PlaceCourtBGs(this Document doc, string sceneData)
     {
         var characterToBgMap = new Dictionary<string, SymbolConfig>
         {
@@ -850,7 +906,7 @@ static class SceneGenerator
     {
         // <!> If you can figure out what type the deserialized JSON is, you can deserialize it here
         // and pass it in to the required functions instead of deserializing at the start of each function.
-        
+
         Trace.Listeners.Add(new ConsoleTraceListener());
         Trace.AutoFlush = true;
         Stopwatch stpw = new Stopwatch();
@@ -894,20 +950,6 @@ static class SceneGenerator
         Trace.WriteLine("Lipsyncing took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
 
-        // SFX Automation
-        stpw.Start();
-        ParseSFX(Doc, json);
-        stpw.Stop();
-        Trace.WriteLine("SFX Placement took " + stpw.ElapsedMilliseconds + " ms.");
-        stpw.Reset();
-
-        // Blink Automation
-        stpw.Start();
-        Doc.AutomaticBlinking(5);
-        stpw.Stop();
-        Trace.WriteLine("Automatic Blinking took " + stpw.ElapsedMilliseconds + " ms.");
-        stpw.Reset();
-
         // Organize Layers
         stpw.Start();
         string[] LayerOrder = new string[] { "FLASH", "INTERJECTION", "FADE", "GAVEL", "TEXT", "TEXTBOX", "EVIDENCE", "DESKS", "JAM_MASK", "BACKGROUNDS" };
@@ -922,6 +964,27 @@ static class SceneGenerator
         Doc.ReorderScene(Doc.Timelines.Count - 1, 0, true);
         stpw.Stop();
         Trace.WriteLine("Typewriter Automation took " + stpw.ElapsedMilliseconds + " ms.");
+        stpw.Reset();
+
+        // BG Placement
+        stpw.Start();
+        PlaceInvestigationBG(Doc);
+        stpw.Stop();
+        Trace.WriteLine("Background Placement took " + stpw.ElapsedMilliseconds + " ms.");
+        stpw.Reset();
+
+        //SFX Automation
+        //stpw.Start();
+        //ParseSFX(Doc, json);
+        //stpw.Stop();
+        //Trace.WriteLine("SFX Placement took " + stpw.ElapsedMilliseconds + " ms.");
+        //stpw.Reset();
+
+        // Blink Automation
+        stpw.Start();
+        Doc.AutomaticBlinking(5);
+        stpw.Stop();
+        Trace.WriteLine("Automatic Blinking took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
 
         stpw.Start();
