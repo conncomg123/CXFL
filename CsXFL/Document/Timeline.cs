@@ -90,7 +90,7 @@ public class Timeline
             XElement elements = new(ns + "elements");
             frame.Add(elements);
         }
-        if(root?.Element(ns + "layers") is null) root?.Add(new XElement(ns + "layers"));
+        if (root?.Element(ns + "layers") is null) root?.Add(new XElement(ns + "layers"));
         root?.Element(ns + "layers")?.Add(newLayer);
         layers.Add(new Layer(newLayer));
         return layers.Count - 1;
@@ -228,29 +228,134 @@ public class Timeline
             whereToRemove.RemoveFrames(numFrames, frameNumIndex.Value);
         }
     }
-    public void ReorderLayer(int layerToMove, int layerToPutItBy, bool addBefore = true)
+    private void UpdateParentLayerIndex(int layerIndex, int newParentLayerIndex)
     {
-        Layer layer = layers[layerToMove];
+        Layer layer = layers[layerIndex];
+        layer.ParentLayerIndex = newParentLayerIndex;
+
+        // If the layer is a folder, recursively update the ParentLayerIndex of all layers within the folder
+        if (layer.LayerType == "folder")
+        {
+            // foreach layer that has a parentLayerIndex equal to the index of the folder, set the parentLayerIndex to the new index
+            for (int i = layerIndex + 1; i < layers.Count; i++)
+            {
+                if (layers[i].ParentLayerIndex == layerIndex)
+                {
+                    UpdateParentLayerIndex(i, newParentLayerIndex);
+                }
+            }
+        }
+    }
+    private void ReorderLayerSingle(int layerToMove, int layerToPutItBy, bool addBefore)
+    {
+        Layer layer = layers[layerToMove], layerToPutItByLayer = layers[layerToPutItBy];
+        layerToPutItBy += addBefore ? 0 : 1;
+        if (layerToMove == layerToPutItBy) return;
+        int? originalParentLayerIndex = layer.ParentLayerIndex;
         layers.RemoveAt(layerToMove);
         if (layerToMove < layerToPutItBy)
         {
             layerToPutItBy--;
         }
-        layers.Insert(addBefore ? layerToPutItBy : layerToPutItBy + 1, layer);
+        layers.Insert(layerToPutItBy, layer);
 
         XElement? layersElement = root?.Element(ns + "layers");
         if (layersElement != null)
         {
             XElement? layerElement = layer.Root;
             layerElement?.Remove();
-            if (addBefore)
+            if (addBefore) layersElement.Elements().ElementAt(layerToPutItBy).AddBeforeSelf(layerElement);
+            else layersElement.Elements().ElementAt(layerToPutItBy - 1).AddAfterSelf(layerElement);
+        }
+        if (layerToPutItByLayer.LayerType == "folder" && !addBefore)
+            layer.ParentLayerIndex = layerToPutItBy - 1;
+        else
+            layer.ParentLayerIndex = layerToPutItByLayer.ParentLayerIndex;
+        int start = Math.Min(layerToMove, layerToPutItBy), end = Math.Max(layerToMove, layerToPutItBy);
+        int increment = Math.Sign(layerToMove - layerToPutItBy);
+        for (int i = start; i <= end; i++)
+        {
+            Layer currentLayer = layers[i];
+            if (currentLayer.ParentLayerIndex is not null && currentLayer.ParentLayerIndex != originalParentLayerIndex)
+                UpdateParentLayerIndex(i, currentLayer.ParentLayerIndex.Value + increment);
+        }
+        return;
+    }
+    private void ReorderFolder(int folderIndex, int layerToPutItBy, bool addBefore)
+    {
+        Layer layer = layers[folderIndex], layerToPutItByLayer = layers[layerToPutItBy];
+        layerToPutItBy += addBefore ? 0 : 1;
+        if (folderIndex == layerToPutItBy) return;
+        int? originalParentLayerIndex = layer.ParentLayerIndex;
+        // gather all layers within the folder
+        List<(int, Layer, int?)> layersToMove = [(folderIndex, layer, originalParentLayerIndex)];
+        int lastItemInFolder = folderIndex;
+        for (int i = folderIndex + 1; i < layers.Count; i++)
+        {
+            if (layers[i].ParentLayerIndex == folderIndex)
             {
-                layersElement.Elements().ElementAt(layerToPutItBy).AddBeforeSelf(layerElement);
-            }
-            else
-            {
-                layersElement.Elements().ElementAt(layerToPutItBy).AddAfterSelf(layerElement);
+                lastItemInFolder = i;
             }
         }
+        if((layerToPutItBy - (addBefore ? 0 : 1)) <= lastItemInFolder && layerToPutItBy > folderIndex)
+        {
+            return;
+        }
+        for (int i = folderIndex + 1; i <= lastItemInFolder; i++)
+        {
+            layersToMove.Add((i, layers[i], layers[i].ParentLayerIndex));
+        }
+        // remove the layers from the list, updating parentLayerIndices of all layers after the last layer to be moved
+        for (int i = layersToMove.Count - 1; i >= 0; i--)
+        {
+            Layer toRemove = layersToMove[i].Item2;
+            layers.RemoveAt(layersToMove[i].Item1);
+            toRemove.Root?.Remove();
+        }
+        if (folderIndex < layerToPutItBy)
+        {
+            layerToPutItBy -= layersToMove.Count;
+        }
+        int distance = layerToPutItBy - folderIndex;
+        foreach (Layer l in layers)
+        {
+            if (l.ParentLayerIndex is not null && l.ParentLayerIndex > lastItemInFolder && l.ParentLayerIndex != originalParentLayerIndex)
+            {
+                l.ParentLayerIndex -= layersToMove.Count;
+            }
+        }
+        if (layerToPutItByLayer.LayerType == "folder" && !addBefore)
+            layer.ParentLayerIndex = layerToPutItBy - 1;
+        else
+            layer.ParentLayerIndex = layerToPutItByLayer.ParentLayerIndex;
+        // insert the layers into the new position, updating parentLayerIndices of all layers after the insertion point
+        for (int i = 0; i < layersToMove.Count; i++)
+        {
+            Layer toInsert = layersToMove[i].Item2;
+            layers.Insert(layerToPutItBy + i, toInsert);
+            if (i > 0) toInsert.ParentLayerIndex = layersToMove[i].Item3 + distance;
+            XElement? layersElement = root?.Element(ns + "layers");
+            if (layersElement != null)
+            {
+                XElement? layerElement = toInsert.Root;
+                if (addBefore) layersElement.Elements().ElementAt(layerToPutItBy + i).AddBeforeSelf(layerElement);
+                else layersElement.Elements().ElementAt(layerToPutItBy + i - 1).AddAfterSelf(layerElement);
+            }
+        }
+        for (int i = layerToPutItBy + layersToMove.Count; i < layers.Count; i++)
+        {
+            Layer currentLayer = layers[i];
+            if (currentLayer.ParentLayerIndex is not null && currentLayer.ParentLayerIndex != layer.ParentLayerIndex)
+            {
+                UpdateParentLayerIndex(i, currentLayer.ParentLayerIndex.Value + layersToMove.Count);
+            }
+        }
+    }
+    public void ReorderLayer(int layerToMove, int layerToPutItBy, bool addBefore = true)
+    {
+        // need to parentLayerIndices, moving folders, moving layers into folders, moving layers out of folders
+        Layer layer = layers[layerToMove];
+        if (layer.LayerType == "folder") ReorderFolder(layerToMove, layerToPutItBy, addBefore);
+        else ReorderLayerSingle(layerToMove, layerToPutItBy, addBefore);
     }
 }
