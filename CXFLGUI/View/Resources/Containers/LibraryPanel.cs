@@ -25,6 +25,12 @@ namespace CXFLGUI
         Dictionary<string, CsXFL.Item> Tuple_LibraryItemDict = new Dictionary<string, CsXFL.Item>();
         ObservableCollection<LibraryItem> LibraryItems = new ObservableCollection<LibraryItem>();
 
+        public class LibraryItem
+        {
+            public string Key { get; set; }
+            public CsXFL.Item Value { get; set; }
+        }
+
         public LibraryPanel(MainViewModel viewModel)
         {
             this.viewModel = viewModel;
@@ -38,9 +44,68 @@ namespace CXFLGUI
 
             var listView = new ListView
             {
-                ItemsSource = LibraryItems,
-                ItemTemplate = new DataTemplate(typeof(LibraryItemCell))
+                ItemsSource = LibraryItems
             };
+
+            listView.ItemTemplate = new DataTemplate(() =>
+            {
+                var cell = new LibraryItemCell();
+
+                var text = new Label();
+                text.SetBinding(Label.TextProperty, "Key");
+
+                var icon = new Label
+                {
+                    FontSize = 20,
+                    TextColor = Colors.White
+                };
+
+                icon.SetBinding(Label.TextProperty, "Key");
+
+                cell.View = new StackLayout
+                {
+                    Orientation = StackOrientation.Horizontal,
+                    Padding = new Thickness(10, 5),
+                    Spacing = 10,
+                    Children = { icon, text }
+                };
+
+                cell.BindingContextChanged += (sender, e) =>
+                {
+                    if (cell.BindingContext is LibraryItem item)
+                    {
+                        switch (item.Value.ItemType)
+                        {
+                            case "bitmap":
+                                icon.Icon(MaterialIcons.Image);
+                                break;
+                            case "sound":
+                                icon.Icon(MaterialIcons.VolumeUp);
+                                break;
+                            case "graphic":
+                                icon.Icon(MaterialIcons.Category);
+                                break;
+                            case "movie clip":
+                                icon.Icon(MaterialIcons.Movie);
+                                break;
+                            case "font":
+                                icon.Icon(MaterialIcons.ABC);
+                                break;
+                            case "button":
+                                icon.Icon(MaterialIcons.SmartButton);
+                                break;
+                            case "folder":
+                                icon.Icon(MaterialIcons.Folder);
+                                break;
+                            default:
+                                icon.Icon(MaterialIcons.QuestionMark);
+                                break;
+                        }
+                    }
+                };
+
+                return cell;
+            });
 
             listView.ItemSelected += MyListView_ItemSelected;
 
@@ -84,11 +149,8 @@ namespace CXFLGUI
             ((ListView)sender).SelectedItem = null;
         }
 
-        public class LibraryItem
-        {
-            public string Key { get; set; }
-            public CsXFL.Item Value { get; set; }
-        }
+        // "Soundman, what the hell is this? Why is it here?"
+        // https://thatisanexcellentquestion.com/
 
         [XamlCompilation(XamlCompilationOptions.Compile)]
         public class LibraryItemCell : ViewCell
@@ -102,7 +164,7 @@ namespace CXFLGUI
                 };
 
                 var text = new Label();
-                text.SetBinding(Label.TextProperty, new Binding("Key"));
+                text.SetBinding(Label.TextProperty, "Key");
 
                 var stackLayout = new StackLayout
                 {
@@ -112,51 +174,29 @@ namespace CXFLGUI
                     Children = { icon, text }
                 };
 
-                var myBinding = new Binding("Value.ItemType");
-                icon.Icon(IconExtension.GetIcon(myBinding))
-                    .IconSize(20.0)
-                    .IconColor(Colors.White);
-
                 View = stackLayout;
-            }
 
-            public static class IconExtension
-            {
-                public static MaterialIcons GetIcon(Binding binding)
+                this.BindingContextChanged += (sender, e) =>
                 {
-                    var itemTypeConverter = new ItemTypeConverter();
-                    // Accessing the object through Binding.Source
-                    return (MaterialIcons)itemTypeConverter.Convert(binding.Source, typeof(MaterialIcons), null, CultureInfo.CurrentCulture);
-                }
-            }
-
-            public class ItemTypeConverter : IValueConverter
-            {
-                Microsoft.Maui.Graphics.Color DefaultColor = Colors.Red;
-                double DefaultSize = 20.0;
-                public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-                {
-                    if (value is string itemType)
+                    if (BindingContext is LibraryPanel.LibraryItem item)
                     {
-                        switch (itemType)
+                        switch (item.Value.ItemType)
                         {
                             case "bitmap":
-                                return MaterialIcons.Image;
+                                icon.Icon(MaterialIcons.Image);
+                                break;
                             case "sound":
-                                return MaterialIcons.AudioFile;
+                                icon.Icon(MaterialIcons.AudioFile);
+                                break;
                             case "graphic":
-                                return MaterialIcons.Collections;
+                                icon.Icon(MaterialIcons.Collections);
+                                break;
                             default:
-                                return MaterialIcons.QuestionMark;
+                                icon.Icon(MaterialIcons.QuestionMark);
+                                break;
                         }
                     }
-                    return MaterialIcons.QuestionMark;
-                }
-
-                public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-                {
-                    throw new NotImplementedException();
-                }
+                };
             }
         }
     }
