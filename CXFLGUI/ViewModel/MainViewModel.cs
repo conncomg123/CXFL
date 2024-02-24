@@ -14,6 +14,7 @@ public class MainViewModel : INotifyPropertyChanged
         SaveDocumentCMD = new Command(SaveDocument);
     }
 
+    public event EventHandler<DocumentEventArgs> DocumentOpened;
     private async void OpenDocument()
     {
         try
@@ -34,6 +35,8 @@ public class MainViewModel : INotifyPropertyChanged
 
                 Document doc = await An.OpenDocumentAsync(filePath);
                 Trace.WriteLine(doc.Filename);
+
+                DocumentOpened?.Invoke(this, new DocumentEventArgs(doc)); // Raise the event
             }
         }
         catch (Exception ex)
@@ -46,9 +49,18 @@ public class MainViewModel : INotifyPropertyChanged
         An.GetActiveDocument().Save();
     }
 
-
     protected virtual void OnPropertyChanged(string propertyName)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    public class DocumentEventArgs : EventArgs
+    {
+        public Document Document { get; private set; }
+
+        public DocumentEventArgs(Document document)
+        {
+            Document = document;
+        }
     }
 }
