@@ -2,10 +2,15 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CsXFL;
+using MauiIcons.Core;
+using MauiIcons.Material;
+using Microsoft.Maui.Graphics.Win2D;
+using Microsoft.UI.Xaml.Markup;
 using static MainViewModel;
 
 namespace CXFLGUI
@@ -18,7 +23,7 @@ namespace CXFLGUI
         int LoadedItemsCount = 0;
 
         Dictionary<string, CsXFL.Item> Tuple_LibraryItemDict = new Dictionary<string, CsXFL.Item>();
-        ObservableCollection<string> String_LibraryItemList = new ObservableCollection<string>();
+        ObservableCollection<LibraryItem> LibraryItems = new ObservableCollection<LibraryItem>();
 
         public LibraryPanel(MainViewModel viewModel)
         {
@@ -33,7 +38,8 @@ namespace CXFLGUI
 
             var listView = new ListView
             {
-                ItemsSource = String_LibraryItemList
+                ItemsSource = LibraryItems,
+                ItemTemplate = new DataTemplate(typeof(LibraryItemCell))
             };
 
             listView.ItemSelected += MyListView_ItemSelected;
@@ -52,12 +58,12 @@ namespace CXFLGUI
             Tuple_LibraryItemDict = Doc.Library.Items;
 
             // Clear existing items
-            String_LibraryItemList.Clear();
+            LibraryItems.Clear();
 
             // Initiating conversion sequence!
             foreach (var kvp in Tuple_LibraryItemDict)
             {
-                String_LibraryItemList.Add(kvp.Key);
+                LibraryItems.Add(new LibraryItem { Key = kvp.Key, Value = kvp.Value });
             }
         }
 
@@ -76,6 +82,82 @@ namespace CXFLGUI
 
             // Deselect the item
             ((ListView)sender).SelectedItem = null;
+        }
+
+        public class LibraryItem
+        {
+            public string Key { get; set; }
+            public CsXFL.Item Value { get; set; }
+        }
+
+        [XamlCompilation(XamlCompilationOptions.Compile)]
+        public class LibraryItemCell : ViewCell
+        {
+            public LibraryItemCell()
+            {
+                var icon = new Label
+                {
+                    FontSize = 20,
+                    TextColor = Colors.White
+                };
+
+                var text = new Label();
+                text.SetBinding(Label.TextProperty, new Binding("Key"));
+
+                var stackLayout = new StackLayout
+                {
+                    Orientation = StackOrientation.Horizontal,
+                    Padding = new Thickness(10, 5),
+                    Spacing = 10,
+                    Children = { icon, text }
+                };
+
+                var myBinding = new Binding("Value.ItemType");
+                icon.Icon(IconExtension.GetIcon(myBinding))
+                    .IconSize(20.0)
+                    .IconColor(Colors.White);
+
+                View = stackLayout;
+            }
+
+            public static class IconExtension
+            {
+                public static MaterialIcons GetIcon(Binding binding)
+                {
+                    var itemTypeConverter = new ItemTypeConverter();
+                    // Accessing the object through Binding.Source
+                    return (MaterialIcons)itemTypeConverter.Convert(binding.Source, typeof(MaterialIcons), null, CultureInfo.CurrentCulture);
+                }
+            }
+
+            public class ItemTypeConverter : IValueConverter
+            {
+                Microsoft.Maui.Graphics.Color DefaultColor = Colors.Red;
+                double DefaultSize = 20.0;
+                public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+                {
+                    if (value is string itemType)
+                    {
+                        switch (itemType)
+                        {
+                            case "bitmap":
+                                return MaterialIcons.Image;
+                            case "sound":
+                                return MaterialIcons.AudioFile;
+                            case "graphic":
+                                return MaterialIcons.Collections;
+                            default:
+                                return MaterialIcons.QuestionMark;
+                        }
+                    }
+                    return MaterialIcons.QuestionMark;
+                }
+
+                public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+                {
+                    throw new NotImplementedException();
+                }
+            }
         }
     }
 }

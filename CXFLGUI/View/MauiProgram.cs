@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
+using MauiIcons.Material;
 
 namespace CXFLGUI
 {
@@ -10,9 +11,8 @@ namespace CXFLGUI
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
-                // Initialize the .NET MAUI Community Toolkit by adding the below line of code
                 .UseMauiCommunityToolkit()
-                // After initializing the .NET MAUI Community Toolkit, optionally add additional fonts
+                .UseMauiApp<App>().UseMaterialMauiIcons()
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
