@@ -10,6 +10,7 @@ public class SymbolInstance : Instance
         public const string SymbolType = "";
         public const string Loop = "loop";
     }
+    private static readonly HashSet<string> ACCEPTABLE_LOOP_VALUES = new HashSet<string> { "loop", "play once", "single frame", "loop reverse", "play once reverse" };
     private int firstFrame;
     private int? lastFrame;
     private string symbolType, loop;

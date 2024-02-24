@@ -3,10 +3,10 @@ using System.Xml.Linq;
 namespace CsXFL;
 public class TextRun
 {
-    private XElement? root;
-    private XNamespace ns;
+    private readonly XElement? root;
+    private readonly XNamespace ns;
     private string characters;
-    private TextAttrs textAttrs;
+    private readonly TextAttrs textAttrs;
     public string Characters { get { return characters; } set { characters = value; root?.SetAttributeValue("characters", value); } }
     public TextAttrs TextAttrs { get { return textAttrs; } }
     public XElement Root { get { return root!; } }

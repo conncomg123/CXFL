@@ -3,7 +3,7 @@ using System.Xml.Linq;
 namespace CsXFL;
 public class TextAttrs
 {
-    private static HashSet<string> ACCEPTABLE_ALIGNMENTS = new HashSet<string> { "left", "center", "right", "justify" },
+    private static readonly HashSet<string> ACCEPTABLE_ALIGNMENTS = new HashSet<string> { "left", "center", "right", "justify" },
         ACCEPTABLE_CHARACTERPOSITIONS = new HashSet<string> { "normal", "subscript", "superscript" };
     private static class DefaultValues
     {
@@ -11,7 +11,7 @@ public class TextAttrs
         public const string Alignment = "left", CharacterPosition = "normal", FillColor = "#000000", Target = "", Url = "", Face = "Suburga2-SemicondensedRegular";
         public const int Indent = 0, LeftMargin = 0, LetterSpacing = 0, LineSpacing = 0, RightMargin = 0, Size = 12;
     }
-    private XElement? root;
+    private readonly XElement? root;
     private bool aliasText, autoKern, bold, italic, rotation;
     private string alignment, characterPosition, face, fillColor, target, url;
     private int indent, leftMargin, letterSpacing, lineSpacing, rightMargin, size;
