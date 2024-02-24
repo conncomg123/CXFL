@@ -982,12 +982,12 @@ static class SceneGenerator
         Trace.WriteLine("Background Placement took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
 
-        // //SFX Automation
-        // stpw.Start();
-        // ParseSFX(Doc, json);
-        // stpw.Stop();
-        // Trace.WriteLine("SFX Placement took " + stpw.ElapsedMilliseconds + " ms.");
-        // stpw.Reset();
+        //SFX Automation
+        stpw.Start();
+        ParseSFX(Doc, json);
+        stpw.Stop();
+        Trace.WriteLine("SFX Placement took " + stpw.ElapsedMilliseconds + " ms.");
+        stpw.Reset();
 
         // Blink Automation
         stpw.Start();

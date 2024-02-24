@@ -17,13 +17,16 @@ public class Text : Element
         {"DOMDynamicText", "dynamic"},
         {"DOMInputText", "input"}
     }, TEXTTYPE_TO_DOMTEXTTYPE = DOMTEXTTYPE_TO_TEXTTYPE.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
-    private static HashSet<string> ACCEPTABLE_LINETYPES = new HashSet<string> { "single line", "multiline", "multiline no wrap", "password" },
+    private static readonly HashSet<string> ACCEPTABLE_LINETYPES = new HashSet<string> { "single line", "multiline", "multiline no wrap", "password" },
         ACCEPTABLE_TEXTTYPES = new HashSet<string> { "static", "dynamic", "input" },
         ACCEPTABLE_FONTRENDERINGMODES = new HashSet<string> { "device", "bitmap", "advanced", "standard", "customThicknessSharpness" },
         ACCEPTABLE_ORIENTATIONS = new HashSet<string> { "horizontal", "vertical left to right", "vertical right to left" };
     new private double width, height;
     private double antiAliasSharpness, antiAliasThickness;
-    private string lineType, textType, fontRenderingMode, orientation;
+    private string lineType;
+    private readonly string textType;
+    private string fontRenderingMode;
+    private string orientation;
     private List<TextRun> textRuns;
     public double AntiAliasSharpness { get { return antiAliasSharpness; } set { antiAliasSharpness = value; root?.SetOrRemoveAttribute("antiAliasSharpness", value, DefaultValues.AntiAliasSharpness); } }
     public double AntiAliasThickness { get { return antiAliasThickness; } set { antiAliasThickness = value; root?.SetOrRemoveAttribute("antiAliasThickness", value, DefaultValues.AntiAliasThickness); } }

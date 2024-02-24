@@ -20,6 +20,7 @@ public class Layer
     private readonly List<Frame> frames;
     private bool locked, current, selected;
     int? parentLayerIndex;
+    private readonly Library library;
     internal XElement? Root { get { return root; } }
     public string Color { get { return color; } set { color = value; root?.SetAttributeValue("color", value); } }
     public string LayerType
@@ -50,7 +51,7 @@ public class Layer
             frames.Add(new Frame(frameNode));
         }
     }
-    internal Layer(XElement layerNode)
+    internal Layer(XElement layerNode, Library library)
     {
         root = layerNode;
         ns = root.Name.Namespace;
@@ -66,6 +67,7 @@ public class Layer
         selected = (bool?)layerNode.Attribute("isSelected") ?? DefaultValues.Selected;
         parentLayerIndex = (int?)layerNode.Attribute("parentLayerIndex");
         frames = new List<Frame>();
+        this.library = library;
         LoadFrames(root);
     }
 
@@ -81,6 +83,7 @@ public class Layer
         selected = other.selected;
         parentLayerIndex = other.parentLayerIndex;
         frames = new List<Frame>();
+        library = other.library;
         if (root is not null) LoadFrames(root);
     }
     private void RemoveKeyframe(int keyframeIndex)
@@ -148,6 +151,7 @@ public class Layer
     {
         int index = GetKeyframeIndex(frameIndex);
         Frame frame = frames[index];
+        bool frameHasSymbolInstanceInLoop = frame.Elements.Any(e => e is SymbolInstance si && (si.Loop == "loop" || si.Loop == "play once" || si.Loop == "loop reverse" || si.Loop == "play once reverse"));
         if (frameIndex == frame.StartFrame)
         {
             frameIndex++;
@@ -155,7 +159,7 @@ public class Layer
             int newIndex = GetKeyframeIndex(frameIndex);
             if (newIndex != index) return false;
         }
-        Frame newFrame = new(ref frame, isBlank)
+        Frame newFrame = new(frame, isBlank)
         {
             Name = Frame.DefaultValues.Name,
             Duration = frame.Duration + frame.StartFrame - frameIndex
@@ -164,8 +168,66 @@ public class Layer
         newFrame.StartFrame = frameIndex;
         frames.Insert(index + 1, newFrame);
         frame.Root!.AddAfterSelf(newFrame.Root);
+        if (frameHasSymbolInstanceInLoop)
+        {
+            UpdateSymbolInstanceFirstFrame(frame, newFrame);
+        }
         return true;
     }
+
+    private void UpdateSymbolInstanceFirstFrame(Frame frame, Frame newFrame)
+    {
+        int distanceBetweenFrames = newFrame.StartFrame - frame.StartFrame;
+        foreach (Element e in newFrame.Elements)
+        {
+            if (e is SymbolInstance si)
+            {
+                Item item = library.Items[si.LibraryItemName];
+                switch (si.Loop)
+                {
+                    case "loop":
+                        if (si.LastFrame is null)
+                        {
+                            si.FirstFrame += distanceBetweenFrames;
+                            si.FirstFrame %= (item as SymbolItem)!.Timeline.GetFrameCount();
+                        }
+                        else
+                        {
+                            si.FirstFrame += distanceBetweenFrames;
+                            si.FirstFrame %= si.LastFrame.Value + 1;
+                        }
+                        break;
+                    case "play once":
+                        int maxFrame = si.LastFrame ?? (item as SymbolItem)!.Timeline.GetFrameCount() - 1;
+                        si.FirstFrame = Math.Clamp(si.FirstFrame + distanceBetweenFrames, 0, maxFrame);
+                        break;
+                    case "loop reverse":
+                        if (si.LastFrame is null)
+                        {
+                            int frameCount = (item as SymbolItem)!.Timeline.GetFrameCount();
+                            si.FirstFrame += frameCount - distanceBetweenFrames;
+                            si.FirstFrame %= frameCount;
+                        }
+                        else
+                        {
+                            int loopTime = (item as SymbolItem)!.Timeline.GetFrameCount() - si.LastFrame.Value;
+                            distanceBetweenFrames %= loopTime;
+                            si.FirstFrame -= distanceBetweenFrames;
+                            if (si.FirstFrame < si.LastFrame.Value)
+                            {
+                                si.FirstFrame += loopTime;
+                            }
+                        }
+                        break;
+                    case "play once reverse":
+                        int minFrame = si.LastFrame ?? 0;
+                        si.FirstFrame = Math.Clamp(si.FirstFrame - distanceBetweenFrames, minFrame, (item as SymbolItem)!.Timeline.GetFrameCount() - 1);
+                        break;
+                }
+            }
+        }
+    }
+
     public bool InsertKeyframe(int frameIndex)
     {
         return InsertKeyframe(frameIndex, false);

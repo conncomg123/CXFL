@@ -10,7 +10,7 @@ public class Instance : Element, ILibraryEventReceiver
         {"DOMVideoInstance", "video"},
         {"DOMCompiledClipInstance", "compiled clip"}
     };
-    private static readonly HashSet<string> AcceptableInstanceTypes = new HashSet<string> {"symbol", "bitmap", "embedded video", "linked video", "video",  "compiled clip"};
+    private static readonly HashSet<string> AcceptableInstanceTypes = new HashSet<string> { "symbol", "bitmap", "embedded video", "linked video", "video", "compiled clip" };
     private readonly string instanceType;
     private string libraryItemName;
     public string InstanceType { get { return instanceType; } }
