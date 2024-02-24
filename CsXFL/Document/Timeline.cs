@@ -13,6 +13,7 @@ public class Timeline
     private readonly List<Layer> layers;
     private string name;
     private int currentFrame;
+    private readonly Library? library;
     internal XElement? Root { get { return root; } }
     public string Name { get { return name; } set { name = value; root?.SetAttributeValue("name", value); } }
     public int CurrentFrame { get { return currentFrame; } set { currentFrame = value; root?.SetAttributeValue("currentFrame", value); } }
@@ -24,19 +25,20 @@ public class Timeline
         if (layerNodes is null) return;
         foreach (XElement layerNode in layerNodes)
         {
-            layers.Add(new Layer(layerNode));
+            layers.Add(new Layer(layerNode, library!));
         }
     }
-    internal Timeline(in XElement timelineNode)
+    internal Timeline(in XElement timelineNode, Library? library)
     {
         root = timelineNode;
         ns = root.Name.Namespace;
         name = (string?)timelineNode.Attribute("name") ?? DefaultValues.Name;
         currentFrame = (int?)timelineNode.Attribute("currentFrame") ?? DefaultValues.CurrentFrame;
         layers = new List<Layer>();
+        this.library = library;
         LoadLayers(root);
     }
-    internal Timeline() : this(new XElement("timeline")) { }
+    internal Timeline() : this(new XElement("timeline"), null) { }
     internal Timeline(Timeline other)
     {
         root = other.root is null ? null : new XElement(other.root);
@@ -44,6 +46,7 @@ public class Timeline
         name = other.name;
         currentFrame = other.currentFrame;
         layers = new List<Layer>();
+        library = other.library;
         LoadLayers(root);
     }
     public void SetSelectedLayer(int layerIndex, bool appendToCurrentSelection = false)
@@ -92,7 +95,7 @@ public class Timeline
         }
         if (root?.Element(ns + "layers") is null) root?.Add(new XElement(ns + "layers"));
         root?.Element(ns + "layers")?.Add(newLayer);
-        layers.Add(new Layer(newLayer));
+        layers.Add(new Layer(newLayer, library!));
         return layers.Count - 1;
     }
     public int GetLayerCount()

@@ -11,11 +11,10 @@ static class BlinkAPI
     {
         double theta = mean / k;
         double sum = 0;
-        Random random = new Random();
 
         for (int i = 0; i < k; i++)
         {
-            sum -= Math.Log(random.NextDouble()) * theta;
+            sum -= Math.Log(Random.Shared.NextDouble()) * theta;
         }
 
         return sum;
@@ -38,16 +37,16 @@ static class BlinkAPI
                 {
                     for (int FrameIndex = 0; FrameIndex < CurrentLayer.GetFrameCount();)
                     {
-                        int Stare = (int)(GammaVariable(mean, k) * FPS) + FrameIndex;
+                        int Stare = (int)(GammaVariable(mean, k) * FPS), blinkFrame = Stare + FrameIndex;
                         // Terrible job, supershit!
-                        if (Stare >= CurrentLayer.GetFrameCount()) { break; }
-                        Frame ConsiderFrame = CurrentLayer.GetFrame(Stare);
+                        if (blinkFrame >= CurrentLayer.GetFrameCount()) { break; }
+                        Frame ConsiderFrame = CurrentLayer.GetFrame(blinkFrame);
 
                         if (!ConsiderFrame.IsEmpty())
                         {
-                            CurrentLayer.ConvertToKeyframes(Stare);
-                            CurrentLayer.GetFrame(Stare).Name = "Blink";
-                            CurrentLayer.GetFrame(Stare).LabelType = "anchor";
+                            CurrentLayer.ConvertToKeyframes(blinkFrame);
+                            CurrentLayer.GetFrame(blinkFrame).Name = "Blink";
+                            CurrentLayer.GetFrame(blinkFrame).LabelType = "anchor";
                         }
 
                         FrameIndex += Stare;

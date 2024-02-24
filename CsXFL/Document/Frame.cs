@@ -103,7 +103,7 @@ public class Frame : ILibraryEventReceiver
         if (registeredForSoundItem) LibraryEventMessenger.Instance.RegisterReceiver(SoundName, this);
     }
 
-    internal Frame(ref Frame other, bool isBlank = false)
+    internal Frame(Frame other, bool isBlank = false)
     {
         root = other.root is null ? null : new XElement(other.root);
         ns = other.ns;
