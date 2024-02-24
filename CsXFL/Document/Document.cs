@@ -73,7 +73,7 @@ public class Document
         if (timelineNodes is null) return;
         foreach (XElement timelineNode in timelineNodes)
         {
-            timelines.Add(new Timeline(timelineNode));
+            timelines.Add(new Timeline(timelineNode, library));
         }
     }
 
@@ -156,7 +156,7 @@ public class Document
         newTimeline.SetAttributeValue("name", name ?? "Scene " + (timelines.Count + 1));
         if (root?.Element(ns + "timelines") is null) root?.Add(new XElement(ns + "timelines"));
         root?.Element(ns + "timelines")?.Add(newTimeline);
-        Timeline timeline = new(newTimeline);
+        Timeline timeline = new(newTimeline, library);
         timelines.Add(timeline);
         timeline.AddNewLayer("Layer_1");
         timeline.Layers[0].KeyFrames[0].Duration = 1;
