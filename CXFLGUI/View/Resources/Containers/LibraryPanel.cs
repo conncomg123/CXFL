@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using CsXFL;
 using MauiIcons.Core;
 using MauiIcons.Material;
+using Microsoft.Maui.Graphics.Text;
 using Microsoft.Maui.Graphics.Win2D;
 using Microsoft.UI.Xaml.Markup;
 using static MainViewModel;
@@ -37,19 +38,25 @@ namespace CXFLGUI
             this.viewModel = viewModel;
             viewModel.DocumentOpened += DocumentOpened;
 
-            // Vertical divider
-            var stackLayout = new StackLayout();
-            stackLayout.Padding = new Thickness(0, 25, 0, 0);
+            // Top / bottom of pane
+            var StackLayout_Pane = new StackLayout();
+            StackLayout_Pane.Padding = new Thickness(0, 25, 0, 0);
 
             // Library count
             Label_LibraryCount = new Label();
+            Label_LibraryCount.TextColor = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryText"];
             UpdateLibraryCount(0);
 
-            // Search bar
+            // Searchbar
             SearchBar SearchBar_Library = new SearchBar
             {
-                Placeholder = "Search",
-                BackgroundColor = Colors.LightGrey
+                WidthRequest = 300,
+                HeightRequest = 40,
+                //BackgroundColor = (Color)App.Fixed_ResourceDictionary["DefaultSearchBar"]["BackgroundColor"],
+                //CancelButtonColor = (Color)App.Fixed_ResourceDictionary["DefaultSearchBar"]["CancelButtonColor"],
+                Placeholder = "Search...",
+                //PlaceholderColor = (Color)App.Fixed_ResourceDictionary["DefaultSearchBar"]["Textcolor"],
+                //TextColor = (Color)App.Fixed_ResourceDictionary["DefaultSearchBar"]["TextColor"]
             };
 
             SearchBar_Library.TextChanged += (sender, e) =>
@@ -57,7 +64,7 @@ namespace CXFLGUI
                 string searchText = e.NewTextValue;
             };
 
-            // Horizontal Divider for top section
+            // Horizontal Divider between label + search and listView
             Grid HzDivider = new Grid();
             HzDivider.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Star });
             HzDivider.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Star });
@@ -70,93 +77,98 @@ namespace CXFLGUI
             Grid.SetRow(SearchBar_Library, 0);
             HzDivider.Children.Add(SearchBar_Library);
 
-            var listView = new ListView
+            // Sort it
+            var SortedLibraryItems = SortLibraryItems(LibraryItems.ToList());
+
+            var ListView_LibraryDisplay = new ListView
             {
-                ItemsSource = LibraryItems
+                ItemsSource = LibraryItems,
+                RowHeight = 35
             };
 
-            listView.ItemTemplate = new DataTemplate(() =>
+            ListView_LibraryDisplay.ItemTemplate = new DataTemplate(() =>
             {
-                var cell = new ViewCell();
+                var ViewCell_LibraryEntry = new ViewCell();
 
-                var text = new Label();
-                text.SetBinding(Label.TextProperty, "Key");
+                var LibraryEntryText = new Label();
+                LibraryEntryText.TextColor = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryText"];
+                LibraryEntryText.SetBinding(Label.TextProperty, "Key");
 
-                var icon = new Label
+                var LibraryEntryIcon = new Label
                 {
                     FontSize = 20,
-                    TextColor = Colors.White
+                    TextColor = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryText"]
                 };
 
-                icon.SetBinding(Label.TextProperty, "Key");
+                LibraryEntryIcon.SetBinding(Label.TextProperty, "Key");
 
-                cell.View = new StackLayout
+                ViewCell_LibraryEntry.View = new StackLayout
                 {
                     Orientation = StackOrientation.Horizontal,
                     Padding = new Thickness(10, 5),
                     Spacing = 10,
-                    Children = { icon, text }
+                    Children = { LibraryEntryIcon, LibraryEntryText }
                 };
 
-                cell.BindingContextChanged += (sender, e) =>
+                ViewCell_LibraryEntry.BindingContextChanged += (sender, e) =>
                 {
-                    if (cell.BindingContext is LibraryItem item)
+                    if (ViewCell_LibraryEntry.BindingContext is LibraryItem item)
                     {
 
                         // Offset folder children
                         int forwardslashCount = item.Key.Count(c => c == '/');
-                        ((StackLayout)cell.View).Margin = new Thickness(forwardslashCount * 25, 0, 0, 0);
+                        ((StackLayout)ViewCell_LibraryEntry.View).Margin = new Thickness(forwardslashCount * 25, 0, 0, 0);
 
                         // Normalize the library name
                         int lastForwardsSlash = item.Key.LastIndexOf('/');
                         if (lastForwardsSlash >= 0 && lastForwardsSlash < item.Key.Length - 1)
                         {
-                            text.Text = item.Key.Substring(lastForwardsSlash + 1);
+                            LibraryEntryText.Text = item.Key.Substring(lastForwardsSlash + 1);
                         }
                         else
                         {
-                            text.Text = item.Key;
+                            LibraryEntryText.Text = item.Key;
                         }
 
                         switch (item.Value.ItemType)
                         {
                             case "bitmap":
-                                icon.Icon(MaterialIcons.Image);
+                                LibraryEntryIcon.Icon(MaterialIcons.Image);
                                 break;
                             case "sound":
-                                icon.Icon(MaterialIcons.VolumeUp);
+                                LibraryEntryIcon.Icon(MaterialIcons.VolumeUp);
                                 break;
                             case "graphic":
-                                icon.Icon(MaterialIcons.Category);
+                                LibraryEntryIcon.Icon(MaterialIcons.Category);
                                 break;
                             case "movie clip":
-                                icon.Icon(MaterialIcons.Movie);
+                                LibraryEntryIcon.Icon(MaterialIcons.Movie);
                                 break;
                             case "font":
-                                icon.Icon(MaterialIcons.ABC);
+                                LibraryEntryIcon.Icon(MaterialIcons.ABC);
                                 break;
                             case "button":
-                                icon.Icon(MaterialIcons.SmartButton);
+                                LibraryEntryIcon.Icon(MaterialIcons.SmartButton);
                                 break;
                             case "folder":
-                                icon.Icon(MaterialIcons.Folder);
+                                LibraryEntryIcon.Icon(MaterialIcons.Folder);
                                 break;
                             default:
-                                icon.Icon(MaterialIcons.QuestionMark);
+                                LibraryEntryIcon.Icon(MaterialIcons.QuestionMark);
                                 break;
                         }
                     }
                 };
 
-                return cell;
+                return ViewCell_LibraryEntry;
             });
 
-            listView.ItemSelected += MyListView_ItemSelected;
+            ListView_LibraryDisplay.ItemSelected += ListView_Library_ItemSelected;
 
-            stackLayout.Children.Add(HzDivider);
-            stackLayout.Children.Add(listView);
+            StackLayout_Pane.Children.Add(HzDivider);
+            StackLayout_Pane.Children.Add(ListView_LibraryDisplay);
 
-            Content = stackLayout;
+            Content = StackLayout_Pane;
         }
 
         private void DocumentOpened(object sender, DocumentEventArgs e)
@@ -181,7 +193,13 @@ namespace CXFLGUI
             Label_LibraryCount.Text = LoadedItemsCount + " Items";
         }
 
-        private void MyListView_ItemSelected(object sender, SelectedItemChangedEventArgs e)
+        private List<LibraryItem> SortLibraryItems(List<LibraryItem> items)
+        {
+            // Use LINQ OrderBy to sort items alphabetically by Key
+            return items.OrderBy(item => item.Key).ToList();
+        }
+
+        private void ListView_Library_ItemSelected(object sender, SelectedItemChangedEventArgs e)
         {
             if (e.SelectedItem == null)
                 return;
