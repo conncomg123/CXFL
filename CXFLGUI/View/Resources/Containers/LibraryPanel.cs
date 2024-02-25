@@ -19,6 +19,7 @@ namespace CXFLGUI
     {
         private MainViewModel viewModel;
         private Label Label_LibraryCount;
+        private SearchBar Search_Library;
 
         int LoadedItemsCount = 0;
 
@@ -36,11 +37,38 @@ namespace CXFLGUI
             this.viewModel = viewModel;
             viewModel.DocumentOpened += DocumentOpened;
 
+            // Vertical divider
             var stackLayout = new StackLayout();
             stackLayout.Padding = new Thickness(0, 25, 0, 0);
 
+            // Library count
             Label_LibraryCount = new Label();
             UpdateLibraryCount(0);
+
+            // Search bar
+            SearchBar SearchBar_Library = new SearchBar
+            {
+                Placeholder = "Search",
+                BackgroundColor = Colors.LightGrey
+            };
+
+            SearchBar_Library.TextChanged += (sender, e) =>
+            {
+                string searchText = e.NewTextValue;
+            };
+
+            // Horizontal Divider for top section
+            Grid HzDivider = new Grid();
+            HzDivider.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Star });
+            HzDivider.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Star });
+
+            Grid.SetColumn(Label_LibraryCount, 0);
+            Grid.SetRow(Label_LibraryCount, 0);
+            HzDivider.Children.Add(Label_LibraryCount);
+
+            Grid.SetColumn(SearchBar_Library, 1);
+            Grid.SetRow(SearchBar_Library, 0);
+            HzDivider.Children.Add(SearchBar_Library);
 
             var listView = new ListView
             {
@@ -49,7 +77,7 @@ namespace CXFLGUI
 
             listView.ItemTemplate = new DataTemplate(() =>
             {
-                var cell = new LibraryItemCell();
+                var cell = new ViewCell();
 
                 var text = new Label();
                 text.SetBinding(Label.TextProperty, "Key");
@@ -74,6 +102,22 @@ namespace CXFLGUI
                 {
                     if (cell.BindingContext is LibraryItem item)
                     {
+
+                        // Offset folder children
+                        int forwardslashCount = item.Key.Count(c => c == '/');
+                        ((StackLayout)cell.View).Margin = new Thickness(forwardslashCount * 25, 0, 0, 0);
+
+                        // Normalize the library name
+                        int lastForwardsSlash = item.Key.LastIndexOf('/');
+                        if (lastForwardsSlash >= 0 && lastForwardsSlash < item.Key.Length - 1)
+                        {
+                            text.Text = item.Key.Substring(lastForwardsSlash + 1);
+                        }
+                        else
+                        {
+                            text.Text = item.Key;
+                        }
+
                         switch (item.Value.ItemType)
                         {
                             case "bitmap":
@@ -109,7 +153,7 @@ namespace CXFLGUI
 
             listView.ItemSelected += MyListView_ItemSelected;
 
-            stackLayout.Children.Add(Label_LibraryCount);
+            stackLayout.Children.Add(HzDivider);
             stackLayout.Children.Add(listView);
 
             Content = stackLayout;
@@ -147,57 +191,6 @@ namespace CXFLGUI
 
             // Deselect the item
             ((ListView)sender).SelectedItem = null;
-        }
-
-        // "Soundman, what the hell is this? Why is it here?"
-        // https://thatisanexcellentquestion.com/
-
-        [XamlCompilation(XamlCompilationOptions.Compile)]
-        public class LibraryItemCell : ViewCell
-        {
-            public LibraryItemCell()
-            {
-                var icon = new Label
-                {
-                    FontSize = 20,
-                    TextColor = Colors.White
-                };
-
-                var text = new Label();
-                text.SetBinding(Label.TextProperty, "Key");
-
-                var stackLayout = new StackLayout
-                {
-                    Orientation = StackOrientation.Horizontal,
-                    Padding = new Thickness(10, 5),
-                    Spacing = 10,
-                    Children = { icon, text }
-                };
-
-                View = stackLayout;
-
-                this.BindingContextChanged += (sender, e) =>
-                {
-                    if (BindingContext is LibraryPanel.LibraryItem item)
-                    {
-                        switch (item.Value.ItemType)
-                        {
-                            case "bitmap":
-                                icon.Icon(MaterialIcons.Image);
-                                break;
-                            case "sound":
-                                icon.Icon(MaterialIcons.AudioFile);
-                                break;
-                            case "graphic":
-                                icon.Icon(MaterialIcons.Collections);
-                                break;
-                            default:
-                                icon.Icon(MaterialIcons.QuestionMark);
-                                break;
-                        }
-                    }
-                };
-            }
         }
     }
 }
