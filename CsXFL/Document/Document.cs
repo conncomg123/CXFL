@@ -59,6 +59,8 @@ public class Document
             zip.CompressionLevel = Ionic.Zlib.CompressionLevel.BestSpeed;
             zip.BufferSize = 65536;
             zip.ParallelDeflateThreshold = 0; // Enable parallel compression
+            zip.AlternateEncoding = System.Text.Encoding.UTF8;
+            zip.AlternateEncodingUsage = Ionic.Zip.ZipOption.Always;
             zip.AddDirectory(tempDir);
             zip.Save(filename);
         }
