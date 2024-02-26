@@ -345,12 +345,7 @@ public class Library
             // Process any queued add operations in parallel
             if (addOperations.Count > 0)
             {
-                Parallel.ForEach(addOperations, addOperation =>
-                {
-                    string addTargetPath = Path.Combine(Path.GetDirectoryName(filename)!, LIBRARY_PATH, addOperation.ItemName);
-                    ProcessAddOperation(addOperation, addTargetPath, filename);
-                });
-
+                ProcessAddOperationsInParallel(addOperations, filename);
                 addOperations.Clear();
             }
 
@@ -368,12 +363,32 @@ public class Library
         // Process any remaining add operations in parallel
         if (addOperations.Count > 0)
         {
-            Parallel.ForEach(addOperations, addOperation =>
-            {
-                string addTargetPath = Path.Combine(Path.GetDirectoryName(filename)!, LIBRARY_PATH, addOperation.ItemName);
-                ProcessAddOperation(addOperation, addTargetPath, filename);
-            });
+            ProcessAddOperationsInParallel(addOperations, filename);
         }
+    }
+
+    private void ProcessAddOperationsInParallel(List<ItemOperation> addOperations, string filename)
+    {
+        int numCores = Environment.ProcessorCount;
+        int operationsPerCore = addOperations.Count / numCores;
+        var tasks = new List<Task>();
+
+        for (int i = 0; i < numCores; i++)
+        {
+            int start = i * operationsPerCore;
+            int end = (i == numCores - 1) ? addOperations.Count : start + operationsPerCore;
+
+            tasks.Add(Task.Run(() =>
+            {
+                for (int j = start; j < end; j++)
+                {
+                    string addTargetPath = Path.Combine(Path.GetDirectoryName(filename)!, LIBRARY_PATH, addOperations[j].ItemName);
+                    ProcessAddOperation(addOperations[j], addTargetPath, filename);
+                }
+            }));
+        }
+
+        Task.WaitAll(tasks.ToArray());
     }
 
     private void ProcessAddOperation(ItemOperation operation, string targetPath, string filename)
