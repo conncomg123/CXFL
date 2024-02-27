@@ -4,6 +4,7 @@ using System.Xml.Linq;
 namespace CsXFL;
 public class Library
 {
+    private static int uniqueSoundItemIndex = 0;
     private class ItemOperation
     {
         public enum OperationType
@@ -329,14 +330,27 @@ public class Library
 
     private void ProcessItemOperations(string filename)
     {
+        var addOperations = new List<ItemOperation>();
+
         while (itemOperations.Count > 0 && itemOperations.Dequeue() is ItemOperation operation)
         {
             string targetPath = Path.Combine(Path.GetDirectoryName(filename)!, LIBRARY_PATH, operation.ItemName);
+
+            if (operation.Type == ItemOperation.OperationType.Add)
+            {
+                addOperations.Add(operation);
+                continue;
+            }
+
+            // Process any queued add operations in parallel
+            if (addOperations.Count > 0)
+            {
+                ProcessAddOperationsInParallel(addOperations, filename);
+                addOperations.Clear();
+            }
+
             switch (operation.Type)
             {
-                case ItemOperation.OperationType.Add:
-                    ProcessAddOperation(operation, targetPath, filename);
-                    break;
                 case ItemOperation.OperationType.Remove:
                     ProcessRemoveOperation(operation, targetPath, filename);
                     break;
@@ -345,6 +359,36 @@ public class Library
                     break;
             }
         }
+
+        // Process any remaining add operations in parallel
+        if (addOperations.Count > 0)
+        {
+            ProcessAddOperationsInParallel(addOperations, filename);
+        }
+    }
+
+    private void ProcessAddOperationsInParallel(List<ItemOperation> addOperations, string filename)
+    {
+        int numCores = Environment.ProcessorCount;
+        int operationsPerCore = addOperations.Count / numCores;
+        var tasks = new List<Task>();
+
+        for (int i = 0; i < numCores; i++)
+        {
+            int start = i * operationsPerCore;
+            int end = (i == numCores - 1) ? addOperations.Count : start + operationsPerCore;
+
+            tasks.Add(Task.Run(() =>
+            {
+                for (int j = start; j < end; j++)
+                {
+                    string addTargetPath = Path.Combine(Path.GetDirectoryName(filename)!, LIBRARY_PATH, addOperations[j].ItemName);
+                    ProcessAddOperation(addOperations[j], addTargetPath, filename);
+                }
+            }));
+        }
+
+        Task.WaitAll(tasks.ToArray());
     }
 
     private void ProcessAddOperation(ItemOperation operation, string targetPath, string filename)
@@ -380,7 +424,7 @@ public class Library
         }
     }
 
-    private void ProcessSoundItemAdd(SoundItem sound, string targetPath, string filename, string itemName)
+    private static void ProcessSoundItemAdd(SoundItem sound, string targetPath, string filename, string itemName)
     {
         sound.Href = itemName;
         if (sound.Name.EndsWith(".flac"))
@@ -388,13 +432,12 @@ public class Library
             // Animate converts flac files to wav and removes their header, then puts it in the bin folder. Really weird but we gotta do the same thing.
             ArraySegment<byte> wavData = SoundUtils.ConvertFlacToWav(targetPath, sound);
             long unixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            int uniqueIndex = 0;
             string datFileName, wavPath;
             do
             {
-                datFileName = "M " + uniqueIndex + " " + unixTime + ".dat";
+                int currentIndex = Interlocked.Increment(ref uniqueSoundItemIndex) - 1;
+                datFileName = "M " + currentIndex + " " + unixTime + ".dat";
                 wavPath = Path.Combine(Path.GetDirectoryName(filename)!, BINARY_PATH, datFileName);
-                uniqueIndex++;
             } while (File.Exists(wavPath));
             using FileStream fs = new(wavPath, FileMode.Create);
             fs.Write(wavData.Array!, WAV_HEADER_SIZE, wavData.Array!.Length - WAV_HEADER_SIZE);

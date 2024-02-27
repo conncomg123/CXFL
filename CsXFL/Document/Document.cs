@@ -54,7 +54,16 @@ public class Document
         }
         SaveXFL(Path.Combine(tempDir, "DOMDocument.xml"));
         File.Delete(filename);
-        ZipFile.CreateFromDirectory(tempDir, filename, CompressionLevel.Fastest, false);
+        using (Ionic.Zip.ZipFile zip = new Ionic.Zip.ZipFile())
+        {
+            zip.CompressionLevel = Ionic.Zlib.CompressionLevel.BestSpeed;
+            zip.BufferSize = 65536;
+            zip.ParallelDeflateThreshold = 0; // Enable parallel compression
+            zip.AlternateEncoding = System.Text.Encoding.UTF8;
+            zip.AlternateEncodingUsage = Ionic.Zip.ZipOption.Always;
+            zip.AddDirectory(tempDir);
+            zip.Save(filename);
+        }
         Directory.Delete(tempDir, true);
     }
     private void LoadXFL(string filename)
