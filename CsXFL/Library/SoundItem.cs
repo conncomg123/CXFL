@@ -8,8 +8,8 @@ public class SoundItem : Item // all the properties are propietary bullshit exce
     internal string Href { get { return href; } set { href = value; Root?.SetAttributeValue("href", value); } }
     internal string SoundDataHRef { get { return soundDataHRef; } set { soundDataHRef = value; Root?.SetAttributeValue("soundDataHRef", value); } }
     internal string Format { get { return format; } set { format = value; Root?.SetAttributeValue("format", value); } }
-    internal int SampleCount { get { return sampleCount; } set { sampleCount = value; Root?.SetAttributeValue("sampleCount", value); } }
-     internal SoundItem() : base()
+    public int SampleCount { get { return sampleCount; } internal set { sampleCount = value; Root?.SetAttributeValue("sampleCount", value); } }
+    internal SoundItem() : base()
     {
         href = string.Empty;
         soundDataHRef = string.Empty;
