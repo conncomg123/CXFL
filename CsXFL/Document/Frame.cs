@@ -19,6 +19,7 @@ public class Frame : ILibraryEventReceiver
         public const int StartFrame = 0;
         public const int Duration = 1;
         public const int KeyMode = (int)KeyModes.Normal;
+        public const int InPoint44 = 0;
         public const string LabelType = "none";
         public const string Name = "";
         public const string SoundName = "";
@@ -27,13 +28,14 @@ public class Frame : ILibraryEventReceiver
     private readonly XElement? root;
     private readonly XNamespace ns;
     private readonly List<Element> elements;
-    private int startFrame, duration, keyMode;
+    private int startFrame, duration, keyMode, inPoint44;
     private string labelType, name, soundName, soundSync;
     private bool registeredForSoundItem;
     internal XElement? Root { get { return root; } }
     public int StartFrame { get { return startFrame; } set { startFrame = value; root?.SetAttributeValue("index", value); } }
     public int Duration { get { return duration; } set { duration = value; root?.SetOrRemoveAttribute("duration", value, DefaultValues.Duration); } }
     public int KeyMode { get { return keyMode; } set { keyMode = value; root?.SetOrRemoveAttribute("keyMode", value, DefaultValues.KeyMode); } }
+    public int InPoint44 { get { return inPoint44; } set { inPoint44 = value; root?.SetOrRemoveAttribute("inPoint44", value, DefaultValues.InPoint44); } }
     public string LabelType { get { return labelType; } set { if (!AcceptableLabelTypes.Contains(value)) throw new ArgumentException(); labelType = value; root?.SetOrRemoveAttribute("labelType", value, DefaultValues.LabelType); } }
     public string Name { get { return name; } set { name = value; root?.SetOrRemoveAttribute("name", value, DefaultValues.Name); } }
     public string SoundName
@@ -93,6 +95,7 @@ public class Frame : ILibraryEventReceiver
         startFrame = (int?)frameNode.Attribute("index") ?? DefaultValues.StartFrame;
         duration = (int?)frameNode.Attribute("duration") ?? DefaultValues.Duration;
         keyMode = (int?)frameNode.Attribute("keyMode") ?? DefaultValues.KeyMode;
+        inPoint44 = (int?)frameNode.Attribute("inPoint44") ?? DefaultValues.InPoint44;
         labelType = (string?)frameNode.Attribute("labelType") ?? DefaultValues.LabelType;
         name = (string?)frameNode.Attribute("name") ?? DefaultValues.Name;
         soundName = (string?)frameNode.Attribute("soundName") ?? DefaultValues.SoundName;
@@ -110,6 +113,7 @@ public class Frame : ILibraryEventReceiver
         startFrame = other.startFrame;
         duration = other.duration;
         keyMode = other.keyMode;
+        inPoint44 = other.inPoint44;
         labelType = other.labelType;
         name = other.name;
         soundName = other.soundName;
