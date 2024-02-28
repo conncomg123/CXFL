@@ -9,8 +9,6 @@ namespace XFL2SESX
 {
     static class XFL2SESX
     {
-        static int audioIdCounter = 1;
-        static int fileIdCounter = 1;
 
         static void AddAudioData(Dictionary<string, Dictionary<string, (int startSample, int endSample, int Id, int fileId)>> audioData, string layerName, string audioFileName, int startSample, int endSample)
         {
@@ -19,8 +17,8 @@ namespace XFL2SESX
                 audioData[layerName] = new Dictionary<string, (int startSample, int endSample, int Id, int fileId)>();
             }
 
-            int id = audioData[layerName].Count; // Get the current count of audio clips in the layer
-            int fileId = audioData.Values.SelectMany(dict => dict.Values).Any() ? audioData.Values.SelectMany(dict => dict.Values).Max(x => x.fileId) + 1 : 0; // Increment fileId across all layers or start from 0 if no elements
+            int id = audioData[layerName].Count;
+            int fileId = audioData.Values.SelectMany(dict => dict.Values).Any() ? audioData.Values.SelectMany(dict => dict.Values).Max(x => x.fileId) + 1 : 0;
             audioData[layerName][audioFileName] = (startSample, endSample, id, fileId);
         }
 
@@ -87,7 +85,11 @@ namespace XFL2SESX
 
             // XML Processing
             XmlDeclaration declaration = SESX.CreateXmlDeclaration("1.0", "UTF-8", null);
+            declaration.Standalone = "no";
             SESX.AppendChild(declaration);
+
+            XmlDocumentType doctype = SESX.CreateDocumentType("sesx", null, null, null);
+            SESX.AppendChild(doctype);
 
             XmlElement root = SESX.CreateElement("sesx");
             root.SetAttribute("version", "1.9");
@@ -99,7 +101,7 @@ namespace XFL2SESX
             sessionElement.SetAttribute("audioChannelType", "stereo");
             sessionElement.SetAttribute("bitDepth", "32");
             sessionElement.SetAttribute("sampleRate", SampleRate.ToString());
-            sessionElement.SetAttribute("duration", "1945359");
+            sessionElement.SetAttribute("duration", "100000");
             root.AppendChild(sessionElement);
 
             XmlElement trackList = SESX.CreateElement("tracks");
@@ -109,8 +111,9 @@ namespace XFL2SESX
             foreach (var layer in AUDIO_DATA)
             {
                 XmlElement audioTrackElement = SESX.CreateElement("audioTrack");
+                audioTrackElement.SetAttribute("automationLaneOpenState", "false");
                 audioTrackElement.SetAttribute("id", "1000" + (trackIndex + 1).ToString());
-                audioTrackElement.SetAttribute("index", trackIndex.ToString());
+                audioTrackElement.SetAttribute("index", (trackIndex + 1).ToString());
                 audioTrackElement.SetAttribute("select", "false");
                 audioTrackElement.SetAttribute("visible", "true");
                 trackList.AppendChild(audioTrackElement);
@@ -152,7 +155,7 @@ namespace XFL2SESX
                     audioElement.SetAttribute("crossFadeTailClipID", "-1");
                     audioElement.SetAttribute("crossFadeTailClipID", "-1");
                     audioElement.SetAttribute("endPoint", audioFile.Value.endSample.ToString());
-                    audioElement.SetAttribute("fileId", audioFile.Value.fileId.ToString());
+                    audioElement.SetAttribute("fileID", audioFile.Value.fileId.ToString());
                     audioElement.SetAttribute("hue", "-1");
                     audioElement.SetAttribute("id", audioFile.Value.Id.ToString());
                     audioElement.SetAttribute("lockedInTime", "false");
@@ -160,7 +163,6 @@ namespace XFL2SESX
                     audioElement.SetAttribute("name", audioFile.Key);
                     audioElement.SetAttribute("offline", "false");
                     audioElement.SetAttribute("select", "false");
-                    // <?>
                     audioElement.SetAttribute("sourceInPoint", "0");
                     audioElement.SetAttribute("sourceOutPoint", audioFile.Value.endSample.ToString());
 
@@ -174,7 +176,7 @@ namespace XFL2SESX
             }
 
             XmlElement filesElement = SESX.CreateElement("files");
-            int globalFileId = 0; // Keep track of the fileId globally
+            int globalFileId = 0;
 
             foreach (var layer in AUDIO_DATA)
             {
@@ -183,13 +185,12 @@ namespace XFL2SESX
                     string pathToAudioFile = Path.Combine(directory_SESX, "Imported Files\\" + audioFile.Key);
                     XmlElement fileElement = SESX.CreateElement("file");
                     fileElement.SetAttribute("absolutePath", pathToAudioFile);
-                    fileElement.SetAttribute("id", globalFileId.ToString()); // Use globalFileId as fileId
-                    //fileElement.SetAttribute("importerPrivateSettings", "ByteOrdering:0:0;Channels:0:1;EncodingType:0:3;FormatType:0:1507328;SampleRate:0:48000;StartOffset:0:0;VBRQuality:0:100;Title:1:s5_001_overall;TrackNumber:1:1;");
+                    fileElement.SetAttribute("id", globalFileId.ToString());
                     fileElement.SetAttribute("mediaHandler", "AmioLSF");
                     fileElement.SetAttribute("relativePath", "Imported Files/" + audioFile.Key);
                     filesElement.AppendChild(fileElement);
 
-                    globalFileId++; // Increment globalFileId for each file
+                    globalFileId++;
                 }
             }
 
