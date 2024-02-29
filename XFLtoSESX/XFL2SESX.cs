@@ -4,27 +4,63 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Collections.Generic;
 using CsXFL;
+using static XFL2SESX.XFL2SESX;
 
 namespace XFL2SESX
 {
     static class XFL2SESX
     {
+        static int CorrectStartSample(int startSample, int sampleRate = 48000, double desyncMilliseconds = 0.0)
+        {
+            int desyncSamples = (int)Math.Round(desyncMilliseconds * sampleRate / 1000.0);
 
-        static void AddAudioData(Dictionary<string, Dictionary<string, (int startSample, int endSample, int Id, int fileId)>> audioData, string layerName, string audioFileName, int startSample, int endSample)
+            int correctedStartSample = startSample + desyncSamples;
+
+            return correctedStartSample;
+        }
+
+        static void AddAudioData(Dictionary<string, List<AudioClip>> audioData, Dictionary<string, int> fileIds, string layerName, string audioFileName, int startSample, int endSample, int sourceInPoint, int sourceOutPoint)
         {
             if (!audioData.ContainsKey(layerName))
             {
-                audioData[layerName] = new Dictionary<string, (int startSample, int endSample, int Id, int fileId)>();
+                audioData[layerName] = new List<AudioClip>();
+            }
+
+            int fileId;
+            if (fileIds.ContainsKey(audioFileName))
+            {
+                fileId = fileIds[audioFileName];
+            }
+            else
+            {
+                fileId = fileIds.Count;
+                fileIds[audioFileName] = fileId;
             }
 
             int id = audioData[layerName].Count;
-            int fileId = audioData.Values.SelectMany(dict => dict.Values).Any() ? audioData.Values.SelectMany(dict => dict.Values).Max(x => x.fileId) + 1 : 0;
-            audioData[layerName][audioFileName] = (startSample, endSample, id, fileId);
+            audioData[layerName].Add(new AudioClip
+            {
+                id = id,
+                name = audioFileName,
+                fileID = fileId,
+                startPoint = startSample,
+                sourceInPoint = sourceInPoint,
+                endPoint = endSample,
+                sourceOutPoint = sourceOutPoint,
+                zOrder = id
+            });
+        }
+
+        static int ConvertSamples(int oldSampleCount, int oldSampleRate, int newSampleRate)
+        {
+            return (int)Math.Round(oldSampleCount * (double)newSampleRate / oldSampleRate);
         }
 
         public static int FrameToSamples(Document doc, int sampleRate, int frameNumber)
         {
+            // I reject your reality and substitute my own
             double frameRate = doc.FrameRate;
+            frameRate = 23.976;
             double frameDuration = 1.0 / frameRate;
 
             int samplesPerFrame = (int)(sampleRate * frameDuration);
@@ -33,37 +69,40 @@ namespace XFL2SESX
             return startSample;
         }
 
-        static string RemoveFileExtension(string fileName)
+        public class AudioClip
         {
-            int lastDotIndex = fileName.LastIndexOf('.');
-            if (lastDotIndex == -1)
-            {
-                return fileName;
-            }
-            else
-            {
-                return fileName.Substring(0, lastDotIndex);
-            }
+            public int id { get; set; }
+            public string name { get; set; }
+            public int fileID { get; set; }
+            public int startPoint { get; set; }
+            public int sourceInPoint { get; set; }
+            public int endPoint { get; set; }
+            public int sourceOutPoint { get; set; }
+            public int zOrder { get; set; }
         }
 
         static void Main()
         {
-            Dictionary<string, Dictionary<string, (int startSample, int endSample, int Id, int fileId)>> AUDIO_DATA = new Dictionary<string, Dictionary<string, (int startSample, int endSample, int Id, int fileId)>>();
+            Dictionary<string, int> fileIds = new Dictionary<string, int>();
+            Dictionary<string, List<AudioClip>> AUDIO_DATA = new Dictionary<string, List<AudioClip>>();
             int SampleRate = 48000;
 
-            string inputFile = @"C:\Users\Administrator\Elements of Justice\303_Autogen_FLAs\Test.fla";
+            string inputFile = @"C:\Users\Administrator\Elements of Justice\303_Autogen_FLAs\RealTestNoSplitAudio.fla";
+            string fileName = Path.GetFileNameWithoutExtension(inputFile);
             string directory = Path.GetDirectoryName(inputFile);
 
             string directory_SESX = directory + @"\Sesx Conversion\Imported Files";
+            directory_SESX = directory + @"\" + fileName + @" Sesx Conversion\";
             if (!Directory.Exists(directory_SESX)) { Directory.CreateDirectory(directory_SESX); }
-            directory_SESX = directory + @"\Sesx Conversion";
 
             XmlDocument SESX = new XmlDocument();
             Document Doc = new(inputFile);
 
             // Extract Audio Data
+            int totalFrames = 0;
             for (int SceneIndex = 0; SceneIndex < Doc.Timelines.Count; SceneIndex++)
             {
+                if (SceneIndex > 0) { totalFrames += Doc.Timelines[SceneIndex - 1].GetFrameCount(); }
                 foreach (var OperatingLayer in Doc.Timelines[SceneIndex].Layers)
                 {
                     if (OperatingLayer.Name.Contains("VOX") || OperatingLayer.Name.Contains("SFX"))
@@ -71,13 +110,22 @@ namespace XFL2SESX
                         foreach (var OperatingFrame in OperatingLayer.KeyFrames)
                         {
                             if (OperatingFrame.SoundName == "") { continue; }
-                            SoundItem AudioFile = Doc.Library.Items[OperatingFrame.SoundName] as SoundItem;
-
+                            string SoundName = OperatingFrame.SoundName;
+                            SoundItem AudioFile = Doc.Library.Items[SoundName] as SoundItem;
                             int SampleCount = AudioFile.SampleCount;
-                            int startSample = FrameToSamples(Doc, SampleRate, OperatingFrame.StartFrame);
+                            int startSample = FrameToSamples(Doc, SampleRate, OperatingFrame.StartFrame + totalFrames);
                             int endSample = startSample + SampleCount;
 
-                            AddAudioData(AUDIO_DATA, OperatingLayer.Name, OperatingFrame.SoundName.Substring(OperatingFrame.SoundName.LastIndexOf('/') + 1), startSample, endSample);
+                            int SplitAudioOffset = OperatingFrame.InPoint44;
+
+                            if (SplitAudioOffset == 0)
+                            {
+                                AddAudioData(AUDIO_DATA, fileIds, OperatingLayer.Name, SoundName, startSample, endSample, 0, SampleCount + 48000);
+                            } else
+                            {
+                                SplitAudioOffset = ConvertSamples(SplitAudioOffset, 44000, SampleRate);
+                                AddAudioData(AUDIO_DATA, fileIds, OperatingLayer.Name, SoundName, startSample, endSample, SplitAudioOffset, (SampleCount - SplitAudioOffset) + 48000);
+                            }
                         }
                     }
                 }
@@ -107,9 +155,34 @@ namespace XFL2SESX
             XmlElement trackList = SESX.CreateElement("tracks");
             sessionElement.AppendChild(trackList);
 
+            XmlElement filesElement = SESX.CreateElement("files");
+
+            // FILE BLOCK
+            foreach (var layer in AUDIO_DATA)
+            {
+                foreach (var audioFile in layer.Value)
+                {
+                    string pathToAudioFile = Path.Combine(directory_SESX, "Imported Files\\" + audioFile.name);
+
+                    // Use the file ID from the dictionary
+                    int fileId = fileIds[audioFile.name];
+
+                    XmlElement fileElement = SESX.CreateElement("file");
+                    fileElement.SetAttribute("absolutePath", pathToAudioFile);
+                    fileElement.SetAttribute("id", fileId.ToString());
+                    fileElement.SetAttribute("mediaHandler", "AmioLSF");
+                    fileElement.SetAttribute("relativePath", "Imported Files/" + audioFile.name);
+                    filesElement.AppendChild(fileElement);
+                }
+            }
+
+            // AUDIO CLIPS
             int trackIndex = 0;
             foreach (var layer in AUDIO_DATA)
             {
+                int idCounter = 0;
+                int zOrderCounter = 0;
+
                 XmlElement audioTrackElement = SESX.CreateElement("audioTrack");
                 audioTrackElement.SetAttribute("automationLaneOpenState", "false");
                 audioTrackElement.SetAttribute("id", "1000" + (trackIndex + 1).ToString());
@@ -146,57 +219,33 @@ namespace XFL2SESX
                 trackAudioParameters.AppendChild(trackOutput);
                 trackAudioParameters.AppendChild(trackInput);
 
-                foreach (var audioFile in layer.Value)
+                foreach (var audioClip in layer.Value)
                 {
+                    string pathToAudioFile = Path.Combine(directory_SESX, "Imported Files\\" + audioClip.name);
+
+                    int fileId = fileIds[audioClip.name];
+
                     XmlElement audioElement = SESX.CreateElement("audioClip");
 
-                    audioElement.SetAttribute("clipAutoCrossfade", "true");
-                    audioElement.SetAttribute("crossFadeHeadClipID", "-1");
-                    audioElement.SetAttribute("crossFadeTailClipID", "-1");
-                    audioElement.SetAttribute("crossFadeTailClipID", "-1");
-                    audioElement.SetAttribute("endPoint", audioFile.Value.endSample.ToString());
-                    audioElement.SetAttribute("fileID", audioFile.Value.fileId.ToString());
-                    audioElement.SetAttribute("hue", "-1");
-                    audioElement.SetAttribute("id", audioFile.Value.Id.ToString());
-                    audioElement.SetAttribute("lockedInTime", "false");
-                    audioElement.SetAttribute("looped", "false");
-                    audioElement.SetAttribute("name", audioFile.Key);
-                    audioElement.SetAttribute("offline", "false");
-                    audioElement.SetAttribute("select", "false");
-                    audioElement.SetAttribute("sourceInPoint", "0");
-                    audioElement.SetAttribute("sourceOutPoint", audioFile.Value.endSample.ToString());
+                    audioElement.SetAttribute("id", audioClip.id.ToString());
+                    audioElement.SetAttribute("name", audioClip.name.ToString());
+                    audioElement.SetAttribute("fileID", audioClip.fileID.ToString());
+                    audioElement.SetAttribute("startPoint", audioClip.startPoint.ToString());
+                    audioElement.SetAttribute("sourceInPoint", audioClip.sourceInPoint.ToString());
+                    audioElement.SetAttribute("endPoint", audioClip.endPoint.ToString());
+                    audioElement.SetAttribute("sourceOutPoint", audioClip.sourceOutPoint.ToString());
+                    audioElement.SetAttribute("zOrder", audioClip.zOrder.ToString());
 
-                    audioElement.SetAttribute("startPoint", audioFile.Value.startSample.ToString());
-                    audioElement.SetAttribute("zOrder", audioFile.Value.Id.ToString());
- 
                     audioTrackElement.AppendChild(audioElement);
                 }
 
                 trackIndex++;
             }
 
-            XmlElement filesElement = SESX.CreateElement("files");
-            int globalFileId = 0;
-
-            foreach (var layer in AUDIO_DATA)
-            {
-                foreach (var audioFile in layer.Value)
-                {
-                    string pathToAudioFile = Path.Combine(directory_SESX, "Imported Files\\" + audioFile.Key);
-                    XmlElement fileElement = SESX.CreateElement("file");
-                    fileElement.SetAttribute("absolutePath", pathToAudioFile);
-                    fileElement.SetAttribute("id", globalFileId.ToString());
-                    fileElement.SetAttribute("mediaHandler", "AmioLSF");
-                    fileElement.SetAttribute("relativePath", "Imported Files/" + audioFile.Key);
-                    filesElement.AppendChild(fileElement);
-
-                    globalFileId++;
-                }
-            }
-
             root.AppendChild(filesElement);
 
             string outputFile = Path.Combine(directory_SESX, Path.GetFileNameWithoutExtension(Doc.Filename) + ".sesx");
+            Console.WriteLine(outputFile);
             SESX.Save(outputFile);
 
         }
