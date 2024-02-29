@@ -16,7 +16,7 @@ public class LibraryTest
         Assert.True(doc.Library.ItemExists(newName));
         Assert.False(doc.Library.ItemExists(itemName));
     }
-    
+
     [Fact]
     public void RemoveItem_ShouldRemoveItem()
     {
@@ -31,7 +31,7 @@ public class LibraryTest
         // Assert
         Assert.False(doc.Library.ItemExists(itemName));
         Assert.True(doc.Library.Items.Count() == itemCount - 1);
-        
+
     }
 
     [Fact]
@@ -50,9 +50,9 @@ public class LibraryTest
         // Assert
         Assert.True(doc.Library.ItemExists("WilhelmScream.wav"));
         Assert.True(doc.Library.ItemExists("ChadObiWan.png"));
-        Assert.True(doc.Library.ItemExists("tmp_Dummysymbol.xml"));
+        Assert.True(doc.Library.ItemExists("tmp_Dummysymbol"));
         Assert.True(doc.Library.Items.Count() == itemCount + 3);
-        
+
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public class LibraryTest
 
         // Act
         doc.Library.AddItemToDocument("Alert.wav");
-        doc.Library.AddItemToDocument("Bracelet.png", doc.Timelines[0].Layers[0].GetFrame(42),69,420);
+        doc.Library.AddItemToDocument("Bracelet.png", doc.Timelines[0].Layers[0].GetFrame(42), 69, 420);
         doc.Library.AddItemToDocument("Symbol 1");
 
 
@@ -99,7 +99,7 @@ public class LibraryTest
         Assert.True(currentFrame.Elements[0] is SymbolInstance);
         Assert.Contains(currentFrame.Elements, element => element is SymbolInstance { LibraryItemName: "Symbol 1" });
         Assert.False(doc.Timelines[0].Layers[0].GetFrame(42).IsEmpty());
-        
+
     }
 
 }

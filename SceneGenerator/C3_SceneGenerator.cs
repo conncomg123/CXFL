@@ -28,14 +28,14 @@ static class SceneGenerator
 
         //Core Settings
         public int DefaultFrameDuration { get; set; }
-        public string ViewMode { get; set; }
-        public string Defense { get; set; }
-        public string Prosecutor { get; set; }
-        public string Judge { get; set; }
-        public string Cocouncil { get; set; }
-        public List<string> Witnesses { get; set; }
+        public string? ViewMode { get; set; }
+        public string? Defense { get; set; }
+        public string? Prosecutor { get; set; }
+        public string? Judge { get; set; }
+        public string? Cocouncil { get; set; }
+        public List<string>? Witnesses { get; set; }
 
-        public string EEBias { get; set; }
+        public string? EEBias { get; set; }
         public int ChunkSize { get; set; }
 
         //Skip Settings
@@ -47,10 +47,10 @@ static class SceneGenerator
         public bool SkipBlinks { get; set; }
 
         //Paths
-        public string PathToOperatingDocument { get; set; }
-        public string PathToSceneData { get; set; }
-        public string PathToCFGs { get; set; }
-        public string PathToLines { get; set; }
+        public string? PathToOperatingDocument { get; set; }
+        public string? PathToSceneData { get; set; }
+        public string? PathToCFGs { get; set; }
+        public string? PathToLines { get; set; }
 
         //Backgrounds
         public SymbolConfig DefenseBackground { get; } = new SymbolConfig("BACKGROUNDS/Full-Courtroom", 7254, -738);
@@ -74,13 +74,13 @@ static class SceneGenerator
         //Letterspacing
         private Dictionary<string, LetterspacingConfig> letterspacingConfigs = new Dictionary<string, LetterspacingConfig>();
 
-        public void AddCharacter(string configName, string simplifiedName, string libraryPath)
+        public void AddCharacter(string configName, string simplifiedName, string libraryPath, string? pathToRigFile = null, string? libraryPathInRigFile = null)
         {
             if (!characterConfigs.ContainsKey(configName))
             {
                 characterConfigs[configName] = new CharacterConfig();
             }
-            characterConfigs[configName].AddCharacter(simplifiedName, libraryPath);
+            characterConfigs[configName].AddCharacter(simplifiedName, libraryPath, pathToRigFile, libraryPathInRigFile);
         }
 
         public CharacterConfig GetCharacterConfig(string configName)
@@ -193,16 +193,16 @@ static class SceneGenerator
 
     public class CharacterConfig
     {
-        public List<(string SimplifiedName, string LibraryPath)> Characters { get; }
+        public List<(string SimplifiedName, string LibraryPath, string? pathToRigFile, string? libraryPathInRigFile)> Characters { get; }
 
         public CharacterConfig()
         {
-            Characters = new List<(string, string)>();
+            Characters = new List<(string, string, string?, string?)>();
         }
 
-        public void AddCharacter(string simplifiedName, string libraryPath)
+        public void AddCharacter(string simplifiedName, string libraryPath, string? pathToRigFile = null, string? libraryPathInRigFile = null)
         {
-            Characters.Add((simplifiedName, libraryPath));
+            Characters.Add((simplifiedName, libraryPath, pathToRigFile, libraryPathInRigFile));
         }
     }
 
@@ -251,10 +251,10 @@ static class SceneGenerator
         config.SkipBlinks = false;
 
         //Paths
-        config.PathToOperatingDocument = "E:\\My stuff\\SceneGenTest\\UltimateCsXFLTest.fla";
-        config.PathToSceneData = "E:\\My stuff\\SceneGenTest\\303S1_output.json";
-        config.PathToCFGs = "E:\\My stuff\\SceneGenTest\\cfg";
-        config.PathToLines = "E:\\My stuff\\SceneGenTest\\vox";
+        config.PathToOperatingDocument = "C:\\Stuff\\SceneGenTest\\UltimateCsXFLTest.fla";
+        config.PathToSceneData = "C:\\Stuff\\SceneGenTest\\303S1_output.json";
+        config.PathToCFGs = "C:\\Stuff\\SceneGenTest\\cfg";
+        config.PathToLines = "C:\\Stuff\\SceneGenTest\\vox";
 
         //Characters
         config.AddCharacter("Investigation", "Trucy", "RIGS/Trucy►/Trucy►ScaledPoses");
@@ -262,6 +262,7 @@ static class SceneGenerator
         config.AddCharacter("Investigation", "Equity", "RIGS/EquityArmored►/EquityArmored►PoseScaled");
         config.AddCharacter("Investigation", "Applejack", "RIGS/APPLEJACK►/APPLEJACK►PoseScaled");
         config.AddCharacter("Investigation", "Guard", "RIGS/Trucy►/Trucy►ScaledPoses");
+        config.AddCharacter("Investigation", "Suri", "RIGS/Trucy►/Suri►ScaledPoses", "C:\\Stuff\\SceneGenTest\\RIGS\\INDEV_MV_Suri.fla", "SURI►");
 
         //Nameswaps
         config.AddNameswap("Turning Page", "Turning");
@@ -303,7 +304,26 @@ static class SceneGenerator
         if (Doc.Timelines[Doc.CurrentTimeline].FindLayerIndex(LayerName).Count == 0) { Doc.Timelines[Doc.CurrentTimeline].AddNewLayer(LayerName, LayerType); }
     }
 
+    static void ImportRigs(this Document doc)
+    {
+        SingletonConfig config = SingletonConfig.Instance;
+        CharacterConfig RigConfig = config.GetCharacterConfig("Investigation");
+        doc.Library.NewFolder("RIGS");
+        foreach (var character in RigConfig.Characters)
+        {
+            string libraryPath = character.LibraryPath;
+            string? pathToRigFile = character.pathToRigFile;
+            string? libraryPathInRigFile = character.libraryPathInRigFile;
 
+            if (pathToRigFile != null && libraryPathInRigFile != null && !doc.Library.ItemExists(libraryPath))
+            {
+                // assuming path to rig is a FOLDER
+                doc.ImportFolderFromOtherDocument(pathToRigFile, libraryPathInRigFile);
+                Item imported = doc.Library.Items[libraryPathInRigFile];
+                doc.Library.MoveToFolder("RIGS", imported);
+            }
+        }
+    }
     // <!> Ported bounding boxes from JSFL scene gen, bounding boxes seem to be slightly off from 3-1 to 3-3 scenes if you compare
     static void PlaceText(this Document Doc, string SceneData)
     {
@@ -314,15 +334,15 @@ static class SceneGenerator
 
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
-        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(SceneData, options);
+        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(SceneData, options)!;
 
         foreach (var dialogueKey in deserializedJson["Dialogue"].Keys)
         {
             var dialogueLine = deserializedJson["Dialogue"][dialogueKey];
 
             string LineID = dialogueKey;
-            string Character = dialogueLine.CharacterName;
-            string Dialogue = dialogueLine.LineText;
+            string Character = dialogueLine.CharacterName!;
+            string Dialogue = dialogueLine.LineText!;
 
             int LineIndex = int.Parse(dialogueKey.Substring(3, 3));
             int SceneIndex = (int)Math.Ceiling((double)LineIndex / config.ChunkSize);
@@ -352,7 +372,7 @@ static class SceneGenerator
             if (CurrentTimeline.Layers[TextboxLayerIndex].GetFrame(0).Elements.Count == 0)
             {
                 Doc.Library.AddItemToDocument("OTHER ASSETS/Textbox", CurrentTimeline.Layers[TextboxLayerIndex].GetFrame(OperatingFrameIndex), 0, 0);
-                SymbolInstance TextboxElement = CurrentTimeline.Layers[TextboxLayerIndex].GetFrame(OperatingFrameIndex).Elements[0] as SymbolInstance;
+                SymbolInstance TextboxElement = (CurrentTimeline.Layers[TextboxLayerIndex].GetFrame(OperatingFrameIndex).Elements[0] as SymbolInstance)!;
                 TextboxElement.Loop = "single frame";
                 TextboxElement.ScaleX = 1.34164876055;
                 TextboxElement.ScaleY = 1.34152669671;
@@ -394,7 +414,7 @@ static class SceneGenerator
             SpeakerText.Name = "SpeakerText";
             SpeakerText.FontRenderingMode = "standard";
 
-            if (config.GetLetterspacing(Character) != null) { SpeakerText.SetTextAttr("lineSpacing", config.GetLetterspacing(Character)); }
+            if (config.GetLetterspacing(Character) != 0) { SpeakerText.SetTextAttr("lineSpacing", config.GetLetterspacing(Character)); }
 
             CurrentTimeline.Layers[TextLayerIndex].GetFrame(OperatingFrameIndex).Name = LineID;
         }
@@ -413,21 +433,21 @@ static class SceneGenerator
         SingletonConfig config = SingletonConfig.Instance;
 
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(SceneData, options);
+        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(SceneData, options)!;
         string previousCharacter = "";
         var keys = deserializedJson["Dialogue"].Keys.ToList();
         for (int i = 0; i < keys.Count; i++)
         {
             var dialogueKey = keys[i];
             var dialogueLine = deserializedJson["Dialogue"][dialogueKey];
-            string Character = dialogueLine.CharacterName;
+            string Character = dialogueLine.CharacterName!;
             if (Character == config.Defense)
             {
-                if(string.IsNullOrEmpty(previousCharacter)) continue;
+                if (string.IsNullOrEmpty(previousCharacter)) continue;
                 Character = previousCharacter;
             }
             string CharacterLayerName = Character.ToUpper();
-            string Emotion = dialogueLine.Emotion;
+            string Emotion = dialogueLine.Emotion!;
 
             int LineIndex = int.Parse(dialogueKey.Substring(3, 3));
             int SceneIndex = (int)Math.Ceiling((double)LineIndex / config.ChunkSize);
@@ -453,7 +473,7 @@ static class SceneGenerator
             bool WasRigPlaced = Doc.Library.AddItemToDocument(config.GetLibraryPathByName(Character), CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex));
             if (WasRigPlaced)
             {
-                SymbolInstance CharacterRig = CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex).Elements[0] as SymbolInstance;
+                SymbolInstance CharacterRig = (CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex).Elements[0] as SymbolInstance)!;
                 CharacterRig.TransformationPoint.X = 0;
                 CharacterRig.TransformationPoint.Y = 0;
                 CharacterRig.Loop = "single frame";
@@ -529,7 +549,7 @@ static class SceneGenerator
     // <!> Want config.EE_Bias, unsure if/how to implement smoothing for transient emotions
     static int PoseAutomation(this Document Doc, string LibraryPath, string Emotion)
     {
-        SymbolItem RigSymbol = Doc.Library.Items[LibraryPath] as SymbolItem;
+        SymbolItem RigSymbol = (Doc.Library.Items[LibraryPath] as SymbolItem)!;
         Layer RigEE_Data = RigSymbol.Timeline.Layers[RigSymbol.Timeline.Layers.Count - 1];
 
         if (Emotion == "") { Emotion = "-"; }
@@ -663,13 +683,13 @@ static class SceneGenerator
         SingletonConfig config = SingletonConfig.Instance;
 
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, SFXLine>>>(SFXData, options);
+        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, SFXLine>>>(SFXData, options)!;
 
         foreach (var dialogueKey in deserializedJson["SFX"].Keys)
         {
             var dialogueLine = deserializedJson["SFX"][dialogueKey];
-            string Alignment = dialogueLine.Alignment;
-            string SFX = dialogueLine.SFX;
+            string Alignment = dialogueLine.Alignment!;
+            string SFX = dialogueLine.SFX!;
 
             int LineIndex = int.Parse(dialogueKey.Substring(3, 3));
             int SceneIndex = (int)Math.Ceiling((double)LineIndex / config.ChunkSize);
@@ -709,7 +729,7 @@ static class SceneGenerator
     {
         SingletonConfig config = SingletonConfig.Instance;
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, TypewriterData>>>(SceneData, options);
+        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, TypewriterData>>>(SceneData, options)!;
 
         // Kid named D drive
         FontCollection fonts = new FontCollection();
@@ -767,7 +787,7 @@ static class SceneGenerator
             if (CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("TEXTBOX")[0]].GetFrame(0).Elements.Count == 0)
             {
                 Doc.Library.AddItemToDocument("OTHER ASSETS/Textbox", CurrentTimeline.Layers[TEXTBOX_LAYER_INDEX].GetFrame(0), 0, 0);
-                SymbolInstance TextboxElement = CurrentTimeline.Layers[TEXTBOX_LAYER_INDEX].GetFrame(0).Elements[0] as SymbolInstance;
+                SymbolInstance TextboxElement = (CurrentTimeline.Layers[TEXTBOX_LAYER_INDEX].GetFrame(0).Elements[0] as SymbolInstance)!;
                 TextboxElement.Loop = "single frame";
                 TextboxElement.FirstFrame = 1;
                 TextboxElement.ScaleX = 1.34164876055;
@@ -830,12 +850,12 @@ static class SceneGenerator
     {
         var characterToDeskMap = new Dictionary<string, SymbolConfig?>
         {
-            { SingletonConfig.Instance.Defense, SingletonConfig.Instance.DefenseDesk },
-            {SingletonConfig.Instance.Prosecutor, SingletonConfig.Instance.ProsecutorDesk },
-            {SingletonConfig.Instance.Judge, SingletonConfig.Instance.JudgeDesk },
-            {SingletonConfig.Instance.Cocouncil, null }
+            { SingletonConfig.Instance.Defense!, SingletonConfig.Instance.DefenseDesk },
+            {SingletonConfig.Instance.Prosecutor!, SingletonConfig.Instance.ProsecutorDesk },
+            {SingletonConfig.Instance.Judge!, SingletonConfig.Instance.JudgeDesk },
+            {SingletonConfig.Instance.Cocouncil!, null }
         };
-        foreach (string witness in SingletonConfig.Instance.Witnesses)
+        foreach (string witness in SingletonConfig.Instance.Witnesses!)
         {
             characterToDeskMap.Add(witness, SingletonConfig.Instance.WitnessDesk);
         }
@@ -881,12 +901,12 @@ static class SceneGenerator
     {
         var characterToBgMap = new Dictionary<string, SymbolConfig>
         {
-            { SingletonConfig.Instance.Defense, SingletonConfig.Instance.DefenseBackground },
-            {SingletonConfig.Instance.Prosecutor, SingletonConfig.Instance.ProsecutorBackground },
-            {SingletonConfig.Instance.Judge, SingletonConfig.Instance.JudgeBackground },
-            {SingletonConfig.Instance.Cocouncil, SingletonConfig.Instance.CocouncilBackground }
+            { SingletonConfig.Instance.Defense!, SingletonConfig.Instance.DefenseBackground },
+            {SingletonConfig.Instance.Prosecutor!, SingletonConfig.Instance.ProsecutorBackground },
+            {SingletonConfig.Instance.Judge!, SingletonConfig.Instance.JudgeBackground },
+            {SingletonConfig.Instance.Cocouncil!, SingletonConfig.Instance.CocouncilBackground }
         };
-        foreach (string witness in SingletonConfig.Instance.Witnesses)
+        foreach (string witness in SingletonConfig.Instance.Witnesses!)
         {
             characterToBgMap.Add(witness, SingletonConfig.Instance.WitnessBackground);
         }
@@ -923,13 +943,16 @@ static class SceneGenerator
         stpw.Start();
         SetConfiguration();
         SingletonConfig config = SingletonConfig.Instance;
-        string json = File.ReadAllText(config.PathToSceneData);
-        Document Doc = new(config.PathToOperatingDocument);
+        string json = File.ReadAllText(config.PathToSceneData!);
+        Document Doc = new(config.PathToOperatingDocument!);
         InputValidation(Doc);
         stpw.Stop();
         Trace.WriteLine("Setup took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
-
+        stpw.Start();
+        Doc.ImportRigs();
+        stpw.Stop();
+        Trace.WriteLine("Rig Import took " + stpw.ElapsedMilliseconds + " ms.");
         // Text Placement
         stpw.Start();
         PlaceText(Doc, json);
@@ -946,15 +969,15 @@ static class SceneGenerator
 
         // Line Insertion
         stpw.Start();
-        Doc.InsertLinesChunked(config.PathToLines);
+        Doc.InsertLinesChunked(config.PathToLines!);
         stpw.Stop();
         Trace.WriteLine("Line Insertion took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
 
         // Automatic Lipsyncing
         stpw.Start();
-        string[] IgnoreLipsync = new string[] { config.Defense.ToUpper() };
-        Doc.LipsyncChunkedDocument(config.PathToCFGs, IgnoreLipsync);
+        string[] IgnoreLipsync = new string[] { config.Defense!.ToUpper() };
+        Doc.LipsyncChunkedDocument(config.PathToCFGs!, IgnoreLipsync);
         stpw.Stop();
         Trace.WriteLine("Lipsyncing took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();

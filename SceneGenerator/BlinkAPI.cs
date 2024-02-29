@@ -5,8 +5,6 @@ namespace SceneGenerator.API;
 
 static class BlinkAPI
 {
-    private static int BLINK_DURATION = 6;
-
     private static double GammaVariable(double mean, int k)
     {
         double theta = mean / k;
