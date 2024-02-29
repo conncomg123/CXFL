@@ -4,8 +4,8 @@ using System.IO.Compression;
 namespace CsXFL;
 public static class An
 {
-    private static Dictionary<string, string> extractedFlas = new();
-    private static List<Document> _documents = new();
+    private static readonly Dictionary<string, string> extractedFlas = new();
+    private static readonly List<Document> _documents = new();
     private static Document? activeDocument;
     static An()
     {
@@ -148,12 +148,17 @@ public static class An
             doc.Library.ImportItem(file, true, otherDocumentLibraryRoot);
         }
     }
-    public static void Cleanup()
+    private static void Cleanup()
     {
         foreach (string tempDir in extractedFlas.Values)
         {
             Directory.Delete(tempDir, true);
         }
         extractedFlas.Clear();
+    }
+    public static Document CreateDocument(string path)
+    {
+        // create the xfl format: DOMDocument.xml, LIBRARY folder, etc.
+        throw new NotImplementedException();
     }
 }

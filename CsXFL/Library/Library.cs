@@ -249,7 +249,6 @@ public class Library
             imported = SymbolItem.FromFile(path);
             if (containingDocument.Root!.Element(ns + "symbols") is null) containingDocument.Root!.AddFirst(new XElement(ns + "symbols"));
             containingDocument.Root!.Element(ns + "symbols")!.Add((imported as SymbolItem)!.Include.Root);
-            imported.Name = itemName.Replace(".xml", "");
             (imported as SymbolItem)!.Timeline.Name = Path.GetFileNameWithoutExtension(itemName);
         }
         else if (AUDIO_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
@@ -265,7 +264,19 @@ public class Library
             containingDocument.Root!.Element(ns + "media")!.Add(imported.Root);
         }
         if (imported is null) return null;
-        items.Add(itemName, imported);
+        items.Add(imported.Name, imported);
+        // also add FolderItems for each
+        string relativePath = targetPath.Substring(targetPath.IndexOf(LIBRARY_PATH) + LIBRARY_PATH.Length + 1).Replace('\\', '/');
+        string[] folders = relativePath.Split('/');
+        for (int i = 0; i < folders.Length - 1; i++)
+        {
+            string folderPath = "";
+            for (int j = 0; j <= i; j++)
+            {
+                folderPath += folders[j] + "/";
+            }
+            NewFolder(folderPath.TrimEnd('/'));
+        }
         itemOperations.Enqueue(new ItemOperation(imported, ItemOperation.OperationType.Add, itemName, path));
         return imported;
     }
@@ -278,7 +289,7 @@ public class Library
         if (item is SymbolItem symbol)
         {
             symbol.Include.Href = newName;
-            symbol.Timeline.Name = newName;
+            symbol.Timeline.Name = newName.Substring(newName.LastIndexOf('/') + 1);
             isSymbol = true;
         }
         if (item is SoundItem sound)
@@ -308,6 +319,42 @@ public class Library
         items.Remove(itemPath);
         itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Remove, itemPath));
         LibraryEventMessenger.Instance.NotifyItemRemoved(itemPath);
+        return true;
+    }
+    private void MoveSingleItemToFolder(string folderName, Item itemToMove)
+    {
+        string itemName = itemToMove.Name.Substring(itemToMove.Name.LastIndexOf('/') + 1);
+        string newItemName = folderName + "/" + itemName;
+        RenameItem(itemToMove.Name, newItemName);
+    }
+    private void MoveFolderItemToFolder(string folderName, FolderItem folderItem)
+    {
+        string folderPath = folderItem.Name;
+        MoveSingleItemToFolder(folderName, folderItem);
+        List<Item> itemsToMove = new();
+        foreach (Item item in items.Values)
+        {
+            if (!item.Name.StartsWith(folderPath + "/")) continue;
+            itemsToMove.Add(item);
+        }
+        foreach (Item item in itemsToMove)
+        {
+            RenameItem(item.Name, folderName + "/" + item.Name);
+        }
+    }
+    public bool MoveToFolder(string folderName, Item itemToMove)
+    {
+        if (!ItemExists(folderName)) return false;
+        if (!items.ContainsKey(itemToMove.Name)) return false;
+        if (items[folderName] is not FolderItem) return false;
+        if (itemToMove is not FolderItem folder)
+        {
+            MoveSingleItemToFolder(folderName, itemToMove);
+        }
+        else
+        {
+            MoveFolderItemToFolder(folderName, folder);
+        }
         return true;
     }
     public bool NewFolder(string folderName)
@@ -355,7 +402,7 @@ public class Library
                     ProcessRemoveOperation(operation, targetPath, filename);
                     break;
                 case ItemOperation.OperationType.Rename:
-                    ProcessRenameOperation(operation, targetPath);
+                    ProcessRenameOperation(operation, targetPath, filename);
                     break;
             }
         }
@@ -395,18 +442,7 @@ public class Library
     {
         if (File.Exists(targetPath)) return;
         if (!Directory.Exists(Path.GetDirectoryName(targetPath)!)) Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
-        // also create FolderItems for each
-        string relativePath = targetPath.Substring(targetPath.IndexOf(LIBRARY_PATH) + LIBRARY_PATH.Length + 1).Replace('\\', '/');
-        string[] folders = relativePath.Split('/');
-        for (int i = 0; i < folders.Length - 1; i++)
-        {
-            string folderPath = "";
-            for (int j = 0; j <= i; j++)
-            {
-                folderPath += folders[j] + "/";
-            }
-            NewFolder(folderPath.TrimEnd('/'));
-        }
+
         File.Copy(operation.NewItemPath!, targetPath);
         // update item's href
         Item item = operation.item;
@@ -455,10 +491,17 @@ public class Library
         File.Delete(targetPath);
     }
 
-    private void ProcessRenameOperation(ItemOperation operation, string targetPath)
+    private void ProcessRenameOperation(ItemOperation operation, string targetPath, string filename)
     {
-        string renamedPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, operation.NewItemName!);
-        File.Move(targetPath, renamedPath);
+        string renamedPath = Path.Combine(Path.GetDirectoryName(filename)!, LIBRARY_PATH, operation.NewItemName!);
+        if (Directory.Exists(targetPath))
+            Directory.Move(targetPath, renamedPath);
+        else if (File.Exists(targetPath))
+            File.Move(targetPath, renamedPath);
+        if (operation.item is SymbolItem symbol)
+        {
+            symbol.Include.Href = operation.NewItemName!;
+        }
     }
 
     private void SaveSymbolItems(string filename)
