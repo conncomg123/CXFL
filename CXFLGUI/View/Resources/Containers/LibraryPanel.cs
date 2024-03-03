@@ -52,11 +52,8 @@ namespace CXFLGUI
             {
                 WidthRequest = 300,
                 HeightRequest = 40,
-                //BackgroundColor = (Color)App.Fixed_ResourceDictionary["DefaultSearchBar"]["BackgroundColor"],
-                //CancelButtonColor = (Color)App.Fixed_ResourceDictionary["DefaultSearchBar"]["CancelButtonColor"],
                 Placeholder = "Search...",
-                //PlaceholderColor = (Color)App.Fixed_ResourceDictionary["DefaultSearchBar"]["Textcolor"],
-                //TextColor = (Color)App.Fixed_ResourceDictionary["DefaultSearchBar"]["TextColor"]
+                Style = (Style)App.Fixed_ResourceDictionary["DefaultSearchBar"]["SearchBar"]
             };
 
             SearchBar_Library.TextChanged += (sender, e) =>

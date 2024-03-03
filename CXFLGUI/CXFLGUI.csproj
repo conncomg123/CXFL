@@ -47,10 +47,10 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <MauiXaml Update="View\Resources\Styles\DefaultButton.xaml">
+    <MauiXaml Update="View\Resources\Styles\DefaultSearchBar.xaml">
       <Generator>MSBuild:Compile</Generator>
     </MauiXaml>
-    <MauiXaml Update="View\Resources\Styles\DefaultSearchBar.xaml">
+    <MauiXaml Update="View\Resources\Styles\DefaultButton.xaml">
       <Generator>MSBuild:Compile</Generator>
     </MauiXaml>
     <MauiXaml Update="View\Resources\Styles\Styles.xaml">
