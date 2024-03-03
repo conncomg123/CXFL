@@ -237,8 +237,9 @@ public class Library
         {
             itemName = Path.GetFileName(path);
         }
+        if(itemName.EndsWith(".xml")) itemName = itemName.Substring(0, itemName.Length - 4);
         string targetPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, itemName);
-        while (File.Exists(targetPath) || items.ContainsKey(itemName))
+        while (items.ContainsKey(itemName)) // file.exists check is not required
         {
             itemName = Path.Combine(Path.GetDirectoryName(itemName)!, Path.GetFileNameWithoutExtension(itemName) + " copy" + Path.GetExtension(itemName)).Replace('\\', '/');
             targetPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, itemName);
@@ -264,7 +265,8 @@ public class Library
             containingDocument.Root!.Element(ns + "media")!.Add(imported.Root);
         }
         if (imported is null) return null;
-        items.Add(imported.Name, imported);
+        imported.Name = itemName;
+        items.Add(itemName, imported);
         // also add FolderItems for each
         string relativePath = targetPath.Substring(targetPath.IndexOf(LIBRARY_PATH) + LIBRARY_PATH.Length + 1).Replace('\\', '/');
         string[] folders = relativePath.Split('/');
