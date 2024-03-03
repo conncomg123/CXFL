@@ -20,7 +20,6 @@ namespace CXFLGUI
     {
         private MainViewModel viewModel;
         private Label Label_LibraryCount;
-        private SearchBar Search_Library;
 
         int LoadedItemsCount = 0;
 
@@ -38,16 +37,16 @@ namespace CXFLGUI
             this.viewModel = viewModel;
             viewModel.DocumentOpened += DocumentOpened;
 
-            // Top / bottom of pane
+            // Top / Bottom of Library Pane
             var StackLayout_Pane = new StackLayout();
             StackLayout_Pane.Padding = new Thickness(0, 25, 0, 0);
 
-            // Library count
+            // Library Count
             Label_LibraryCount = new Label();
             Label_LibraryCount.TextColor = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryText"];
             UpdateLibraryCount(0);
 
-            // Searchbar
+            // SearchBar
             SearchBar SearchBar_Library = new SearchBar
             {
                 WidthRequest = 300,
@@ -61,7 +60,7 @@ namespace CXFLGUI
                 string searchText = e.NewTextValue;
             };
 
-            // Horizontal Divider between label + search and listView
+            // Horizontal Divider between Library Count and SearchBar
             Grid HzDivider = new Grid();
             HzDivider.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Star });
             HzDivider.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Star });
@@ -74,30 +73,29 @@ namespace CXFLGUI
             Grid.SetRow(SearchBar_Library, 0);
             HzDivider.Children.Add(SearchBar_Library);
 
-            // Sort it
             var SortedLibraryItems = SortLibraryItems(LibraryItems.ToList());
 
             var ListView_LibraryDisplay = new ListView
             {
                 ItemsSource = LibraryItems,
-                RowHeight = 35
+                RowHeight = 50
             };
 
+            // Library Display
             ListView_LibraryDisplay.ItemTemplate = new DataTemplate(() =>
             {
                 var ViewCell_LibraryEntry = new ViewCell();
 
-                var LibraryEntryText = new Label();
+                var LibraryEntryText = new Entry();
                 LibraryEntryText.TextColor = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryText"];
-                LibraryEntryText.SetBinding(Label.TextProperty, "Key");
+                //LibraryEntryText.SetBinding(Label.TextProperty, "Key");
 
-                var LibraryEntryIcon = new Label
+                var LibraryEntryIcon = new ImageButton
                 {
-                    FontSize = 20,
-                    TextColor = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryText"]
+                    Style = (Style)App.Fixed_ResourceDictionary["DefaultImageButton"]["Button"]
                 };
 
-                LibraryEntryIcon.SetBinding(Label.TextProperty, "Key");
+                //LibraryEntryIcon.SetBinding(Label.TextProperty, "Key");
 
                 ViewCell_LibraryEntry.View = new StackLayout
                 {
@@ -160,10 +158,49 @@ namespace CXFLGUI
                 return ViewCell_LibraryEntry;
             });
 
+            // Footer
+            Grid footerGrid = new Grid();
+            footerGrid.Padding = new Thickness(10, 5);
+            footerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+            footerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+            footerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+            footerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+            footerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+
+            footerGrid.HorizontalOptions = LayoutOptions.Start;
+
+            ImageButton button1 = CreateIconButton(MaterialIcons.Add, "New Symbol", (Style)App.Fixed_ResourceDictionary["DefaultImageButton"]["Button"]);
+            ImageButton button2 = CreateIconButton(MaterialIcons.Folder, "New Folder", (Style)App.Fixed_ResourceDictionary["DefaultImageButton"]["Button"]);
+            ImageButton button3 = CreateIconButton(MaterialIcons.Help, "Properties", (Style)App.Fixed_ResourceDictionary["DefaultImageButton"]["Button"]);
+            ImageButton button4 = CreateIconButton(MaterialIcons.Delete, "Delete", (Style)App.Fixed_ResourceDictionary["DefaultImageButton"]["Button"]);
+
+            int ButtonSize = 35;
+
+            button1.WidthRequest = ButtonSize;
+            button2.WidthRequest = ButtonSize;
+            button3.WidthRequest = ButtonSize;
+            button4.WidthRequest = ButtonSize;
+
+            button1.HeightRequest = ButtonSize;
+            button2.HeightRequest = ButtonSize;
+            button3.HeightRequest = ButtonSize;
+            button4.HeightRequest = ButtonSize;
+
+            Grid.SetColumn(button1, 1);
+            Grid.SetColumn(button2, 2);
+            Grid.SetColumn(button3, 3);
+            Grid.SetColumn(button4, 4);
+
+            footerGrid.Children.Add(button1);
+            footerGrid.Children.Add(button2);
+            footerGrid.Children.Add(button3);
+            footerGrid.Children.Add(button4);
+
             ListView_LibraryDisplay.ItemSelected += ListView_Library_ItemSelected;
 
             StackLayout_Pane.Children.Add(HzDivider);
             StackLayout_Pane.Children.Add(ListView_LibraryDisplay);
+            StackLayout_Pane.Children.Add(footerGrid);
 
             Content = StackLayout_Pane;
         }
@@ -188,6 +225,23 @@ namespace CXFLGUI
         private void UpdateLibraryCount(int LoadedItemsCount)
         {
             Label_LibraryCount.Text = LoadedItemsCount + " Items";
+        }
+
+        public static ImageButton CreateIconButton(MaterialIcons icon, string tooltip = null, Style buttonStyle = null)
+        {
+            var button = new ImageButton().Icon(icon);
+
+            if (!string.IsNullOrEmpty(tooltip))
+            {
+                ToolTipProperties.SetText(button, tooltip);
+            }
+
+            if (buttonStyle != null)
+            {
+                button.Style = buttonStyle;
+            }
+
+            return button;
         }
 
         private List<LibraryItem> SortLibraryItems(List<LibraryItem> items)

@@ -9,6 +9,7 @@
     <Color x:Key="PrimaryLight">#c3c3c3</Color>
     <Color x:Key="White">White</Color>
     <Color x:Key="Black">Black</Color>
+    <Color x:Key="Transparent">Transparent</Color>
 
     <Color x:Key="Gray100">#E1E1E1</Color>
     <Color x:Key="Gray200">#C8C8C8</Color>
@@ -29,5 +30,7 @@
         <GradientStop Color="{DynamicResource PrimaryDark}" Offset="0.1" />
         <GradientStop Color="{DynamicResource Black}" Offset="1.0"/>
     </LinearGradientBrush>
+
+    <Color x:Key="ButtonHoverBorder">#4287f5</Color>
 
 </ResourceDictionary>

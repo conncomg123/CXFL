@@ -7,10 +7,10 @@
     <Style x:Key="SearchBar" TargetType="SearchBar">
         <!--Base Visuals-->
         <Setter Property="BackgroundColor"
-							Value="{DynamicResource Black}" />
+							Value="{DynamicResource PrimaryDark}" />
         <Setter Property="CancelButtonColor"
-							Value="{DynamicResource Black}" />
+							Value="{DynamicResource PrimaryText}" />
         <Setter Property="TextColor"
-							Value="{DynamicResource White}" />
+							Value="{DynamicResource PrimaryText}" />
     </Style>
 </ResourceDictionary>
