@@ -1,5 +1,6 @@
 // utility class, simliar to the fl object in JSFL
 using System.IO.Compression;
+using System.Xml.Linq;
 
 namespace CsXFL;
 public static class An
@@ -42,22 +43,7 @@ public static class An
         }
         if (isFla)
         {
-            if (!extractedFlas.TryGetValue(otherDocPath, out string? tempDir))
-            {
-                // extract fla to xfl in temp directory
-                tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-                while (Directory.Exists(tempDir))
-                {
-                    tempDir = Path.Combine(tempDir, Path.GetRandomFileName());
-                }
-                Directory.CreateDirectory(tempDir);
-                using (ZipArchive archive = ZipFile.Open(otherDocPath, ZipArchiveMode.Read))
-                {
-                    archive.ExtractToDirectory(tempDir);
-                }
-                extractedFlas.TryAdd(otherDocPath, tempDir);
-            }
-            otherDocPath = tempDir + "/DOMDocument.xml";
+            otherDocPath = GetTempFLAPath(otherDocPath);
         }
         string otherItemPath = Path.Combine(Path.GetDirectoryName(otherDocPath)!, Library.LIBRARY_PATH, itemName);
         if (!File.Exists(otherItemPath)) throw new FileNotFoundException("The item does not exist in the other document", otherItemPath);
@@ -65,13 +51,35 @@ public static class An
         {
             AddSymbolAndDependencies(otherItemPath, filesToImport, otherDocPath);
         }
-        filesToImport.Add(otherItemPath);
+        filesToImport.Add(otherItemPath.Replace('\\', '/'));
         string otherDocumentLibraryRoot = Path.Combine(Path.GetDirectoryName(otherDocPath)!, Library.LIBRARY_PATH).Replace('\\', '/');
         foreach (string file in filesToImport)
         {
             doc.Library.ImportItem(file, true, otherDocumentLibraryRoot);
         }
     }
+
+    private static string GetTempFLAPath(string otherDocPath)
+    {
+        if (!extractedFlas.TryGetValue(otherDocPath, out string? tempDir))
+        {
+            // extract fla to xfl in temp directory
+            tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            while (Directory.Exists(tempDir))
+            {
+                tempDir = Path.Combine(tempDir, Path.GetRandomFileName());
+            }
+            Directory.CreateDirectory(tempDir);
+            using (ZipArchive archive = ZipFile.Open(otherDocPath, ZipArchiveMode.Read))
+            {
+                archive.ExtractToDirectory(tempDir);
+            }
+            extractedFlas.TryAdd(otherDocPath, tempDir);
+        }
+        otherDocPath = tempDir + "/DOMDocument.xml";
+        return otherDocPath;
+    }
+
     private static void AddSymbolAndDependencies(string symbolPath, HashSet<string> filesToImport, string otherDocPath)
     {
         string toImport = Path.Combine(Path.GetDirectoryName(otherDocPath)!, Library.LIBRARY_PATH, symbolPath).Replace('\\', '/');
@@ -112,22 +120,7 @@ public static class An
         bool isFla = Path.GetExtension(otherDocPath) == ".fla";
         if (isFla)
         {
-            if (!extractedFlas.TryGetValue(otherDocPath, out string? tempDir))
-            {
-                // extract fla to xfl in temp directory
-                tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-                while (Directory.Exists(tempDir))
-                {
-                    tempDir = Path.Combine(tempDir, Path.GetRandomFileName());
-                }
-                Directory.CreateDirectory(tempDir);
-                using (ZipArchive archive = ZipFile.Open(otherDocPath, ZipArchiveMode.Read))
-                {
-                    archive.ExtractToDirectory(tempDir);
-                }
-                extractedFlas.TryAdd(otherDocPath, tempDir);
-            }
-            otherDocPath = tempDir + "/DOMDocument.xml";
+            otherDocPath = GetTempFLAPath(otherDocPath);
         }
         string otherFolderPath = Path.Combine(Path.GetDirectoryName(otherDocPath)!, Library.LIBRARY_PATH, folderName);
         if (!Directory.Exists(otherFolderPath)) throw new DirectoryNotFoundException($"The folder does not exist in the other document: {folderName}");
@@ -147,6 +140,56 @@ public static class An
         {
             doc.Library.ImportItem(file, true, otherDocumentLibraryRoot);
         }
+    }
+    public static bool ImportSceneFromOtherDocument(this Document doc, Document otherDoc, int sceneIndex)
+    {
+        string otherDocPath = otherDoc.Filename;
+        bool isFla = Path.GetExtension(otherDocPath) == ".fla";
+        string updatedPath = otherDocPath;
+        if (isFla)
+        {
+            updatedPath = GetTempFLAPath(otherDocPath);
+        }
+        XNamespace ns = doc.Root!.Name.Namespace;
+        Timeline duped = new(otherDoc.GetTimeline(sceneIndex));
+        duped.Name += " (imported)";
+        if (duped.Root?.Parent is not null)
+            duped.Root?.Remove();
+        if (doc.Root?.Element(ns + "timelines") is null) doc.Root?.Add(new XElement(ns + "timelines"));
+        doc.Root?.Element(ns + "timelines")!.Add(duped.Root);
+        doc.Timelines.Add(duped);
+        // now import all the library items
+        HashSet<string> filesToImport = new();
+        foreach (Layer l in duped.Layers)
+        {
+            foreach (Frame f in l.KeyFrames)
+            {
+                foreach (Element e in f.Elements)
+                {
+                    if (e is Instance i)
+                    {
+                        filesToImport.Add(i.LibraryItemName);
+                    }
+                }
+                if (!string.IsNullOrEmpty(f.SoundName))
+                {
+                    filesToImport.Add(f.SoundName);
+                }
+            }
+        }
+        foreach (string file in filesToImport)
+        {
+            if (!doc.Library.ItemExists(file))
+            {
+                doc.ImportFromOtherDocument(updatedPath, file);
+            }
+        }
+        return true;
+    }
+    public static bool ImportSceneFromOtherDocument(this Document doc, string otherDocPath, int sceneIndex)
+    {
+        Document otherDoc = new(otherDocPath);
+        return doc.ImportSceneFromOtherDocument(otherDoc, sceneIndex);
     }
     private static void Cleanup()
     {
