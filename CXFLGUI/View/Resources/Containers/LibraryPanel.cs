@@ -6,6 +6,8 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CommunityToolkit.Maui.Core;
+using CommunityToolkit.Maui.Views;
 using CsXFL;
 using MauiIcons.Core;
 using MauiIcons.Material;
@@ -14,6 +16,11 @@ using Microsoft.Maui.Graphics.Win2D;
 using Microsoft.UI.Xaml.Markup;
 using static MainViewModel;
 
+// To-do:
+// Dynamic context menus for library entries
+// Custom handler for removing border + underline on entry / searchbar for Windows
+// CursorIcon handling for buttons. VSM?
+// ViewModel funk
 namespace CXFLGUI
 {
     public class LibraryPanel : VanillaFrame
@@ -44,15 +51,24 @@ namespace CXFLGUI
             // Library Count
             Label_LibraryCount = new Label();
             Label_LibraryCount.TextColor = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryText"];
+            Label_LibraryCount.Padding = new Thickness(10, 5, 20, 5);
+            Label_LibraryCount.VerticalOptions = LayoutOptions.Center;
+            Label_LibraryCount.HorizontalOptions = LayoutOptions.Center;
             UpdateLibraryCount(0);
 
             // SearchBar
             SearchBar SearchBar_Library = new SearchBar
             {
-                WidthRequest = 300,
                 HeightRequest = 40,
+                HorizontalOptions = LayoutOptions.FillAndExpand,
                 Placeholder = "Search...",
                 Style = (Style)App.Fixed_ResourceDictionary["DefaultSearchBar"]["SearchBar"]
+            };
+
+            var SearchPadding = new Microsoft.Maui.Controls.Frame
+            {
+                Padding = Padding = new Thickness(10, 5, 20, 5),
+                HasShadow = true
             };
 
             SearchBar_Library.TextChanged += (sender, e) =>
@@ -61,9 +77,14 @@ namespace CXFLGUI
             };
 
             // Horizontal Divider between Library Count and SearchBar
-            Grid HzDivider = new Grid();
-            HzDivider.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Star });
-            HzDivider.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Star });
+            Grid HzDivider = new Grid
+            {
+                ColumnDefinitions =
+            {
+                new ColumnDefinition { Width = GridLength.Auto },
+                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }
+            }
+            };
 
             Grid.SetColumn(Label_LibraryCount, 0);
             Grid.SetRow(Label_LibraryCount, 0);
@@ -88,19 +109,17 @@ namespace CXFLGUI
 
                 var LibraryEntryText = new Entry();
                 LibraryEntryText.TextColor = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryText"];
-                //LibraryEntryText.SetBinding(Label.TextProperty, "Key");
 
                 var LibraryEntryIcon = new ImageButton
                 {
                     Style = (Style)App.Fixed_ResourceDictionary["DefaultImageButton"]["Button"]
                 };
 
-                //LibraryEntryIcon.SetBinding(Label.TextProperty, "Key");
-
                 ViewCell_LibraryEntry.View = new StackLayout
                 {
                     Orientation = StackOrientation.Horizontal,
-                    Padding = new Thickness(10, 5),
+                    VerticalOptions = LayoutOptions.Center,
+                    Padding = new Thickness(0, 0), // 10 5
                     Spacing = 10,
                     Children = { LibraryEntryIcon, LibraryEntryText }
                 };
