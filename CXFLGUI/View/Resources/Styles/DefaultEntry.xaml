@@ -4,10 +4,27 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
-    <Style x:Key="Entry" TargetType="Entry">
+    <Style x:Key="Style" TargetType="Entry">
         <!--Base Visuals-->
         <Setter Property="BackgroundColor"
 							Value="{DynamicResource Transparent}" />
+							
+	<Setter Property="VisualStateManager.VisualStateGroups">
+    <VisualStateGroupList>
+        <VisualStateGroup Name="CommonStates">
+            <VisualState Name="Normal">
+                <VisualState.Setters>
+                    <Setter Property="BackgroundColor" Value="{DynamicResource Transparent}" />
+                </VisualState.Setters>
+            </VisualState>
+            <VisualState Name="Focused">
+                <VisualState.Setters>
+                    <Setter Property="BackgroundColor" Value="{DynamicResource PrimaryDark}" />
+                </VisualState.Setters>
+            </VisualState>
+        </VisualStateGroup>
+    </VisualStateGroupList>
+</Setter>
     </Style>
 
 </ResourceDictionary>
