@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using MauiIcons.Material;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CXFLGUI
 {
@@ -14,7 +15,7 @@ namespace CXFLGUI
                 .UseMauiCommunityToolkit()
                 .UseMauiApp<App>().UseMaterialMauiIcons()
                 .ConfigureFonts(fonts =>
-                {
+                {   
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });

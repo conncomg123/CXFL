@@ -16,11 +16,6 @@ using Microsoft.Maui.Graphics.Win2D;
 using Microsoft.UI.Xaml.Markup;
 using static MainViewModel;
 
-// To-do:
-// Dynamic context menus for library entries
-// Custom handler for removing border + underline on entry / searchbar for Windows
-// CursorIcon handling for buttons. VSM?
-// ViewModel funk
 namespace CXFLGUI
 {
     public class LibraryPanel : VanillaFrame
@@ -71,11 +66,6 @@ namespace CXFLGUI
                 HasShadow = true
             };
 
-            SearchBar_Library.TextChanged += (sender, e) =>
-            {
-                string searchText = e.NewTextValue;
-            };
-
             // Horizontal Divider between Library Count and SearchBar
             Grid HzDivider = new Grid
             {
@@ -109,6 +99,23 @@ namespace CXFLGUI
 
                 var LibraryEntryText = new Entry();
                 LibraryEntryText.TextColor = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryText"];
+                LibraryEntryText.Style = (Style)App.Fixed_ResourceDictionary["DefaultEntry"]["Entry"];
+                LibraryEntryText.IsSpellCheckEnabled = false;
+
+                LibraryEntryText.Focused += (sender, e) =>
+                {
+                    LibraryEntryText.BackgroundColor = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryDark"];
+                };
+
+                LibraryEntryText.Unfocused += (sender, e) =>
+                {
+                    LibraryEntryText.BackgroundColor = (Color)App.Fixed_ResourceDictionary["Colors"]["Transparent"];
+                };
+
+                LibraryEntryText.Completed += (sender, e) =>
+                {
+                    LibraryEntryText.Unfocus();
+                };
 
                 var LibraryEntryIcon = new ImageButton
                 {
@@ -176,6 +183,21 @@ namespace CXFLGUI
 
                 return ViewCell_LibraryEntry;
             });
+
+            SearchBar_Library.TextChanged += (sender, e) =>
+            {
+                string searchText = e.NewTextValue.ToLower();
+
+                // Filter the library items based on the search text
+                var filteredItems = LibraryItems.Where(item =>
+                {
+                    // Search for specific text
+                    return item.Key.ToLower().Contains(searchText) || item.Value.ItemType.ToLower().Contains(searchText);
+                }).ToList();
+
+                // Update the ListView with the filtered items
+                ListView_LibraryDisplay.ItemsSource = filteredItems;
+            };
 
             // Footer
             Grid footerGrid = new Grid();
