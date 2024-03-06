@@ -14,8 +14,8 @@ namespace CXFLGUI
         private bool isResizing = false;
         private Microsoft.Maui.Graphics.Point? resizeStartPosition;
 
-        double InitialWidth = 300;
-        double InitialHeight = 250;
+        double InitialWidth = 500;
+        double InitialHeight = 700;
 
         int ResizeTolerance = 15;
 
@@ -64,9 +64,10 @@ namespace CXFLGUI
             Grid.SetRow(contentStackLayout, 1);
             Grid.SetColumnSpan(contentStackLayout, 2);
 
-            var panGesture = new PanGestureRecognizer();
-            panGesture.PanUpdated += OnPanUpdated;
-            this.GestureRecognizers.Add(panGesture);
+            // Resize Controls
+            //var panGesture = new PanGestureRecognizer();
+            //panGesture.PanUpdated += OnPanUpdated;
+            //this.GestureRecognizers.Add(panGesture);
 
             Content = grid;
         }
