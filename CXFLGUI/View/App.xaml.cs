@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using CXFLGUI;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace CXFLGUI
@@ -12,6 +13,7 @@ namespace CXFLGUI
             InitializeComponent();
             MainPage = new AppShell();
 
+            // Created Fixed Resource Dictionary
             Fixed_ResourceDictionary = new Dictionary<string, ResourceDictionary>();
             foreach (var dictionary in Application.Current.Resources.MergedDictionaries)
             {
