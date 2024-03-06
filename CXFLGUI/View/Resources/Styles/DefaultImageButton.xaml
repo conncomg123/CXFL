@@ -4,7 +4,7 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
-    <Style x:Key="Button" TargetType="ImageButton">
+    <Style x:Key="Style" TargetType="ImageButton">
         <!--Base Visuals-->
         <Setter Property="BackgroundColor"
 							Value="{DynamicResource Transparent}" />

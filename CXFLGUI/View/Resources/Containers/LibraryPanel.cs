@@ -2,18 +2,9 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using CommunityToolkit.Maui.Core;
-using CommunityToolkit.Maui.Views;
 using CsXFL;
 using MauiIcons.Core;
 using MauiIcons.Material;
-using Microsoft.Maui.Graphics.Text;
-using Microsoft.Maui.Graphics.Win2D;
-using Microsoft.UI.Xaml.Markup;
 using static MainViewModel;
 
 namespace CXFLGUI
@@ -24,6 +15,7 @@ namespace CXFLGUI
         private Label Label_LibraryCount;
 
         int LoadedItemsCount = 0;
+        int LibraryRowHeight = 35;
 
         Dictionary<string, CsXFL.Item> Tuple_LibraryItemDict = new Dictionary<string, CsXFL.Item>();
         ObservableCollection<LibraryItem> LibraryItems = new ObservableCollection<LibraryItem>();
@@ -34,30 +26,102 @@ namespace CXFLGUI
             public CsXFL.Item Value { get; set; }
         }
 
+        public static ImageButton CreateIconButton(MaterialIcons icon, int size, string tooltip = null, Style buttonStyle = null)
+        {
+            var button = new ImageButton().Icon(icon);
+            button.HeightRequest = size;
+            button.WidthRequest = size;
+
+            if (!string.IsNullOrEmpty(tooltip))
+            {
+                ToolTipProperties.SetText(button, tooltip);
+            }
+
+            if (buttonStyle != null)
+            {
+                button.Style = buttonStyle;
+            }
+
+            return button;
+        }
+
+        private void DocumentOpened(object sender, DocumentEventArgs e)
+        {
+            Document Doc = e.Document;
+            LoadedItemsCount = Doc.Library.Items.Count;
+            UpdateLibraryCount(LoadedItemsCount);
+            Tuple_LibraryItemDict = Doc.Library.Items;
+
+            // Clear existing items
+            LibraryItems.Clear();
+
+            // Initiating conversion sequence!
+            foreach (var kvp in Tuple_LibraryItemDict)
+            {
+                LibraryItems.Add(new LibraryItem { Key = kvp.Key, Value = kvp.Value });
+            }
+        }
+
+        private void UpdateLibraryCount(int LoadedItemsCount)
+        {
+            Label_LibraryCount.Text = LoadedItemsCount + " Items";
+        }
+
+        private List<LibraryItem> SortLibraryItems(List<LibraryItem> items)
+        {
+            // Naive alphabetical sort, doesn't accomodate file structure
+            return items.OrderBy(item => item.Key).ToList();
+        }
+        private MenuItem CreateMenuItem(string text, Action action)
+        {
+            return new MenuItem
+            {
+                Text = text,
+                Command = new Command(action)
+            };
+        }
+
+        private void Library_CellSelected(object sender, SelectedItemChangedEventArgs e)
+        {
+            if (e.SelectedItem == null)
+                return;
+
+            // Do something with the selected item (e.SelectedItem)
+            Trace.WriteLine("Selected Item", e.SelectedItem.ToString());
+
+            // Deselect the item
+            ((ListView)sender).SelectedItem = null;
+        }
+
         public LibraryPanel(MainViewModel viewModel)
         {
             this.viewModel = viewModel;
             viewModel.DocumentOpened += DocumentOpened;
 
             // Top / Bottom of Library Pane
-            var StackLayout_Pane = new StackLayout();
-            StackLayout_Pane.Padding = new Thickness(0, 25, 0, 0);
+            var StackLayout_Pane = new StackLayout()
+            {
+                Padding = new Thickness(0, 25, 0, 0)
+            };
 
             // Library Count
-            Label_LibraryCount = new Label();
-            Label_LibraryCount.TextColor = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryText"];
-            Label_LibraryCount.Padding = new Thickness(10, 5, 20, 5);
-            Label_LibraryCount.VerticalOptions = LayoutOptions.Center;
-            Label_LibraryCount.HorizontalOptions = LayoutOptions.Center;
+            Label_LibraryCount = new Label()
+            {
+                TextColor = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryText"],
+                Padding = new Thickness(10, 5, 20, 5),
+                VerticalOptions = LayoutOptions.Center,
+                HorizontalOptions = LayoutOptions.Center,
+            };
+
             UpdateLibraryCount(0);
 
             // SearchBar
             SearchBar SearchBar_Library = new SearchBar
             {
+                Style = (Style)App.Fixed_ResourceDictionary["DefaultSearchBar"]["Style"],
                 HeightRequest = 40,
                 HorizontalOptions = LayoutOptions.FillAndExpand,
                 Placeholder = "Search...",
-                Style = (Style)App.Fixed_ResourceDictionary["DefaultSearchBar"]["SearchBar"]
             };
 
             var SearchPadding = new Microsoft.Maui.Controls.Frame
@@ -84,223 +148,175 @@ namespace CXFLGUI
             Grid.SetRow(SearchBar_Library, 0);
             HzDivider.Children.Add(SearchBar_Library);
 
+            // Library Display
             var SortedLibraryItems = SortLibraryItems(LibraryItems.ToList());
-
             var ListView_LibraryDisplay = new ListView
             {
                 ItemsSource = LibraryItems,
-                RowHeight = 50
+                RowHeight = LibraryRowHeight
             };
 
-            // Library Display
             ListView_LibraryDisplay.ItemTemplate = new DataTemplate(() =>
             {
-                var ViewCell_LibraryEntry = new ViewCell();
+                var Library_ViewCell = new ViewCell();
 
-                var LibraryEntryText = new Entry();
-                LibraryEntryText.TextColor = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryText"];
-                LibraryEntryText.Style = (Style)App.Fixed_ResourceDictionary["DefaultEntry"]["Entry"];
-                LibraryEntryText.IsSpellCheckEnabled = false;
-
-                LibraryEntryText.Focused += (sender, e) =>
+                var LibraryCell_Entry = new Entry()
                 {
-                    LibraryEntryText.BackgroundColor = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryDark"];
+                    Style = (Style)App.Fixed_ResourceDictionary["DefaultEntry"]["Style"],
+                    TextColor = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryText"],
+                    IsSpellCheckEnabled = false
                 };
 
-                LibraryEntryText.Unfocused += (sender, e) =>
+                var LibraryCell_Icon = new ImageButton
                 {
-                    LibraryEntryText.BackgroundColor = (Color)App.Fixed_ResourceDictionary["Colors"]["Transparent"];
+                    Style = (Style)App.Fixed_ResourceDictionary["DefaultImageButton"]["Style"],
                 };
 
-                LibraryEntryText.Completed += (sender, e) =>
+                // Visually unfocus when enter button is pressed
+                LibraryCell_Entry.Completed += (sender, e) =>
                 {
-                    LibraryEntryText.Unfocus();
+                    LibraryCell_Entry.Unfocus();
                 };
 
-                var LibraryEntryIcon = new ImageButton
-                {
-                    Style = (Style)App.Fixed_ResourceDictionary["DefaultImageButton"]["Button"]
-                };
-
-                ViewCell_LibraryEntry.View = new StackLayout
+                Library_ViewCell.View = new StackLayout
                 {
                     Orientation = StackOrientation.Horizontal,
                     VerticalOptions = LayoutOptions.Center,
-                    Padding = new Thickness(0, 0), // 10 5
+                    Padding = new Thickness(0, 0),
                     Spacing = 10,
-                    Children = { LibraryEntryIcon, LibraryEntryText }
+                    Children = { LibraryCell_Icon, LibraryCell_Entry }
                 };
 
-                ViewCell_LibraryEntry.BindingContextChanged += (sender, e) =>
+                Library_ViewCell.BindingContextChanged += (sender, e) =>
                 {
-                    if (ViewCell_LibraryEntry.BindingContext is LibraryItem item)
+                    if (Library_ViewCell.BindingContext is LibraryItem item)
                     {
+                        // itemType agnostic context options
+                        Library_ViewCell.ContextActions.Add(CreateMenuItem("Cut", () =>
+                        {
+                            Trace.WriteLine("Cutting " + Library_ViewCell.ToString());
+                        }));
+
+                        Library_ViewCell.ContextActions.Add(CreateMenuItem("Copy", () =>
+                        {
+                            Trace.WriteLine("Copying " + Library_ViewCell.ToString());
+                        }));
+
+                        Library_ViewCell.ContextActions.Add(CreateMenuItem("Paste", () =>
+                        {
+                            Trace.WriteLine("Pasting " + Library_ViewCell.ToString());
+                        }));
 
                         // Offset folder children
                         int forwardslashCount = item.Key.Count(c => c == '/');
-                        ((StackLayout)ViewCell_LibraryEntry.View).Margin = new Thickness(forwardslashCount * 25, 0, 0, 0);
+                        ((StackLayout)Library_ViewCell.View).Margin = new Thickness(forwardslashCount * 25, 0, 0, 0);
 
                         // Normalize the library name
                         int lastForwardsSlash = item.Key.LastIndexOf('/');
                         if (lastForwardsSlash >= 0 && lastForwardsSlash < item.Key.Length - 1)
                         {
-                            LibraryEntryText.Text = item.Key.Substring(lastForwardsSlash + 1);
+                            LibraryCell_Entry.Text = item.Key.Substring(lastForwardsSlash + 1);
                         }
                         else
                         {
-                            LibraryEntryText.Text = item.Key;
+                            LibraryCell_Entry.Text = item.Key;
                         }
 
+                        // itemType dependent icons and context options 
                         switch (item.Value.ItemType)
                         {
                             case "bitmap":
-                                LibraryEntryIcon.Icon(MaterialIcons.Image);
+                                LibraryCell_Icon.Icon(MaterialIcons.Image);
                                 break;
                             case "sound":
-                                LibraryEntryIcon.Icon(MaterialIcons.VolumeUp);
+                                LibraryCell_Icon.Icon(MaterialIcons.VolumeUp);
+                                Library_ViewCell.ContextActions.Add(CreateMenuItem("Play", () =>
+                                {
+                                    Trace.WriteLine("Playing " + Library_ViewCell.ToString());
+                                }));
+
                                 break;
                             case "graphic":
-                                LibraryEntryIcon.Icon(MaterialIcons.Category);
+                                LibraryCell_Icon.Icon(MaterialIcons.Category);
+                                Library_ViewCell.ContextActions.Add(CreateMenuItem("Export to SWF", () =>
+                                {
+                                    Trace.WriteLine("Exporting to SWF " + Library_ViewCell.ToString());
+                                }));
                                 break;
                             case "movie clip":
-                                LibraryEntryIcon.Icon(MaterialIcons.Movie);
+                                LibraryCell_Icon.Icon(MaterialIcons.Movie);
                                 break;
                             case "font":
-                                LibraryEntryIcon.Icon(MaterialIcons.ABC);
+                                LibraryCell_Icon.Icon(MaterialIcons.ABC);
                                 break;
                             case "button":
-                                LibraryEntryIcon.Icon(MaterialIcons.SmartButton);
+                                LibraryCell_Icon.Icon(MaterialIcons.SmartButton);
                                 break;
                             case "folder":
-                                LibraryEntryIcon.Icon(MaterialIcons.Folder);
+                                LibraryCell_Icon.Icon(MaterialIcons.Folder);
                                 break;
                             default:
-                                LibraryEntryIcon.Icon(MaterialIcons.QuestionMark);
+                                LibraryCell_Icon.Icon(MaterialIcons.QuestionMark);
                                 break;
                         }
                     }
                 };
 
-                return ViewCell_LibraryEntry;
+                return Library_ViewCell;
             });
 
+            ListView_LibraryDisplay.ItemSelected += Library_CellSelected;
+
+            // SearchBar logic
             SearchBar_Library.TextChanged += (sender, e) =>
             {
                 string searchText = e.NewTextValue.ToLower();
-
-                // Filter the library items based on the search text
                 var filteredItems = LibraryItems.Where(item =>
                 {
-                    // Search for specific text
                     return item.Key.ToLower().Contains(searchText) || item.Value.ItemType.ToLower().Contains(searchText);
                 }).ToList();
 
-                // Update the ListView with the filtered items
                 ListView_LibraryDisplay.ItemsSource = filteredItems;
             };
 
             // Footer
-            Grid footerGrid = new Grid();
-            footerGrid.Padding = new Thickness(10, 5);
-            footerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
-            footerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
-            footerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
-            footerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
-            footerGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
+            var footerGrid = new Grid
+            {
+                Padding = new Thickness(10, 5),
+                HorizontalOptions = LayoutOptions.Start,
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+                    new ColumnDefinition { Width = GridLength.Auto },
+                    new ColumnDefinition { Width = GridLength.Auto },
+                    new ColumnDefinition { Width = GridLength.Auto },
+                    new ColumnDefinition { Width = GridLength.Auto }
+                }
+            };
 
-            footerGrid.HorizontalOptions = LayoutOptions.Start;
+            int ButtonSize = 25;
+            Style IconButtonStyle = (Style)App.Fixed_ResourceDictionary["DefaultImageButton"]["Style"];
 
-            ImageButton button1 = CreateIconButton(MaterialIcons.Add, "New Symbol", (Style)App.Fixed_ResourceDictionary["DefaultImageButton"]["Button"]);
-            ImageButton button2 = CreateIconButton(MaterialIcons.Folder, "New Folder", (Style)App.Fixed_ResourceDictionary["DefaultImageButton"]["Button"]);
-            ImageButton button3 = CreateIconButton(MaterialIcons.Help, "Properties", (Style)App.Fixed_ResourceDictionary["DefaultImageButton"]["Button"]);
-            ImageButton button4 = CreateIconButton(MaterialIcons.Delete, "Delete", (Style)App.Fixed_ResourceDictionary["DefaultImageButton"]["Button"]);
+            var NewSymbol = CreateIconButton(MaterialIcons.Add, ButtonSize, "New Symbol", IconButtonStyle);
+            var NewFolder = CreateIconButton(MaterialIcons.Folder, ButtonSize, "New Folder", IconButtonStyle);
+            var EditProperties = CreateIconButton(MaterialIcons.Help, ButtonSize, "Properties", IconButtonStyle);
+            var Delete = CreateIconButton(MaterialIcons.Delete, ButtonSize, "Delete", IconButtonStyle);
 
-            int ButtonSize = 35;
+            Grid.SetColumn(NewSymbol, 1);
+            Grid.SetColumn(NewFolder, 2);
+            Grid.SetColumn(EditProperties, 3);
+            Grid.SetColumn(Delete, 4);
 
-            button1.WidthRequest = ButtonSize;
-            button2.WidthRequest = ButtonSize;
-            button3.WidthRequest = ButtonSize;
-            button4.WidthRequest = ButtonSize;
-
-            button1.HeightRequest = ButtonSize;
-            button2.HeightRequest = ButtonSize;
-            button3.HeightRequest = ButtonSize;
-            button4.HeightRequest = ButtonSize;
-
-            Grid.SetColumn(button1, 1);
-            Grid.SetColumn(button2, 2);
-            Grid.SetColumn(button3, 3);
-            Grid.SetColumn(button4, 4);
-
-            footerGrid.Children.Add(button1);
-            footerGrid.Children.Add(button2);
-            footerGrid.Children.Add(button3);
-            footerGrid.Children.Add(button4);
-
-            ListView_LibraryDisplay.ItemSelected += ListView_Library_ItemSelected;
+            footerGrid.Children.Add(NewSymbol);
+            footerGrid.Children.Add(NewFolder);
+            footerGrid.Children.Add(EditProperties);
+            footerGrid.Children.Add(Delete);
 
             StackLayout_Pane.Children.Add(HzDivider);
             StackLayout_Pane.Children.Add(ListView_LibraryDisplay);
             StackLayout_Pane.Children.Add(footerGrid);
 
             Content = StackLayout_Pane;
-        }
-
-        private void DocumentOpened(object sender, DocumentEventArgs e)
-        {
-            Document Doc = e.Document;
-            LoadedItemsCount = Doc.Library.Items.Count;
-            UpdateLibraryCount(LoadedItemsCount);
-            Tuple_LibraryItemDict = Doc.Library.Items;
-
-            // Clear existing items
-            LibraryItems.Clear();
-
-            // Initiating conversion sequence!
-            foreach (var kvp in Tuple_LibraryItemDict)
-            {
-                LibraryItems.Add(new LibraryItem { Key = kvp.Key, Value = kvp.Value });
-            }
-        }
-
-        private void UpdateLibraryCount(int LoadedItemsCount)
-        {
-            Label_LibraryCount.Text = LoadedItemsCount + " Items";
-        }
-
-        public static ImageButton CreateIconButton(MaterialIcons icon, string tooltip = null, Style buttonStyle = null)
-        {
-            var button = new ImageButton().Icon(icon);
-
-            if (!string.IsNullOrEmpty(tooltip))
-            {
-                ToolTipProperties.SetText(button, tooltip);
-            }
-
-            if (buttonStyle != null)
-            {
-                button.Style = buttonStyle;
-            }
-
-            return button;
-        }
-
-        private List<LibraryItem> SortLibraryItems(List<LibraryItem> items)
-        {
-            // Use LINQ OrderBy to sort items alphabetically by Key
-            return items.OrderBy(item => item.Key).ToList();
-        }
-
-        private void ListView_Library_ItemSelected(object sender, SelectedItemChangedEventArgs e)
-        {
-            if (e.SelectedItem == null)
-                return;
-
-            // Do something with the selected item (e.SelectedItem)
-            Trace.WriteLine("Selected Item", e.SelectedItem.ToString());
-
-            // Deselect the item
-            ((ListView)sender).SelectedItem = null;
         }
     }
 }
