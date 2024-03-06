@@ -16,6 +16,12 @@ namespace CXFLGUI
     {
         public static void SetCustomCursor(this VisualElement visualElement, CursorIcon cursor, IMauiContext? mauiContext)
         {
+            if (mauiContext == null)
+            {
+                // How unfortunate! How unfortunate!
+                return;
+            }
+
             ArgumentNullException.ThrowIfNull(mauiContext);
             UIElement view = visualElement.ToPlatform(mauiContext);
             view.PointerEntered += ViewOnPointerEntered;
