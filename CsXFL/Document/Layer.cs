@@ -254,6 +254,26 @@ public class Layer
         }
         return numConverted > 0;
     }
+    public void CreateMotionTween(int startFrame, int? endFrame = null, string? target = null, string? method = null)
+    {
+        endFrame ??= startFrame;
+        int currentFrame = startFrame;
+        while (currentFrame <= endFrame)
+        {
+            Frame frame = GetFrame(currentFrame);
+            if (frame.IsEmpty())
+            {
+                currentFrame = frame.StartFrame + frame.Duration;
+                continue;
+            }
+            frame.CreateMotionTween(target, method);
+            currentFrame = frame.StartFrame + frame.Duration;
+        }
+    }
+    public void CreateMotionTween(int startFrame, string target, string method)
+    {
+        CreateMotionTween(startFrame, null, target, method);
+    }
     internal void InsertFrames(int numFrames, int frameIndex)
     {
         int index = GetKeyframeIndex(frameIndex);
