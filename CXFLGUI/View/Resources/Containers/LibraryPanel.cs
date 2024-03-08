@@ -1,37 +1,206 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using CsXFL;
 using MauiIcons.Core;
 using MauiIcons.Material;
 using Microsoft.Maui.Controls.Shapes;
 using static MainViewModel;
 
+// <Y>   Refactor for clarity again
+// <1/2> Fix this goddamn centering issue
+// <1/2> Scroll View height fix
+// <1/2> Do something about separator suck
+// Get cursor hand to work
+// TabWidths propertychange to make CollectionView stacklayout update dynamically
 namespace CXFLGUI
 {
+    public class WidthConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is double nameWidth)
+            {
+                // You can adjust the multiplier as needed to fit your layout
+                return nameWidth * 2; // Example: doubling the NameWidth value
+            }
+            return 0; // Default value
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class TabWidths
+    {
+        public double NameWidth { get; set; }
+        public double UseCountWidth { get; set; }
+        public double DateModifiedWidth { get; set; }
+
+        public TabWidths(double nameWidth, double useCountWidth, double dateModifiedWidth)
+        {
+            NameWidth = nameWidth;
+            UseCountWidth = useCountWidth;
+            DateModifiedWidth = dateModifiedWidth;
+        }
+
+        public void UpdateWidth(Label element, double newWidth)
+        {
+            // I'm basically honorary nasty
+            if (element.Text == "Name")
+            {
+                NameWidth = newWidth;
+            }
+            else if (element.Text == "Use Count")
+            {
+                UseCountWidth = newWidth;
+            }
+            else if (element.Text == "Date Modified")
+            {
+                DateModifiedWidth = newWidth;
+            }
+        }
+
+        public double GetNameWidth()
+        {
+            return NameWidth;
+        }
+
+        public double GetUseCountWidth()
+        {
+            return UseCountWidth;
+        }
+
+        public double GetDateModifiedWidth()
+        {
+            return DateModifiedWidth;
+        }
+    }
+
+    public class LibraryItem
+    {
+        public string Key { get; set; }
+        public CsXFL.Item Value { get; set; }
+    }
+
+    public class DraggableSeparator : Grid
+    {
+        private readonly BoxView visualIndicator;
+        private readonly BoxView hitArea;
+        private double initialX;
+        private bool isDragging;
+        private Label leftElement;
+        private Label rightElement;
+        private TabWidths tabWidths;
+        double MIN_WIDTH = 50;
+
+        // <!> Clicking on the separator will not drag, this is a layering issue
+        // <!> Pan event drops when cursor leaves parent container
+        public DraggableSeparator(Label leftElement, Label rightElement, TabWidths tabWidths)
+        {
+            this.leftElement = leftElement;
+            this.rightElement = rightElement;
+            this.tabWidths = tabWidths;
+
+            // These are brushes...
+            visualIndicator = new BoxView
+            {
+                BackgroundColor = Colors.White,
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.FillAndExpand,
+                WidthRequest = 0.5,
+            };
+
+            hitArea = new BoxView
+            {
+                Color = Colors.Transparent,
+                BackgroundColor = Colors.Transparent,
+                HorizontalOptions = LayoutOptions.FillAndExpand,
+                VerticalOptions = LayoutOptions.FillAndExpand,
+                WidthRequest = 30,  // Increase width for easier dragging
+            };
+
+            var gestureRecognizer = new PanGestureRecognizer();
+            gestureRecognizer.PanUpdated += OnPanUpdated;
+            hitArea.GestureRecognizers.Add(gestureRecognizer);
+
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            Grid.SetColumn(hitArea, 0);
+            Grid.SetRow(hitArea, 0);
+            grid.Children.Add(hitArea);
+
+            // Create a container for the visual indicator to allow centering
+            var visualIndicatorContainer = new ContentView
+            {
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.FillAndExpand,
+            };
+            visualIndicatorContainer.Content = visualIndicator;
+
+            Grid.SetColumn(visualIndicatorContainer, 0); // Use column 0 for the visual indicator container
+            Grid.SetRow(visualIndicatorContainer, 0);
+            grid.Children.Add(visualIndicatorContainer);
+
+            Children.Add(grid);
+        }
+
+        private void OnPanUpdated(object sender, PanUpdatedEventArgs e)
+        {
+            switch (e.StatusType)
+            {
+                case GestureStatus.Started:
+                    initialX = e.TotalX;
+                    isDragging = true;
+                    break;
+                case GestureStatus.Running when isDragging:
+                    double offset = e.TotalX - initialX;
+
+                    if (leftElement != null)
+                    {
+                        var WidthRequest = Math.Max(leftElement.WidthRequest + offset, MIN_WIDTH);
+                        leftElement.WidthRequest = WidthRequest;
+                        tabWidths.UpdateWidth(leftElement, WidthRequest);
+                    }
+
+                    if (rightElement != null)
+                    {
+                        var WidthRequest = Math.Max(rightElement.WidthRequest - offset, MIN_WIDTH);
+                        rightElement.WidthRequest = WidthRequest;
+                        tabWidths.UpdateWidth(rightElement, WidthRequest);
+                    }
+
+                    initialX = e.TotalX;
+                    break;
+                case GestureStatus.Canceled:
+                case GestureStatus.Completed:
+                    isDragging = false;
+                    break;
+            }
+        }
+    }
+
     public class LibraryPanel : VanillaFrame
     {
         private MainViewModel viewModel;
-        private Label Label_LibraryCount;
+        private Label LoadedLibraryItemCount;
 
         int LoadedItemsCount = 0;
         int LibraryRowHeight = 35;
+        int MainHorizontalPadding = 15;
 
         // Library Tabs
-        double nameWidth = 300;
-        double useCountWidth = 50;
-        double dateModifiedWidth = 100;
-        double MIN_WIDTH = 50;
+        TabWidths tabWidths = new TabWidths(300, 100, 100);
 
         Dictionary<string, CsXFL.Item> Tuple_LibraryItemDict = new Dictionary<string, CsXFL.Item>();
         ObservableCollection<LibraryItem> LibraryItems = new ObservableCollection<LibraryItem>();
-
-        public class LibraryItem
-        {
-            public string Key { get; set; }
-            public CsXFL.Item Value { get; set; }
-        }
 
         public static ImageButton CreateIconButton(MaterialIcons icon, int size, string tooltip = null, Style buttonStyle = null)
         {
@@ -71,7 +240,7 @@ namespace CXFLGUI
 
         private void UpdateLibraryCount(int LoadedItemsCount)
         {
-            Label_LibraryCount.Text = LoadedItemsCount + " Items";
+            LoadedLibraryItemCount.Text = LoadedItemsCount + " Items";
         }
 
         private List<LibraryItem> SortLibraryItems(List<LibraryItem> items)
@@ -79,6 +248,7 @@ namespace CXFLGUI
             // Naive alphabetical sort, doesn't accomodate file structure
             return items.OrderBy(item => item.Key).ToList();
         }
+
         private MenuItem CreateMenuItem(string text, Action action)
         {
             return new MenuItem
@@ -87,6 +257,7 @@ namespace CXFLGUI
                 Command = new Command(action)
             };
         }
+
         Label CreateLabel(string text, double width)
         {
             return new Label
@@ -96,6 +267,8 @@ namespace CXFLGUI
                 WidthRequest = width,
                 VerticalOptions = LayoutOptions.Center,
                 HorizontalOptions = LayoutOptions.Start,
+                Padding = new Thickness(5, 0, 0, 0),
+                LineBreakMode = LineBreakMode.NoWrap
             };
         }
 
@@ -111,88 +284,19 @@ namespace CXFLGUI
             ((ListView)sender).SelectedItem = null;
         }
 
-            public class DraggableSeparator : Grid
-            {
-                private readonly BoxView visualIndicator;
-                private readonly BoxView hitArea;
-                private double initialX;
-                private bool isDragging;
-                private View leftElement;
-                private View rightElement;
-
-                public DraggableSeparator(View leftElement, View rightElement)
-                {
-                    this.leftElement = leftElement;
-                    this.rightElement = rightElement;
-
-                    visualIndicator = new BoxView
-                    {
-                        BackgroundColor = Colors.White,
-                        HorizontalOptions = LayoutOptions.Start,
-                        VerticalOptions = LayoutOptions.FillAndExpand,
-                        WidthRequest = 0.5,
-                    };
-
-                    hitArea = new BoxView
-                    {
-                        BackgroundColor = Colors.Transparent,
-                        HorizontalOptions = LayoutOptions.Start,
-                        VerticalOptions = LayoutOptions.FillAndExpand,
-                        WidthRequest = 5,
-                    };
-
-                    var gestureRecognizer = new PanGestureRecognizer();
-                    gestureRecognizer.PanUpdated += OnPanUpdated;
-                    hitArea.GestureRecognizers.Add(gestureRecognizer);
-
-                    Children.Add(visualIndicator);
-                    Children.Add(hitArea);
-                }
-
-                private void OnPanUpdated(object sender, PanUpdatedEventArgs e)
-                {
-                    switch (e.StatusType)
-                    {
-                        case GestureStatus.Started:
-                            initialX = e.TotalX;
-                            isDragging = true;
-                            break;
-                        case GestureStatus.Running when isDragging:
-                            double offset = e.TotalX - initialX;
-
-                            if (leftElement != null)
-                            {
-                                leftElement.WidthRequest = Math.Max(leftElement.WidthRequest + offset, 0);
-                            }
-
-                            if (rightElement != null)
-                            {
-                                rightElement.WidthRequest = Math.Max(rightElement.WidthRequest - offset, 0);
-                            }
-
-                            initialX = e.TotalX;
-                            break;
-                        case GestureStatus.Canceled:
-                        case GestureStatus.Completed:
-                            isDragging = false;
-                            break;
-                    }
-                }
-            }
-
         public LibraryPanel(MainViewModel viewModel)
         {
             this.viewModel = viewModel;
             viewModel.DocumentOpened += DocumentOpened;
 
             // Top / Bottom of Library Pane
-            var StackLayout_Pane = new StackLayout()
+            var MainPane = new StackLayout()
             {
-                Padding = new Thickness(0, 25, 0, 0)
+                Padding = new Thickness(0, 25, 0, 0),
             };
 
             // Library Count
-            Label_LibraryCount = new Label()
+            LoadedLibraryItemCount = new Label()
             {
                 TextColor = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryText"],
                 Padding = new Thickness(10, 5, 20, 5),
@@ -203,7 +307,7 @@ namespace CXFLGUI
             UpdateLibraryCount(0);
 
             // SearchBar
-            SearchBar SearchBar_Library = new SearchBar
+            SearchBar SearchLibraryItems = new SearchBar
             {
                 Style = (Style)App.Fixed_ResourceDictionary["DefaultSearchBar"]["Style"],
                 HeightRequest = 40,
@@ -213,41 +317,51 @@ namespace CXFLGUI
 
             var SearchPadding = new Microsoft.Maui.Controls.Frame
             {
-                Padding = Padding = new Thickness(10, 5, 20, 5),
+                Padding = new Thickness(10, 5, 20, 5),
                 HasShadow = true
             };
 
             // Horizontal Divider between Library Count and SearchBar
-            Grid HzDivider = new Grid
+            Grid OverheadLibraryDisplay = new Grid
             {
+                Padding = new Thickness(MainHorizontalPadding, 5, MainHorizontalPadding, 5),
                 ColumnDefinitions =
-            {
+                {
                 new ColumnDefinition { Width = GridLength.Auto },
                 new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }
-            }
+                }
             };
 
-            Grid.SetColumn(Label_LibraryCount, 0);
-            Grid.SetRow(Label_LibraryCount, 0);
-            HzDivider.Children.Add(Label_LibraryCount);
+            Grid.SetColumn(LoadedLibraryItemCount, 0);
+            Grid.SetRow(LoadedLibraryItemCount, 0);
+            OverheadLibraryDisplay.Children.Add(LoadedLibraryItemCount);
 
-            Grid.SetColumn(SearchBar_Library, 1);
-            Grid.SetRow(SearchBar_Library, 0);
-            HzDivider.Children.Add(SearchBar_Library);
+            Grid.SetColumn(SearchLibraryItems, 1);
+            Grid.SetRow(SearchLibraryItems, 0);
+            OverheadLibraryDisplay.Children.Add(SearchLibraryItems);
 
             // Library Display
-            var SortedLibraryItems = SortLibraryItems(LibraryItems.ToList());
-            var ListView_LibraryDisplay = new ListView
+            Grid LibraryTable = new Grid
             {
-                ItemsSource = LibraryItems,
-                RowHeight = LibraryRowHeight
+                Padding = new Thickness(MainHorizontalPadding, 5, MainHorizontalPadding, 5),
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition { Width = GridLength.Star }
+                },
+                RowDefinitions =
+                {
+                    new RowDefinition { Height = GridLength.Auto },
+                    new RowDefinition { Height = GridLength.Star }
+                }
             };
 
-            var nameLabel = CreateLabel("Name", nameWidth);
-            var useCountLabel = CreateLabel("Use Count", useCountWidth);
-            var dateModifiedLabel = CreateLabel("Date Modified", dateModifiedWidth);
+            var SortedLibraryItems = SortLibraryItems(LibraryItems.ToList());
 
-            var LibraryDisplayTabs = new Border
+            var nameLabel = CreateLabel("Name", tabWidths.GetNameWidth());
+            var useCountLabel = CreateLabel("Use Count", tabWidths.GetUseCountWidth());
+            var dateModifiedLabel = CreateLabel("Date Modified", tabWidths.GetDateModifiedWidth());
+
+            var LibraryTableTabs = new Border
             {
                 Background = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryDark"],
                 Stroke = (Color)App.Fixed_ResourceDictionary["Colors"]["White"],
@@ -256,43 +370,44 @@ namespace CXFLGUI
                 {
                     CornerRadius = new CornerRadius(25, 25, 0, 0)
                 },
+                Padding = new Thickness(MainHorizontalPadding, 0, MainHorizontalPadding, 0),
                 HeightRequest = 25,
-                HorizontalOptions = LayoutOptions.FillAndExpand,
+                HorizontalOptions = LayoutOptions.CenterAndExpand,
                 Content = new StackLayout
                 {
                     Children =
                     {
                         nameLabel,
-                        new DraggableSeparator(nameLabel, useCountLabel),
+                        new DraggableSeparator(nameLabel, useCountLabel, tabWidths),
                         useCountLabel,
-                        new DraggableSeparator(useCountLabel, dateModifiedLabel),
+                        new DraggableSeparator(useCountLabel, dateModifiedLabel, tabWidths),
                         dateModifiedLabel,
                     },
                     Orientation = StackOrientation.Horizontal
                 }
             };
 
-            // Add the gesture recognizer to the parent container (ContentPage in this case)
-            // Note, this is stupid.
-            //LibraryDisplayTabs.GestureRecognizers.Add(separatorDragGesture);
-
-            var Collection_LibraryDisplay = new CollectionView
+            var EmptyView = new Grid
             {
-                EmptyView = new Grid
-                {
-                    HorizontalOptions = LayoutOptions.FillAndExpand,
-                    VerticalOptions = LayoutOptions.FillAndExpand,
-                    Children =
+                HorizontalOptions = LayoutOptions.FillAndExpand,
+                VerticalOptions = LayoutOptions.FillAndExpand,
+                Children =
                         {
                             new Label
                             {
                                 Text = "No library items.",
-                                FontSize = 16,
+                                FontSize = 14,
                                 HorizontalOptions = LayoutOptions.Center,
-                                VerticalOptions = LayoutOptions.Center
+                                VerticalOptions = LayoutOptions.Center,
+                                Padding = new Thickness(0, 0, 30, 0),
                             }
                         }
-                },
+            };
+
+            var LibraryItemList = new CollectionView
+            {
+                EmptyView = EmptyView,
+                //HorizontalOptions = LayoutOptions.Start,
                 ItemsSource = LibraryItems,
                 ItemSizingStrategy = ItemSizingStrategy.MeasureFirstItem,
                 ItemTemplate = new DataTemplate(() =>
@@ -319,17 +434,21 @@ namespace CXFLGUI
                         LibraryCell_Entry.Unfocus();
                     };
 
+                    // Centering Problem here! Setting horizontal layout to start destroys shit, updating stackCell's width destroys shit
                     var Library_StackCell = new StackLayout
                     {
                         Orientation = StackOrientation.Horizontal,
-                        VerticalOptions = LayoutOptions.Center,
+                        //VerticalOptions = LayoutOptions.Center,
+                        //HorizontalOptions = LayoutOptions.Start,
                         Padding = new Thickness(0, 0),
                         Spacing = 10,
                         Children = { LibraryCell_Icon, LibraryCell_Entry }
                     };
 
+                    //Library_StackCell.SetBinding(StackLayout.WidthRequestProperty, new Binding("NameWidth", BindingMode.Default, source: tabWidths));
+
                     // MVVM Stuff Here
-                    
+
                     return Library_StackCell;
 
                 })
@@ -337,15 +456,28 @@ namespace CXFLGUI
 
             var scrollView = new ScrollView
             {
-                Content = Collection_LibraryDisplay,
+                Content = LibraryItemList,
+                VerticalOptions = LayoutOptions.FillAndExpand,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Always
             };
 
-            var stackLayout = new StackLayout
+            var scrollViewBorder = new Border
             {
-                Children = { scrollView },
-                VerticalOptions = LayoutOptions.FillAndExpand
+                Padding = new Thickness(MainHorizontalPadding, 0, MainHorizontalPadding, 0),
+                Content = scrollView,
+                VerticalOptions = LayoutOptions.FillAndExpand,
+                HorizontalOptions = LayoutOptions.FillAndExpand,
+                Background = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryDark"],
+                Stroke = (Color)App.Fixed_ResourceDictionary["Colors"]["White"],
             };
+
+            Grid.SetColumn(LibraryTableTabs, 0);
+            Grid.SetRow(LibraryTableTabs, 0);
+            LibraryTable.Children.Add(LibraryTableTabs);
+
+            Grid.SetColumn(scrollViewBorder, 0);
+            Grid.SetRow(scrollViewBorder, 1);
+            LibraryTable.Children.Add(scrollViewBorder);
 
             // Keep right now for reference
 
@@ -461,15 +593,9 @@ namespace CXFLGUI
             //ListView_LibraryDisplay.ItemSelected += Library_CellSelected;
 
             // SearchBar logic
-            SearchBar_Library.TextChanged += (sender, e) =>
+            SearchLibraryItems.TextChanged += (sender, e) =>
             {
-                string searchText = e.NewTextValue.ToLower();
-                var filteredItems = LibraryItems.Where(item =>
-                {
-                    return item.Key.ToLower().Contains(searchText) || item.Value.ItemType.ToLower().Contains(searchText);
-                }).ToList();
-
-                ListView_LibraryDisplay.ItemsSource = filteredItems;
+                string searchText = e.NewTextValue;
             };
 
             // Footer
@@ -505,13 +631,13 @@ namespace CXFLGUI
             footerGrid.Children.Add(EditProperties);
             footerGrid.Children.Add(Delete);
 
-            StackLayout_Pane.Children.Add(HzDivider);
-            StackLayout_Pane.Children.Add(LibraryDisplayTabs);
-            StackLayout_Pane.Children.Add(stackLayout);
-            StackLayout_Pane.Children.Add(footerGrid);
+            MainPane.Children.Add(OverheadLibraryDisplay);
+            MainPane.Children.Add(LibraryTable);
+            //MainPane.Children.Add(LibraryTableTabs);
+            //MainPane.Children.Add(scrollViewBorder);
+            MainPane.Children.Add(footerGrid);
 
-            Content = StackLayout_Pane;
-
+            Content = MainPane;
         }
     }
 }
