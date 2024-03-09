@@ -6,7 +6,7 @@ public static class SoundUtils
     {
         using CSCore.Codecs.FLAC.FlacFile flacFile = new(flacFilePath);
         MemoryStream memStream = new();
-        flacFile.ChangeSampleRate(44100).ToSampleSource().ToWaveSource(16).WriteToWaveStream(memStream);
+        flacFile.ChangeSampleRate(44000).ToSampleSource().ToWaveSource(16).WriteToWaveStream(memStream);
         bool success = memStream.TryGetBuffer(out ArraySegment<byte> segment);
         if (!success)
             throw new InvalidOperationException("Failed to convert FLAC to WAV.");
@@ -16,7 +16,7 @@ public static class SoundUtils
     {
         using CSCore.Codecs.FLAC.FlacFile flacFile = new(flacFilePath);
         MemoryStream memStream = new();
-        var wavData = flacFile.ChangeSampleRate(44100).ToSampleSource().ToWaveSource(16);
+        var wavData = flacFile.ChangeSampleRate(44000).ToSampleSource().ToWaveSource(16);
         wavData.WriteToWaveStream(memStream);
         bool success = memStream.TryGetBuffer(out ArraySegment<byte> segment);
         if (!success)
