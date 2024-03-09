@@ -9,8 +9,9 @@ namespace SceneGenerator;
 
 // <!> Todo:
 // 2. Evidence API (Soundman will do this EVENTUALLY?)
-// 3. Fade API (Soundman will do this)
-// 4. Jam Fade API (Soundman will do this)
+// 4. SFX parent to audio
+// 5. Typewriter exclusion for (Not Shown)
+// 12. Lines are desynced post jam fading
 // ∞. Do a full test
 
 static class SceneGenerator
@@ -906,6 +907,17 @@ static class SceneGenerator
         }
     }
 
+    // <!> Person in the future who came here to fix the pointless Defense => Other Character fade:
+    // The problem is not going from Defense => Other Character, because that is intended behavior, but when
+    // the visible character is a leftover from when the Defense appeared. To illustrate:
+    //
+    // Trucy - Apollo - Applejack - Apollo - Applejack - Trucy
+    //
+    // When we go from Trucy to Apollo, we fade. When we go from Apollo to Applejack we fade. But because
+    // Apollo is nested between two Applejacks, a fade will happen when it technically shouldn't. To properly
+    // fix this, we'd need to look behind and in front of us within a certain range to fix this and I cannot
+    // be bothered to do this right now.
+    //
     static void JamMaskFades(this Document Doc, string sceneData)
     {
         int JAM_FADE_DURATION = 12;
@@ -1146,7 +1158,7 @@ static class SceneGenerator
 
         //SFX Automation
         stpw.Start();
-        //ParseSFX(Doc, json);
+        ParseSFX(Doc, json);
         stpw.Stop();
         Trace.WriteLine("SFX Placement took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();

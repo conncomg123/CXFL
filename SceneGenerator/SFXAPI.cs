@@ -100,11 +100,13 @@ static class SFXAPI
                     Matrix modMatrix = CurrentTimeline.Layers[i].GetFrame(FrameIndex).Elements[0].Matrix;
                     for (int j = 1; j < ShakeRange - 1; j++)
                     {
+                        if (CurrentTimeline.Layers[i].GetFrame(FrameIndex + j).Elements.Count == 0) { continue; }
                         CurrentTimeline.Layers[i].ConvertToKeyframes(FrameIndex + j);
                         CurrentTimeline.Layers[i].GetFrame(FrameIndex + j).Elements[0].Matrix = modMatrix;
                         CurrentTimeline.Layers[i].GetFrame(FrameIndex + j).Elements[0].Matrix.Tx += ShakeOffsets[j].Item1;
                         CurrentTimeline.Layers[i].GetFrame(FrameIndex + j).Elements[0].Matrix.Ty += ShakeOffsets[j].Item2;
                     };
+                    if (CurrentTimeline.Layers[i].GetFrame(FrameIndex + ShakeRange - 1).Elements.Count == 0) { continue; }
                     CurrentTimeline.Layers[i].ConvertToKeyframes(FrameIndex + ShakeRange - 1);
                     CurrentTimeline.Layers[i].GetFrame(FrameIndex + ShakeRange - 1).Elements[0].Matrix = modMatrix;
                 }
