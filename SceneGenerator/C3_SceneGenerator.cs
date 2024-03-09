@@ -4,14 +4,14 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using SixLabors.Fonts;
+using static SceneGenerator.SceneGenerator;
 namespace SceneGenerator;
 
 // <!> Todo:
-// 2. Evidence API (Soundman will do this)
+// 2. Evidence API (Soundman will do this EVENTUALLY?)
 // 3. Fade API (Soundman will do this)
 // 4. Jam Fade API (Soundman will do this)
-// 6. Dynamic rig importing (Soundman will do this)
-// 7. More elegant logging
+// ∞. Do a full test
 
 static class SceneGenerator
 {
@@ -251,10 +251,10 @@ static class SceneGenerator
         config.SkipBlinks = false;
 
         //Paths
-        config.PathToOperatingDocument = "C:\\Stuff\\SceneGenTest\\UltimateCsXFLTest.fla";
-        config.PathToSceneData = "C:\\Stuff\\SceneGenTest\\303S1_output.json";
-        config.PathToCFGs = "C:\\Stuff\\SceneGenTest\\cfg";
-        config.PathToLines = "C:\\Stuff\\SceneGenTest\\vox";
+        config.PathToOperatingDocument = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\303_S1.fla";
+        config.PathToSceneData = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\303S1_output.json";
+        config.PathToCFGs = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\CFGs\\Scene 1";
+        config.PathToLines = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\SCENE 1";
 
         //Characters
         config.AddCharacter("Investigation", "Trucy", "RIGS/Trucy►/Trucy►ScaledPoses");
@@ -626,9 +626,11 @@ static class SceneGenerator
             }
 
             // Delete the default Layer_1
-            int DefaultLayerIndex = CurrentTimeline.FindLayerIndex("Layer_1")[0];
-            CurrentTimeline.DeleteLayer(DefaultLayerIndex);
-
+            if (CurrentTimeline.FindLayerIndex("Layer_1")[0] != null)
+            {
+                int DefaultLayerIndex = CurrentTimeline.FindLayerIndex("Layer_1")[0];
+                CurrentTimeline.DeleteLayer(DefaultLayerIndex);
+            }
         }
     }
 
@@ -846,11 +848,138 @@ static class SceneGenerator
         }
     }
 
+    static void SceneFadeInOut(this Document Doc)
+    {
+        string FadePath = "OTHER ASSETS/Standard_Fade";
+        for (int SceneIndex = 0; SceneIndex < Doc.Timelines.Count; SceneIndex++)
+        {
+            Timeline CurrentTimeline = Doc.Timelines[SceneIndex];
+            Doc.CurrentTimeline = SceneIndex;
+            CreateLayerIfDoesntExist(Doc, "FADE");
+            Layer CurrentLayer = CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("FADE")[0]];
+
+            // Fade scene in
+            if (SceneIndex == 0)
+            {
+                Doc.Library.AddItemToDocument(FadePath, CurrentLayer.GetFrame(0), Doc.Width/2, Doc.Height/2);
+                SymbolInstance FadeInstance = CurrentLayer.GetFrame(0).Elements[0] as SymbolInstance;
+                FadeInstance.Loop = "play once reverse";
+                FadeInstance.FirstFrame = 20;
+
+                //Hardcode Andy
+                CurrentTimeline.ReorderLayer(CurrentTimeline.FindLayerIndex("FADE")[0], CurrentTimeline.FindLayerIndex("TEXTBOX")[0], false);
+            }
+
+            // Fade scene out
+            if (SceneIndex == Doc.Timelines.Count - 1)
+            {
+                int OperatingFrameIndex = CurrentLayer.GetFrameCount() - 1;
+                CurrentLayer.ConvertToKeyframes(OperatingFrameIndex);
+                Doc.Library.AddItemToDocument(FadePath, CurrentLayer.GetFrame(OperatingFrameIndex), Doc.Width / 2, Doc.Height / 2);
+                SymbolInstance FadeInstance = CurrentLayer.GetFrame(OperatingFrameIndex).Elements[0] as SymbolInstance;
+                FadeInstance.Loop = "loop";
+                FadeInstance.FirstFrame = 0;
+                CurrentTimeline.InsertFrames(20, true, OperatingFrameIndex);
+                CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("TEXT")[0]].ConvertToKeyframes(OperatingFrameIndex);
+                CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("TEXT")[0]].GetFrame(OperatingFrameIndex).ClearElements();
+                CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("TEXTBOX")[0]].ConvertToKeyframes(OperatingFrameIndex);
+                CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("TEXTBOX")[0]].GetFrame(OperatingFrameIndex).ClearElements();
+            }
+        }
+    }
+
+    static void goToVoiceLine(this Document Doc, string inputString)
+    {
+        int LineIndex = int.Parse(inputString.Substring(3, 3));
+        int SceneIndex = (int)(Math.Ceiling((double)LineIndex / (double)SingletonConfig.Instance.ChunkSize)) - 1;
+
+        Timeline CurrentTimeline = Doc.Timelines[SceneIndex];
+        Layer TextLayer = CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("TEXT")[0]];
+
+        for (int i = 0; i < TextLayer.KeyFrames.Count; i++)
+        {
+            if (TextLayer.KeyFrames[i].Name == inputString)
+            {
+                CurrentTimeline.CurrentFrame = TextLayer.KeyFrames[i].StartFrame;
+                break;
+            }
+        }
+    }
+
+    static void JamMaskFades(this Document Doc, string sceneData)
+    {
+        int JAM_FADE_DURATION = 12;
+        string JAM_FADE_PATH = "OTHER ASSETS/Jam_Fade";
+        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(sceneData, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+
+        var keys = deserializedJson["Dialogue"].Keys;
+        string? previousCharacter = null; // Variable to store the previous character
+        string? nextCharacter = null;
+        for (int i = 0; i < keys.Count; i++)
+        {
+            var dialogueKey = keys.ElementAt(i);
+            var dialogueLine = deserializedJson["Dialogue"][dialogueKey];
+            string LineID = dialogueKey;
+            string Character = dialogueLine.CharacterName!;
+            int Id = int.Parse(dialogueKey.Substring(3, 3));
+
+            if (i + 1 < keys.Count)
+            {
+                nextCharacter = deserializedJson["Dialogue"][keys.ElementAt(i + 1)].CharacterName;
+            }
+
+            // Check if the previous character is the same as the current character or if the next character is equal to SingletonConfig.Instance.Defense
+            if ((previousCharacter == Character) || Character == SingletonConfig.Instance.Defense && (previousCharacter == null || previousCharacter != SingletonConfig.Instance.Defense))
+            {
+                previousCharacter = Character;
+                continue;
+            }
+
+            previousCharacter = Character;
+
+            Doc.CurrentTimeline = (int)Math.Ceiling((double)Id / (double)SingletonConfig.Instance.ChunkSize) - 1;
+            Timeline CurrentTimeline = Doc.Timelines[Doc.CurrentTimeline];
+            Layer JamLayer = CurrentTimeline.Layers[Doc.Timelines[Doc.CurrentTimeline].FindLayerIndex("JAM_MASK")[0]];
+
+            // Don't fade if it's the same character
+            if (Id % SingletonConfig.Instance.ChunkSize == 1)
+            {
+                // First fade within a chunk
+                CurrentTimeline.CurrentFrame = 0;
+                JamLayer.ConvertToKeyframes(CurrentTimeline.CurrentFrame);
+                Doc.Library.AddItemToDocument(JAM_FADE_PATH, JamLayer.GetFrame(CurrentTimeline.CurrentFrame), Doc.Width / 2, Doc.Height / 2);
+                CurrentTimeline.InsertFrames(JAM_FADE_DURATION / 2, true, CurrentTimeline.CurrentFrame);
+                SymbolInstance JamInstance = JamLayer.GetFrame(CurrentTimeline.CurrentFrame).Elements[0] as SymbolInstance;
+                JamInstance.FirstFrame = (JAM_FADE_DURATION / 2) + 1;
+                JamLayer.ConvertToKeyframes((JAM_FADE_DURATION / 2) - 1);
+                JamLayer.GetFrame((JAM_FADE_DURATION / 2) - 1).ClearElements();
+            } else if (Id % SingletonConfig.Instance.ChunkSize == 0)
+            {
+                // Last fade within a chunk
+                CurrentTimeline.CurrentFrame = JamLayer.GetFrameCount() - 1;
+                JamLayer.ConvertToKeyframes(CurrentTimeline.CurrentFrame);
+                Doc.Library.AddItemToDocument(JAM_FADE_PATH, JamLayer.GetFrame(CurrentTimeline.CurrentFrame), Doc.Width / 2, Doc.Height / 2);
+                CurrentTimeline.InsertFrames(JAM_FADE_DURATION / 2, true, CurrentTimeline.CurrentFrame);
+            } else
+            {
+                // Regular chunk
+                goToVoiceLine(Doc, LineID);
+                CurrentTimeline.InsertFrames((JAM_FADE_DURATION / 2), true, CurrentTimeline.CurrentFrame - 1);
+                JamLayer.ConvertToKeyframes(CurrentTimeline.CurrentFrame);
+                Doc.Library.AddItemToDocument(JAM_FADE_PATH, JamLayer.GetFrame(CurrentTimeline.CurrentFrame), Doc.Width / 2, Doc.Height / 2);
+                goToVoiceLine(Doc, LineID);
+                CurrentTimeline.InsertFrames((JAM_FADE_DURATION / 2), true, CurrentTimeline.CurrentFrame);
+                JamLayer.ConvertToKeyframes(CurrentTimeline.CurrentFrame + (JAM_FADE_DURATION / 2));
+                JamLayer.GetFrame(CurrentTimeline.CurrentFrame + (JAM_FADE_DURATION / 2)).ClearElements();
+            }
+        }
+    }
+
     static void PlaceDesks(this Document doc, string sceneData)
     {
         var characterToDeskMap = new Dictionary<string, SymbolConfig?>
         {
-            { SingletonConfig.Instance.Defense!, SingletonConfig.Instance.DefenseDesk },
+            {SingletonConfig.Instance.Defense!, SingletonConfig.Instance.DefenseDesk },
             {SingletonConfig.Instance.Prosecutor!, SingletonConfig.Instance.ProsecutorDesk },
             {SingletonConfig.Instance.Judge!, SingletonConfig.Instance.JudgeDesk },
             {SingletonConfig.Instance.Cocouncil!, null }
@@ -950,9 +1079,12 @@ static class SceneGenerator
         Trace.WriteLine("Setup took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
         stpw.Start();
-        Doc.ImportRigs();
-        stpw.Stop();
-        Trace.WriteLine("Rig Import took " + stpw.ElapsedMilliseconds + " ms.");
+
+        // <!> Fix me hahahaha
+        //Doc.ImportRigs();
+        //stpw.Stop();
+        //Trace.WriteLine("Rig Import took " + stpw.ElapsedMilliseconds + " ms.");
+
         // Text Placement
         stpw.Start();
         PlaceText(Doc, json);
@@ -990,14 +1122,21 @@ static class SceneGenerator
         Trace.WriteLine("Layer Organization took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
 
+        // Jam Mask Fading
+        stpw.Start();
+        JamMaskFades(Doc, json);
+        stpw.Stop();
+        Trace.WriteLine("Jam Mask Fading took " + stpw.ElapsedMilliseconds + " ms.");
+        stpw.Reset();
 
         // Typewriter Intro
-        stpw.Start();
+        
         PlaceIntroTypewriter(Doc, json);
         Doc.ReorderScene(Doc.Timelines.Count - 1, 0, true);
         stpw.Stop();
         Trace.WriteLine("Typewriter Automation took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
+
         // BG Placement
         stpw.Start();
         PlaceInvestigationBG(Doc);
@@ -1007,7 +1146,7 @@ static class SceneGenerator
 
         //SFX Automation
         stpw.Start();
-        ParseSFX(Doc, json);
+        //ParseSFX(Doc, json);
         stpw.Stop();
         Trace.WriteLine("SFX Placement took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
@@ -1019,6 +1158,14 @@ static class SceneGenerator
         Trace.WriteLine("Automatic Blinking took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
 
+        // Scene Fading
+        stpw.Start();
+        SceneFadeInOut(Doc);
+        stpw.Stop();
+        Trace.WriteLine("Scene Fading took " + stpw.ElapsedMilliseconds + " ms.");
+        stpw.Reset();
+
+        // Doc Saving
         stpw.Start();
         Doc.Save();
         stpw.Stop();
