@@ -27,14 +27,15 @@ public class Frame : ILibraryEventReceiver
         public const string TweenType = "none";
         public const bool MotionTweenSnap = false;
         public const string EaseMethodName = "classic";
+        public const bool HasCustomEase = false;
     }
     private readonly XElement? root;
     private readonly XNamespace ns;
     private readonly List<Element> elements;
-    private readonly List<Ease> eases;
+    private readonly List<IEase> eases;
     private int startFrame, duration, keyMode, inPoint44;
     private string labelType, name, soundName, soundSync, tweenType, easeMethodName;
-    private bool registeredForSoundItem, motionTweenSnap;
+    private bool registeredForSoundItem, motionTweenSnap, hasCustomEase;
     internal XElement? Root { get { return root; } }
     public int StartFrame { get { return startFrame; } set { startFrame = value; root?.SetAttributeValue("index", value); } }
     public int Duration { get { return duration; } set { duration = value; root?.SetOrRemoveAttribute("duration", value, DefaultValues.Duration); } }
@@ -67,6 +68,7 @@ public class Frame : ILibraryEventReceiver
     }
     public string TweenType { get { return tweenType; } set { tweenType = value; root?.SetOrRemoveAttribute("tweenType", value, DefaultValues.TweenType); } }
     public bool MotionTweenSnap { get { return motionTweenSnap; } set { motionTweenSnap = value; root?.SetOrRemoveAttribute("motionTweenSnap", value, DefaultValues.MotionTweenSnap); } }
+    public bool HasCustomEase { get { return hasCustomEase; } set { hasCustomEase = value; root?.SetOrRemoveAttribute("hasCustomEase", value, DefaultValues.HasCustomEase); } }
     public string EaseMethodName { get { return easeMethodName; } private set { easeMethodName = value; root?.SetOrRemoveAttribute("easeMethodName", value, DefaultValues.EaseMethodName); } }
     private static readonly HashSet<string> AcceptableSoundSyncs = new HashSet<string> { "event", "start", "stop", "stream" };
     public ReadOnlyCollection<Element> Elements { get { return elements.AsReadOnly(); } }
@@ -101,7 +103,16 @@ public class Frame : ILibraryEventReceiver
         if (easeNodes is null) return;
         foreach (XElement easeNode in easeNodes)
         {
-            eases.Add(new Ease(easeNode));
+            string easeName = easeNode.Name.LocalName.ToString();
+            switch (easeName)
+            {
+                case "Ease":
+                    eases.Add(new Ease(easeNode));
+                    break;
+                case "CustomEase":
+                    eases.Add(new CustomEase(easeNode));
+                    break;
+            }
         }
     }
     internal Frame(in XElement frameNode, bool isBlank = false)
@@ -118,9 +129,10 @@ public class Frame : ILibraryEventReceiver
         soundSync = (string?)frameNode.Attribute("soundSync") ?? DefaultValues.SoundSync;
         tweenType = (string?)frameNode.Attribute("tweenType") ?? DefaultValues.TweenType;
         motionTweenSnap = (bool?)frameNode.Attribute("motionTweenSnap") ?? DefaultValues.MotionTweenSnap;
+        hasCustomEase = (bool?)frameNode.Attribute("hasCustomEase") ?? DefaultValues.HasCustomEase;
         easeMethodName = (string?)frameNode.Attribute("easeMethodName") ?? DefaultValues.EaseMethodName;
         elements = new List<Element>();
-        eases = new List<Ease>();
+        eases = new List<IEase>();
         if (!isBlank)
         {
             LoadElements(root);
@@ -144,9 +156,10 @@ public class Frame : ILibraryEventReceiver
         soundSync = other.soundSync;
         tweenType = other.tweenType;
         motionTweenSnap = other.motionTweenSnap;
+        hasCustomEase = other.hasCustomEase;
         easeMethodName = other.easeMethodName;
         elements = new List<Element>();
-        eases = new List<Ease>();
+        eases = new List<IEase>();
         if (root is not null && !isBlank)
         {
             LoadElements(root);
