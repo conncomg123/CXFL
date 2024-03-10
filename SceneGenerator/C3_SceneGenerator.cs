@@ -5,13 +5,13 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using SixLabors.Fonts;
 using static SceneGenerator.SceneGenerator;
+using Esprima;
 namespace SceneGenerator;
 
 // <!> Todo:
 // 2. Evidence API (Soundman will do this EVENTUALLY?)
 // 4. SFX parent to audio
 // 5. Typewriter exclusion for (Not Shown)
-// 12. Lines are desynced post jam fading
 // ∞. Do a full test
 
 static class SceneGenerator
@@ -252,7 +252,7 @@ static class SceneGenerator
         config.SkipBlinks = false;
 
         //Paths
-        config.PathToOperatingDocument = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\303_S1.fla";
+        config.PathToOperatingDocument = "C:\\Users\\Administrator\\Elements of Justice\\Episode Generation\\Episode-Generator-Base.fla";
         config.PathToSceneData = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\303S1_output.json";
         config.PathToCFGs = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\CFGs\\Scene 1";
         config.PathToLines = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\SCENE 1";
@@ -987,6 +987,64 @@ static class SceneGenerator
         }
     }
 
+    static void PlaceLabels(this Document Doc, string EPISODE_STRING, string SCENE_STRING, string MODE_STRING)
+    {
+        for (int SceneIndex = 1; SceneIndex < Doc.Timelines.Count; SceneIndex++)
+        {
+            Doc.CurrentTimeline = SceneIndex;
+            Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
+
+            CreateLayerIfDoesntExist(Doc, "NOTES", "guide");
+            int NotesLayerIndex = CurrentTimeline.FindLayerIndex("NOTES")[0];
+
+            CsXFL.Rectangle EpisodeBounding = new(-481.1, -112.4, 481.1, 112.4);
+            CsXFL.Rectangle SceneBounding = new(-744.6, -113.4, 744.6, 113.4);
+            CsXFL.Rectangle ModeBounding = new(-492.1, -190.2, 492.1, 190.2);
+
+            Text EpisodeText = CurrentTimeline.Layers[NotesLayerIndex].GetFrame(0).AddNewText(EpisodeBounding, EPISODE_STRING);
+            Text SceneText = CurrentTimeline.Layers[NotesLayerIndex].GetFrame(0).AddNewText(SceneBounding, SCENE_STRING);
+            Text ModeText = CurrentTimeline.Layers[NotesLayerIndex].GetFrame(0).AddNewText(ModeBounding, MODE_STRING);
+
+            EpisodeText.SetTextAttr("alignment", "left");
+            EpisodeText.SetTextAttr("face", "Suburga 2 Semi-condensed Regular");
+            EpisodeText.SetTextAttr("size", 84);
+            EpisodeText.SetTextAttr("fillColor", "#ffffff");
+            EpisodeText.SetTextAttr("letterSpacing", -1);
+            EpisodeText.TextType = "dynamic";
+            EpisodeText.LineType = "multiline";
+            EpisodeText.Name = "EpisodeText";
+            EpisodeText.FontRenderingMode = "standard";
+            EpisodeText.Matrix.Tx = -250;
+            EpisodeText.Matrix.Ty = -150;
+
+            SceneText.SetTextAttr("alignment", "right");
+            SceneText.SetTextAttr("face", "Suburga 2 Semi-condensed Regular");
+            SceneText.SetTextAttr("size", 84);
+            SceneText.SetTextAttr("fillColor", "#ffffff");
+            SceneText.SetTextAttr("letterSpacing", -1);
+            SceneText.TextType = "dynamic";
+            SceneText.LineType = "multiline";
+            SceneText.Name = "SceneText";
+            SceneText.FontRenderingMode = "standard";
+            SceneText.Matrix.Tx = 1100;
+            SceneText.Matrix.Ty = -150;
+
+            ModeText.SetTextAttr("alignment", "left");
+            ModeText.SetTextAttr("face", "Suburga 2 Semi-condensed Regular");
+            ModeText.SetTextAttr("size", 144);
+            ModeText.SetTextAttr("fillColor", "#ffffff");
+            ModeText.SetTextAttr("letterSpacing", -1);
+            ModeText.TextType = "dynamic";
+            ModeText.LineType = "multiline";
+            ModeText.Name = "ModeText";
+            ModeText.FontRenderingMode = "standard";
+            ModeText.Matrix.Tx = 1650;
+            ModeText.Matrix.Ty = 1500;
+
+            CurrentTimeline.ReorderLayer(NotesLayerIndex, 0, true);
+        }
+    }
+
     static void PlaceDesks(this Document doc, string sceneData)
     {
         var characterToDeskMap = new Dictionary<string, SymbolConfig?>
@@ -1176,6 +1234,26 @@ static class SceneGenerator
         stpw.Stop();
         Trace.WriteLine("Scene Fading took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
+
+        // Scene Fading
+        stpw.Start();
+        PlaceLabels(Doc, "Elements of Justice (3-3)", "SCENE 1", "INVESTIGATION");
+        stpw.Stop();
+        Trace.WriteLine("Label Placing took " + stpw.ElapsedMilliseconds + " ms.");
+        stpw.Reset();
+
+        // Parent SFX track.
+        for (int i = 0; i < Doc.Timelines.Count; i++)
+        {
+            if (!Doc.GetTimeline(i).Name.Contains("Scene")) continue;
+            Doc.CurrentTimeline = i;
+            Timeline CurrentTimeline = Doc.Timelines[i];
+            CurrentTimeline.ReorderLayer(CurrentTimeline.FindLayerIndex("SFX")[0], CurrentTimeline.FindLayerIndex("AUDIO")[0], false);
+            CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("SFX")[0]].ParentLayerIndex = CurrentTimeline.FindLayerIndex("AUDIO")[0];
+        }
+
+        // User starts at the start.
+        Doc.CurrentTimeline = 1;
 
         // Doc Saving
         stpw.Start();

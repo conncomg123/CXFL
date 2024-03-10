@@ -22,6 +22,7 @@ static class LineAdderAPI
         Doc.ImportFile(AttemptFile);
         CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex(LayerName)[0]].ConvertToKeyframes(FrameReference);
         Doc.Library.AddItemToDocument(FrameReferenceName + ".flac", CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex(LayerName)[0]].GetFrame(FrameReference));
+        Doc.Library.MoveToFolder("AUDIO\\VOX", Doc.Library.Items[FrameReferenceName + ".flac"]);
         ExtendVoiceLine(SoundUtils.GetSoundDuration(AttemptFile), FrameReference, SceneNumber, Doc);
         CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex(LayerName)[0]].GetFrame(FrameReference).SoundSync = "stream";
         ExtendVoiceLine(SoundUtils.GetSoundDuration(AttemptFile), FrameReference, SceneNumber, Doc);
@@ -42,7 +43,10 @@ static class LineAdderAPI
                     string AttemptFile = FolderPath + "\\" + ReadTextName.Split(" & ")[MultipleSpeakingChars] + ".flac";
                     if (File.Exists(AttemptFile))
                     {
-                        PlaceLine(AttemptFile, FrameToConsider.StartFrame, OperatingScene, Doc);
+                        // Soundman, what the fuck is the number 5 doing here?
+                        // Well, observant programmer, 5 is one less than half of a jam fade duration. This is a quick
+                        // and dirty trick to re-align the audio after we do jam fading, but it works. 
+                        PlaceLine(AttemptFile, FrameToConsider.StartFrame + 5, OperatingScene, Doc);
                     } else
                     {
                         Console.WriteLine(AttemptFile + " Does not Exist.");
