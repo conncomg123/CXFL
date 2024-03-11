@@ -22,7 +22,7 @@ static class LineAdderAPI
         Doc.ImportFile(AttemptFile);
         CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex(LayerName)[0]].ConvertToKeyframes(FrameReference);
         Doc.Library.AddItemToDocument(FrameReferenceName + ".flac", CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex(LayerName)[0]].GetFrame(FrameReference));
-        Doc.Library.MoveToFolder("AUDIO\\VOX", Doc.Library.Items[FrameReferenceName + ".flac"]);
+        Doc.Library.MoveToFolder("AUDIO/VOX", Doc.Library.Items[FrameReferenceName + ".flac"]);
         ExtendVoiceLine(SoundUtils.GetSoundDuration(AttemptFile), FrameReference, SceneNumber, Doc);
         CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex(LayerName)[0]].GetFrame(FrameReference).SoundSync = "stream";
         ExtendVoiceLine(SoundUtils.GetSoundDuration(AttemptFile), FrameReference, SceneNumber, Doc);

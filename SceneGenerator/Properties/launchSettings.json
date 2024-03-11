@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SceneGenerator": {
+      "commandName": "Project",
+      "commandLineArgs": "\"C:\\Users\\Administrator\\Elements of Justice\\Episode Generation\""
+    }
+  }
+}

@@ -1130,10 +1130,13 @@ static class SceneGenerator
             currentTimeline.CurrentFrame += SingletonConfig.Instance.DefaultFrameDuration;
         }
     }
-    static void Main()
+
+    static void GenerateScene(string PathToOperatingDocument, string PathToSceneData, string PathToCFGs, string PathToLines)
     {
         // <!> If you can figure out what type the deserialized JSON is, you can deserialize it here
         // and pass it in to the required functions instead of deserializing at the start of each function.
+
+        Console.WriteLine(PathToOperatingDocument, PathToSceneData, PathToCFGs, PathToLines);
 
         Trace.Listeners.Add(new ConsoleTraceListener());
         Trace.AutoFlush = true;
@@ -1142,8 +1145,16 @@ static class SceneGenerator
         stpw.Start();
         SetConfiguration();
         SingletonConfig config = SingletonConfig.Instance;
+
+        // Data injection
+        config.PathToOperatingDocument = PathToOperatingDocument;
+        config.PathToSceneData = PathToSceneData;
+        config.PathToCFGs = PathToCFGs;
+        config.PathToLines = PathToLines;
+
         string json = File.ReadAllText(config.PathToSceneData!);
         Document Doc = new(config.PathToOperatingDocument!);
+
         InputValidation(Doc);
         stpw.Stop();
         Trace.WriteLine("Setup took " + stpw.ElapsedMilliseconds + " ms.");
@@ -1151,9 +1162,9 @@ static class SceneGenerator
         stpw.Start();
 
         // <!> Fix me hahahaha
-        //Doc.ImportRigs();
-        //stpw.Stop();
-        //Trace.WriteLine("Rig Import took " + stpw.ElapsedMilliseconds + " ms.");
+        Doc.ImportRigs();
+        stpw.Stop();
+        Trace.WriteLine("Rig Import took " + stpw.ElapsedMilliseconds + " ms.");
 
         // Text Placement
         stpw.Start();
@@ -1200,7 +1211,7 @@ static class SceneGenerator
         stpw.Reset();
 
         // Typewriter Intro
-        
+
         PlaceIntroTypewriter(Doc, json);
         Doc.ReorderScene(Doc.Timelines.Count - 1, 0, true);
         stpw.Stop();
@@ -1263,5 +1274,89 @@ static class SceneGenerator
         stpw.Reset();
 
         Trace.Close();
+    }
+
+    static void Main(string[] args)
+    {
+        string RootOperatingFolder = "";
+        bool displayHelp = false;
+
+        for (int i = 0; i < args.Length; i++)
+        {
+            string arg = args[i];
+
+            if (arg == "--help" || arg == "-h" || arg == "-?")
+            {
+                displayHelp = true;
+            }
+            else if (i == 0)
+            {
+                // Process FLAs
+                RootOperatingFolder = arg;
+            }
+        }
+
+        // <!> Technically can run within the same directory. Keep this for testing purposes until final build.
+        if (displayHelp)
+        {
+            Console.WriteLine("");
+            Console.WriteLine("Usage:");
+            Console.WriteLine("    EpisodeGenerator.exe \"AbsolutePathToOperatingDirectory\"");
+            Console.WriteLine("Options:");
+            Console.WriteLine("    --help, -h   Display this help message");
+            Console.WriteLine("Description:");
+            Console.WriteLine("    An implementation of the Elements of Justice scene generator created in Connor's CsXFL framework.");
+            Console.WriteLine("This executable requires a specific folder setup as detailed in the ReadMe. All instructions for how");
+            Console.WriteLine("to gather and organize the assets required for this executable to run will also be detailed in the ReadMe.");
+            Console.WriteLine("");
+            return;
+        }
+
+        string RootAssetsFolder = RootOperatingFolder + "\\assets";
+        string RootSceneDataFolder = RootOperatingFolder + "\\scene_data";
+        string RootCFGsFolder = RootOperatingFolder + "\\CFGs";
+        string RootVoiceLinesFolder = RootOperatingFolder + "\\voice_lines";
+
+        string[] paths = { RootOperatingFolder, RootAssetsFolder, RootSceneDataFolder, RootCFGsFolder, RootVoiceLinesFolder };
+
+        // Check if paths exist
+        foreach (var path in paths)
+        {
+            if (!File.Exists(path) && !Directory.Exists(path))
+            {
+                throw new FileNotFoundException($"The path '{path}' does not exist.");
+            }
+        }
+
+        // Iterate over sceneData
+        foreach (var file in Directory.GetFiles(RootSceneDataFolder))
+        {
+            string json = File.ReadAllText(file);
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var sceneData = JsonSerializer.Deserialize<Dictionary<string, object>>(json, options);
+
+            if (sceneData.ContainsKey("DataLabels") && sceneData["DataLabels"] is JsonElement dataLabels)
+            {
+                string episodeText = dataLabels.GetProperty("EpisodeText").GetString();
+                string sceneText = dataLabels.GetProperty("SceneText").GetString();
+                string modeText = dataLabels.GetProperty("ModeText").GetString();
+
+                string operatingEpisode = episodeText;
+                string operatingScene = sceneText;
+                string operatingMode = modeText;
+
+                string PathToCFGs = Path.Combine(RootCFGsFolder, operatingScene);
+                string PathToLines = Path.Combine(RootVoiceLinesFolder, operatingScene);
+
+                string BaseFLA = Path.Combine(RootOperatingFolder, "Episode-Generator-Base.fla");
+                string NewFLA = Path.Combine(RootOperatingFolder, operatingEpisode + " " + operatingScene + ".fla");
+
+                File.Copy(BaseFLA, NewFLA);
+
+                // Do it.
+                GenerateScene(NewFLA, file, PathToCFGs, PathToLines);
+            }
+        }
+
     }
 }
