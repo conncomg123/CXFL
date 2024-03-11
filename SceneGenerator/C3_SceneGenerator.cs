@@ -35,6 +35,7 @@ static class SceneGenerator
         public string? Judge { get; set; }
         public string? Cocouncil { get; set; }
         public List<string>? Witnesses { get; set; }
+        public List<RigEntry> RigConfigs { get; set; } = new();
 
         public string? EEBias { get; set; }
         public int ChunkSize { get; set; }
@@ -153,6 +154,10 @@ static class SceneGenerator
                 return 2;
             }
         }
+        public void AddRigEntry(string characterName, string flaName, string rigFolderPath)
+        {
+            RigConfigs?.Add(new RigEntry(characterName, flaName, rigFolderPath));
+        }
     }
     public class NameswapConfig
     {
@@ -225,7 +230,18 @@ static class SceneGenerator
         public string? Time { get; set; }
         public string? Location { get; set; }
     }
-
+    public class RigEntry
+    {
+        string CharacterName { get; set; }
+        string FLAName { get; set; }
+        string RigFolderPath { get; set; }
+        public RigEntry(string characterName, string flaName, string rigFolderPath)
+        {
+            CharacterName = characterName;
+            FLAName = flaName;
+            RigFolderPath = rigFolderPath;
+        }
+    }
     static void SetConfiguration()
     {
         SingletonConfig config = SingletonConfig.Instance;
@@ -252,10 +268,10 @@ static class SceneGenerator
         config.SkipBlinks = false;
 
         //Paths
-        config.PathToOperatingDocument = "C:\\Users\\Administrator\\Elements of Justice\\Episode Generation\\Episode-Generator-Base.fla";
-        config.PathToSceneData = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\303S1_output.json";
-        config.PathToCFGs = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\CFGs\\Scene 1";
-        config.PathToLines = "C:\\Users\\Administrator\\Elements of Justice\\303_Autogen_FLAs\\SCENE 1";
+        config.PathToOperatingDocument = "C:\\Stuff\\SceneGenTest\\UltimateCsXFLTest.fla";
+        config.PathToSceneData = "C:\\Stuff\\SceneGenTest\\303S1_output.json";
+        config.PathToCFGs = "C:\\Stuff\\SceneGenTest\\cfg";
+        config.PathToLines = "C:\\Stuff\\SceneGenTest\\vox";
 
         //Characters
         config.AddCharacter("Investigation", "Trucy", "RIGS/Trucy►/Trucy►ScaledPoses");
@@ -269,6 +285,39 @@ static class SceneGenerator
         config.AddNameswap("Turning Page", "Turning");
         config.AddNameswap("Sweetie Belle", "Sweetie");
         config.AddNameswap("Diamond Tiara", "Diamond");
+        
+        // Rigs
+        config.AddRigEntry("CO-COUNCIL_Twilight", "CO-COUNCIL_Twilight.fla", "TWILIGHT SPARKLE/TwilightCouncil►");
+        config.AddRigEntry("COURTROOM_Celestia", "COURTROOM_Celestia.fla", "CELESTIA►");
+        config.AddRigEntry("COURTROOM_Luna", "COURTROOM_Luna.fla", "RIGS/VECTOR CHARACTERS/LunaProsecutor►");
+        config.AddRigEntry("COURTROOM_Sonata", "COURTROOM_Sonata.fla", "SonataDefenseBench►");
+        config.AddRigEntry("COURTROOM_Trixie", "COURTROOM_Trixie.fla", "TrixieProsecution►");
+        config.AddRigEntry("INVESTIGATION_AmberGleam", "INVESTIGATION_AmberGleam.fla", "AmberGleam►");
+        config.AddRigEntry("INVESTIGATION_Applejack", "INVESTIGATION_Applejack.fla", "APPLEJACK►");
+        config.AddRigEntry("INVESTIGATION_Athena", "INVESTIGATION_Athena.fla", "Cykes►");
+        config.AddRigEntry("INVESTIGATION_Celestia", "INVESTIGATION_Celestia.fla", "PRINCESS_CELESTIA►");
+        config.AddRigEntry("INVESTIGATION_Coco", "INVESTIGATION_Coco.fla", "Coco►");
+        config.AddRigEntry("INVESTIGATION_CruiseControl", "INVESTIGATION_CruiseControl.fla", "CRUISE_CONTROL►");
+        config.AddRigEntry("INVESTIGATION_Equity", "INVESTIGATION_Equity.fla", "EquityArmored►");
+        config.AddRigEntry("INVESTIGATION_FatedPursuit", "INVESTIGATION_FatedPursuit.fla", "FATED_PURSUIT");
+        config.AddRigEntry("INVESTIGATION_Fluttershy", "INVESTIGATION_Fluttershy.fla", "Fluttershy►");
+        config.AddRigEntry("INVESTIGATION_Luna", "INVESTIGATION_Luna.fla", "Luna►");
+        config.AddRigEntry("INVESTIGATION_OverallConcept", "INVESTIGATION_OverallConcept.fla", "Overall►");
+        config.AddRigEntry("INVESTIGATION_PhiloReed", "INVESTIGATION_PhiloReed.fla", "PhiloReed►");
+        config.AddRigEntry("INVESTIGATION_Phoenix", "INVESTIGATION_Phoenix.fla", "Wright►");
+        config.AddRigEntry("INVESTIGATION_Pinkie", "INVESTIGATION_Pinkie.fla", "PINKIE_PIE►");
+        config.AddRigEntry("INVESTIGATION_PrivateEye", "INVESTIGATION_PrivateEye.fla", "PRIVATE_EYE►");
+        config.AddRigEntry("INVESTIGATION_Rainbow_Dash", "INVESTIGATION_Rainbow_Dash.fla", "RAINBOW►");
+        config.AddRigEntry("INVESTIGATION_Rarity", "INVESTIGATION_Rarity.fla", "RARITY►");
+        config.AddRigEntry("INVESTIGATION_Spike", "INVESTIGATION_Spike.fla", "SPIKE►");
+        config.AddRigEntry("INVESTIGATION_Spitfire", "INVESTIGATION_Spitfire.fla", "Spitfire►");
+        config.AddRigEntry("INVESTIGATION_Suri", "INVESTIGATION_Suri.fla", "SURI►");
+        config.AddRigEntry("INVESTIGATION_SweetieBelle", "INVESTIGATION_SweetieBelle.fla", "SWEETIEBELLE");
+        config.AddRigEntry("INVESTIGATION_Trixie", "INVESTIGATION_Trixie.fla", "Trixie►");
+        config.AddRigEntry("INVESTIGATION_Trucy", "INVESTIGATION_Trucy.fla", "Trucy►");
+        config.AddRigEntry("INVESTIGATION_Twilight", "INVESTIGATION_Twilight.fla", "TWILIGHT►");
+        config.AddRigEntry("LOGICCHESS_Sonata", "LOGICCHESS_Sonata.fla", "SonataLogicChess►");
+        
 
         //Letter Spacing
         config.AddLetterspacing("Royal Order", 1);
