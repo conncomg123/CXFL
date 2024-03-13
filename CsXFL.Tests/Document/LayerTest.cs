@@ -157,4 +157,21 @@ public class LayerTests
         Assert.True(layer.IsKeyFrame(0));   // start keyframe still exists
         Assert.True(layer.KeyFrames.Count == keyFrames - 1); // 1 keyframe should be gone in this instance
     }
+
+    // TODO: Make test for CreateMotionTween
+    // [Fact]
+    // public void CreateMotionTween_ShouldDoAThing()
+    // {
+    //     // Arrange
+    //     Document doc = new("TestAssets/DOMDocument.xml");
+    //     Timeline timeline = doc.GetTimeline(0);
+    //     Layer layer = timeline.Layers[0];
+
+
+    //     // Act
+        
+
+    //     // Assert
+    //     Assert.True(true);
+    // }
 }
