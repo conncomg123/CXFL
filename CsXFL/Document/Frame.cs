@@ -3,7 +3,7 @@ namespace CsXFL;
 using System.Collections.ObjectModel;
 using System.Xml.Linq;
 
-public class Frame : ILibraryEventReceiver
+public class Frame : ILibraryEventReceiver, IDisposable
 {
     private static readonly HashSet<string> AcceptableLabelTypes = new HashSet<string> { "none", "name", "comment", "anchor" };
     public enum KeyModes : int
@@ -37,6 +37,7 @@ public class Frame : ILibraryEventReceiver
     private int startFrame, duration, keyMode, inPoint44;
     private string labelType, name, soundName, soundSync, tweenType, easeMethodName;
     private bool registeredForSoundItem, motionTweenSnap, hasCustomEase, bookmark;
+    private Library library;
     internal XElement? Root { get { return root; } }
     public int StartFrame { get { return startFrame; } set { startFrame = value; root?.SetAttributeValue("index", value); } }
     public int Duration { get { return duration; } set { duration = value; root?.SetOrRemoveAttribute("duration", value, DefaultValues.Duration); } }
@@ -94,11 +95,11 @@ public class Frame : ILibraryEventReceiver
             switch (elementName)
             {
                 case "DOMBitmapInstance":
-                    elements.Add(new BitmapInstance(elementNode));
+                    elements.Add(new BitmapInstance(elementNode, library));
                     LibraryEventMessenger.Instance.RegisterReceiver((elements.Last() as BitmapInstance)!.LibraryItemName, this);
                     break;
                 case "DOMSymbolInstance":
-                    elements.Add(new SymbolInstance(elementNode));
+                    elements.Add(new SymbolInstance(elementNode, library));
                     LibraryEventMessenger.Instance.RegisterReceiver((elements.Last() as SymbolInstance)!.LibraryItemName, this);
                     break;
                 case "DOMStaticText":
@@ -127,7 +128,7 @@ public class Frame : ILibraryEventReceiver
             }
         }
     }
-    internal Frame(in XElement frameNode, bool isBlank = false)
+    internal Frame(in XElement frameNode, Library library, bool isBlank = false)
     {
         root = frameNode;
         ns = root.Name.Namespace;
@@ -143,6 +144,7 @@ public class Frame : ILibraryEventReceiver
         motionTweenSnap = (bool?)frameNode.Attribute("motionTweenSnap") ?? DefaultValues.MotionTweenSnap;
         hasCustomEase = (bool?)frameNode.Attribute("hasCustomEase") ?? DefaultValues.HasCustomEase;
         easeMethodName = (string?)frameNode.Attribute("easeMethodName") ?? DefaultValues.EaseMethodName;
+        this.library = library;
         elements = new List<Element>();
         eases = new List<IEase>();
         if (!isBlank)
@@ -170,6 +172,7 @@ public class Frame : ILibraryEventReceiver
         motionTweenSnap = other.motionTweenSnap;
         hasCustomEase = other.hasCustomEase;
         easeMethodName = other.easeMethodName;
+        library = other.library;
         elements = new List<Element>();
         eases = new List<IEase>();
         if (root is not null && !isBlank)
@@ -180,26 +183,27 @@ public class Frame : ILibraryEventReceiver
         registeredForSoundItem = SoundName != DefaultValues.SoundName;
         if (registeredForSoundItem) LibraryEventMessenger.Instance.RegisterReceiver(SoundName, this);
     }
-    ~Frame()
+    public void Dispose()
     {
         if (registeredForSoundItem)
         {
             LibraryEventMessenger.Instance.UnregisterReceiver(SoundName, this);
         }
-        UnregisterFromInstanceLibraryEvents();
+        CleanupElements();
     }
 
     public bool IsEmpty()
     {
         return !elements.Any();
     }
-    private void UnregisterFromInstanceLibraryEvents()
+    private void CleanupElements()
     {
         foreach (Element element in elements)
         {
             if (element is Instance instance)
             {
                 LibraryEventMessenger.Instance.UnregisterReceiver(instance.LibraryItemName, this);
+                instance.Dispose();
             }
         }
     }
@@ -207,7 +211,7 @@ public class Frame : ILibraryEventReceiver
     public void ClearElements()
     {
         // unregister from library events
-        UnregisterFromInstanceLibraryEvents();
+        CleanupElements();
         elements.Clear();
         root?.Element(ns + "elements")?.RemoveAll();
     }
@@ -228,7 +232,7 @@ public class Frame : ILibraryEventReceiver
         }
         if (item is SymbolItem symbolItem)
         {
-            SymbolInstance symbolInstance = new SymbolInstance(symbolItem);
+            SymbolInstance symbolInstance = new SymbolInstance(symbolItem, library);
             elements.Add(symbolInstance);
             root?.Element(ns + "elements")?.Add(symbolInstance.Root);
             LibraryEventMessenger.Instance.RegisterReceiver(symbolInstance.LibraryItemName, this);
@@ -236,7 +240,7 @@ public class Frame : ILibraryEventReceiver
         }
         if (item is BitmapItem bitmapItem)
         {
-            BitmapInstance bitmapInstance = new BitmapInstance(bitmapItem);
+            BitmapInstance bitmapInstance = new BitmapInstance(bitmapItem, library);
             elements.Add(bitmapInstance);
             root?.Element(ns + "elements")?.Add(bitmapInstance.Root);
             LibraryEventMessenger.Instance.RegisterReceiver(bitmapInstance.LibraryItemName, this);
