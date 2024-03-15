@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using SixLabors.Fonts;
 using static SceneGenerator.SceneGenerator;
 using Esprima;
+using Jint;
 namespace SceneGenerator;
 
 // <!> Todo:
@@ -76,7 +77,7 @@ static class SceneGenerator
         //Letterspacing
         private Dictionary<string, LetterspacingConfig> letterspacingConfigs = new Dictionary<string, LetterspacingConfig>();
 
-        public void AddCharacter(string configName, string simplifiedName, string libraryPath, string? pathToRigFile = null, string? libraryPathInRigFile = null)
+        public void AddCharacter(string configName, string simplifiedName, string pathToRigFile, string libraryPathInRigFile, string libraryPath)
         {
             if (!characterConfigs.ContainsKey(configName))
             {
@@ -212,6 +213,14 @@ static class SceneGenerator
         }
     }
 
+    public class SceneData
+    {
+        public Dictionary<string, DialogueLine>? Dialogue { get; set; }
+        public Dictionary<string, SFXLine>? SFX { get; set; }
+        public TypewriterData? Typewriter { get; set; }
+        public DataLabels? DataLabels { get; set; }
+    }
+
     public class DialogueLine
     {
         public string? CharacterName { get; set; }
@@ -230,6 +239,14 @@ static class SceneGenerator
         public string? Time { get; set; }
         public string? Location { get; set; }
     }
+
+    public class DataLabels
+    {
+        public string? EpisodeText { get; set; }
+        public string? SceneText { get; set; }
+        public string? ModeText { get; set; }
+    }
+
     public class RigEntry
     {
         string CharacterName { get; set; }
@@ -268,56 +285,56 @@ static class SceneGenerator
         config.SkipBlinks = false;
 
         //Paths
-        config.PathToOperatingDocument = "C:\\Stuff\\SceneGenTest\\UltimateCsXFLTest.fla";
-        config.PathToSceneData = "C:\\Stuff\\SceneGenTest\\303S1_output.json";
-        config.PathToCFGs = "C:\\Stuff\\SceneGenTest\\cfg";
-        config.PathToLines = "C:\\Stuff\\SceneGenTest\\vox";
+        // No more ping pong, specify your operating folder path in the startup args
+        config.PathToOperatingDocument = "";
+        config.PathToSceneData = "";
+        config.PathToCFGs = "";
+        config.PathToLines = "";
 
-        //Characters
-        config.AddCharacter("Investigation", "Trucy", "RIGS/Trucy►/Trucy►ScaledPoses");
-        config.AddCharacter("Investigation", "Rarity", "RIGS/RARITY►/Rarity►PoseScaled");
-        config.AddCharacter("Investigation", "Equity", "RIGS/EquityArmored►/EquityArmored►PoseScaled");
-        config.AddCharacter("Investigation", "Applejack", "RIGS/APPLEJACK►/APPLEJACK►PoseScaled");
-        config.AddCharacter("Investigation", "Guard", "RIGS/Trucy►/Trucy►ScaledPoses");
-        config.AddCharacter("Investigation", "Suri", "RIGS/Trucy►/Suri►ScaledPoses", "C:\\Stuff\\SceneGenTest\\RIGS\\INDEV_MV_Suri.fla", "SURI►");
+        // Characters
+        config.AddCharacter("Courtroom", "Twilight", "CO-COUNCIL_Twilight.fla", "TWILIGHT SPARKLE/TwilightCouncil►", "TWILIGHT SPARKLE/TwilightCouncil►/TwilightCouncil►All");
+        config.AddCharacter("Courtroom", "Celestia", "COURTROOM_Celestia.fla", "CELESTIA►", "CELESTIA►/Celestia►ScaledPoses");
+        config.AddCharacter("Courtroom", "Luna", "COURTROOM_Luna.fla", "RIGS/VECTOR CHARACTERS/LunaProsecutor►", "RIGS/VECTOR CHARACTERS/LunaProsecutor►/LunaProsecutor►PoseScaled");
+        config.AddCharacter("Courtroom", "Sonata", "COURTROOM_Sonata.fla", "SonataDefenseBench►", "SonataDefenseBench►/SonataDefenseBench►ScaledPoses");
+        config.AddCharacter("Courtroom", "Trixie", "COURTROOM_Trixie.fla", "TrixieProsecution►", "TrixieProsecution►/TrixieProsecution►ScaledPoses");
+
+        config.AddCharacter("Investigation", "Amber", "INVESTIGATION_AmberGleam.fla", "AmberGleam►", "AmberGleam►/AmberGleam►PoseScaled");
+        config.AddCharacter("Investigation", "Applejack", "INVESTIGATION_Applejack.fla", "APPLEJACK►", "APPLEJACK►/APPLEJACK►PoseScaled");
+        config.AddCharacter("Investigation", "Athena", "INVESTIGATION_Athena.fla", "Cykes►", "Cykes►PoseOnly"); // <!> This rig needs a pose scaled
+        config.AddCharacter("Investigation", "Celestia", "INVESTIGATION_Celestia.fla", "PRINCESS_CELESTIA►", "PRINCESS_CELESTIA►/PrincessCelestia►ScaledPoses");
+        config.AddCharacter("Investigation", "Coco", "INVESTIGATION_Coco.fla", "Coco►", "Coco►/Coco►PoseScaled");
+
+        config.AddCharacter("Investigation", "Cruise", "INVESTIGATION_CruiseControl.fla", "CRUISE_CONTROL►", "CRUISE_CONTROL►/Cruise►PoseScaled");
+        config.AddCharacter("Investigation", "Equity", "INVESTIGATION_Equity.fla", "EquityArmored►", "EquityArmored►/EquityArmored►PoseScaled");
+        config.AddCharacter("Investigation", "Fated Pursuit", "INVESTIGATION_FatedPursuit.fla", "FATED_PURSUIT", "FATED_PURSUIT/FatedPursuit►ScaledPoses");
+        config.AddCharacter("Investigation", "Fluttershy", "INVESTIGATION_Fluttershy.fla", "Fluttershy►", "Fluttershy►/Fluttershy►PoseScaled");
+        config.AddCharacter("Investigation", "Luna", "INVESTIGATION_Luna.fla", "Luna►", "Luna►/Luna►ScaledPoses"); // <!> C2 standard
+
+        config.AddCharacter("Investigation", "Overall", "INVESTIGATION_OverallConcept.fla", "Overall►", "Overall►/Overall►PoseScaled");
+        config.AddCharacter("Investigation", "Philo Reed", "INVESTIGATION_PhiloReed.fla", "PhiloReed►", "PhiloReed►/PoseScaled");
+        config.AddCharacter("Investigation", "Phoenix", "INVESTIGATION_Phoenix.fla", "Wright►", "Wright►/Wright►ScaledPoses");
+        config.AddCharacter("Investigation", "Pinkie", "INVESTIGATION_Pinkie.fla", "PINKIE_PIE►", "PINKIE_PIE►PoseScaled");
+        config.AddCharacter("Investigation", "Private Eye", "INVESTIGATION_PrivateEye.fla", "PRIVATE_EYE►", "PRIVATE_EYE►/Private►PoseScaled");
+
+        config.AddCharacter("Investigation", "Rainbow Dash", "INVESTIGATION_Rainbow_Dash.fla", "RAINBOW►", "RAINBOW►/RAINBOW►PoseScaled");
+        config.AddCharacter("Investigation", "Rarity", "INVESTIGATION_Rarity.fla", "RARITY►", "RARITY►/Rarity►PoseScaled");
+        config.AddCharacter("Investigation", "Spike", "INVESTIGATION_Spike.fla", "SPIKE►", "SPIKE►/Spike►PoseScaled");
+        config.AddCharacter("Investigation", "Spitfire", "INVESTIGATION_Spitfire.fla", "Spitfire►", "Spitfire►/Spitfire►ScaledPoses");
+        config.AddCharacter("Investigation", "Suri", "INVESTIGATION_Suri.fla", "SURI►", "SURI►/Suri►PoseScaled");
+
+        config.AddCharacter("Investigation", "Sweetie Belle", "INVESTIGATION_SweetieBelle.fla", "SWEETIEBELLE", "SWEETIEBELLE/SweetieBelle►ScaledPoses");
+        config.AddCharacter("Investigation", "Trixie", "INVESTIGATION_Trixie.fla", "Trixie►", "Trixie►/Trixie►ScaledPoses");
+        config.AddCharacter("Investigation", "Trucy", "INVESTIGATION_Trucy.fla", "Trucy►", "Trucy►/Trucy►ScaledPoses");
+        config.AddCharacter("Investigation", "Twilight", "INVESTIGATION_Twilight.fla", "TWILIGHT►", "TWILIGHT►/Twilight►PoseScaled");
+        config.AddCharacter("LogicChess", "Sonata", "LOGICCHESS_Sonata.fla", "SonataLogicChess►", "SonataLogicChess►/SonataLogicChess►ScaledPoses");
+
+        // <!> Always fake characters
+        config.AddCharacter("Investigation", "Guard", "INVESTIGATION_Trucy.fla", "Trucy►", "Trucy►/Trucy►ScaledPoses");
 
         //Nameswaps
         config.AddNameswap("Turning Page", "Turning");
         config.AddNameswap("Sweetie Belle", "Sweetie");
-        config.AddNameswap("Diamond Tiara", "Diamond");
-        
-        // Rigs
-        config.AddRigEntry("CO-COUNCIL_Twilight", "CO-COUNCIL_Twilight.fla", "TWILIGHT SPARKLE/TwilightCouncil►");
-        config.AddRigEntry("COURTROOM_Celestia", "COURTROOM_Celestia.fla", "CELESTIA►");
-        config.AddRigEntry("COURTROOM_Luna", "COURTROOM_Luna.fla", "RIGS/VECTOR CHARACTERS/LunaProsecutor►");
-        config.AddRigEntry("COURTROOM_Sonata", "COURTROOM_Sonata.fla", "SonataDefenseBench►");
-        config.AddRigEntry("COURTROOM_Trixie", "COURTROOM_Trixie.fla", "TrixieProsecution►");
-        config.AddRigEntry("INVESTIGATION_AmberGleam", "INVESTIGATION_AmberGleam.fla", "AmberGleam►");
-        config.AddRigEntry("INVESTIGATION_Applejack", "INVESTIGATION_Applejack.fla", "APPLEJACK►");
-        config.AddRigEntry("INVESTIGATION_Athena", "INVESTIGATION_Athena.fla", "Cykes►");
-        config.AddRigEntry("INVESTIGATION_Celestia", "INVESTIGATION_Celestia.fla", "PRINCESS_CELESTIA►");
-        config.AddRigEntry("INVESTIGATION_Coco", "INVESTIGATION_Coco.fla", "Coco►");
-        config.AddRigEntry("INVESTIGATION_CruiseControl", "INVESTIGATION_CruiseControl.fla", "CRUISE_CONTROL►");
-        config.AddRigEntry("INVESTIGATION_Equity", "INVESTIGATION_Equity.fla", "EquityArmored►");
-        config.AddRigEntry("INVESTIGATION_FatedPursuit", "INVESTIGATION_FatedPursuit.fla", "FATED_PURSUIT");
-        config.AddRigEntry("INVESTIGATION_Fluttershy", "INVESTIGATION_Fluttershy.fla", "Fluttershy►");
-        config.AddRigEntry("INVESTIGATION_Luna", "INVESTIGATION_Luna.fla", "Luna►");
-        config.AddRigEntry("INVESTIGATION_OverallConcept", "INVESTIGATION_OverallConcept.fla", "Overall►");
-        config.AddRigEntry("INVESTIGATION_PhiloReed", "INVESTIGATION_PhiloReed.fla", "PhiloReed►");
-        config.AddRigEntry("INVESTIGATION_Phoenix", "INVESTIGATION_Phoenix.fla", "Wright►");
-        config.AddRigEntry("INVESTIGATION_Pinkie", "INVESTIGATION_Pinkie.fla", "PINKIE_PIE►");
-        config.AddRigEntry("INVESTIGATION_PrivateEye", "INVESTIGATION_PrivateEye.fla", "PRIVATE_EYE►");
-        config.AddRigEntry("INVESTIGATION_Rainbow_Dash", "INVESTIGATION_Rainbow_Dash.fla", "RAINBOW►");
-        config.AddRigEntry("INVESTIGATION_Rarity", "INVESTIGATION_Rarity.fla", "RARITY►");
-        config.AddRigEntry("INVESTIGATION_Spike", "INVESTIGATION_Spike.fla", "SPIKE►");
-        config.AddRigEntry("INVESTIGATION_Spitfire", "INVESTIGATION_Spitfire.fla", "Spitfire►");
-        config.AddRigEntry("INVESTIGATION_Suri", "INVESTIGATION_Suri.fla", "SURI►");
-        config.AddRigEntry("INVESTIGATION_SweetieBelle", "INVESTIGATION_SweetieBelle.fla", "SWEETIEBELLE");
-        config.AddRigEntry("INVESTIGATION_Trixie", "INVESTIGATION_Trixie.fla", "Trixie►");
-        config.AddRigEntry("INVESTIGATION_Trucy", "INVESTIGATION_Trucy.fla", "Trucy►");
-        config.AddRigEntry("INVESTIGATION_Twilight", "INVESTIGATION_Twilight.fla", "TWILIGHT►");
-        config.AddRigEntry("LOGICCHESS_Sonata", "LOGICCHESS_Sonata.fla", "SonataLogicChess►");
-        
+        config.AddNameswap("Diamond Tiara", "Diamond");       
 
         //Letter Spacing
         config.AddLetterspacing("Royal Order", 1);
@@ -362,7 +379,7 @@ static class SceneGenerator
         foreach (var character in RigConfig.Characters)
         {
             string libraryPath = character.LibraryPath;
-            string? pathToRigFile = character.pathToRigFile;
+            string? pathToRigFile = Path.Combine(Path.GetDirectoryName(config.PathToOperatingDocument), "rigs\\" + character.pathToRigFile);
             string? libraryPathInRigFile = character.libraryPathInRigFile;
 
             if (pathToRigFile != null && libraryPathInRigFile != null && !doc.Library.ItemExists(libraryPath))
@@ -374,7 +391,7 @@ static class SceneGenerator
             }
         }
     }
-    // <!> Ported bounding boxes from JSFL scene gen, bounding boxes seem to be slightly off from 3-1 to 3-3 scenes if you compare
+
     static void PlaceText(this Document Doc, string SceneData)
     {
         SingletonConfig config = SingletonConfig.Instance;
@@ -382,13 +399,12 @@ static class SceneGenerator
         CsXFL.Rectangle DialogueBounding = new(40.05 * 2, 549.5 * 2, 1212.95 * 2, 708.92 * 2);
         CsXFL.Rectangle SpeakerBounding = new(20.05 * 2, 482.5 * 2, 254.4 * 2, 540.2 * 2);
 
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var deserializedJson = JsonSerializer.Deserialize<SceneData>(SceneData)!;
+        var dialogueLines = deserializedJson.Dialogue;
 
-        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(SceneData, options)!;
-
-        foreach (var dialogueKey in deserializedJson["Dialogue"].Keys)
+        foreach (var dialogueKey in dialogueLines.Keys)
         {
-            var dialogueLine = deserializedJson["Dialogue"][dialogueKey];
+            var dialogueLine = dialogueLines[dialogueKey];
 
             string LineID = dialogueKey;
             string Character = dialogueLine.CharacterName!;
@@ -477,19 +493,20 @@ static class SceneGenerator
         }
     }
 
-    // <!> Need logic to extend the last placed rig when config.Defense is the character
     static void PlaceRigs(this Document Doc, string SceneData)
     {
         SingletonConfig config = SingletonConfig.Instance;
 
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(SceneData, options)!;
+        var deserializedJson = JsonSerializer.Deserialize<SceneData>(SceneData)!;
+        var dialogueLines = deserializedJson.Dialogue;
+
         string previousCharacter = "";
-        var keys = deserializedJson["Dialogue"].Keys.ToList();
+        var keys = dialogueLines.Keys.ToList();
+
         for (int i = 0; i < keys.Count; i++)
         {
             var dialogueKey = keys[i];
-            var dialogueLine = deserializedJson["Dialogue"][dialogueKey];
+            var dialogueLine = dialogueLines[dialogueKey];
             string Character = dialogueLine.CharacterName!;
             if (Character == config.Defense)
             {
@@ -596,7 +613,6 @@ static class SceneGenerator
         return maxPair;
     }
 
-    // <!> Want config.EE_Bias, unsure if/how to implement smoothing for transient emotions
     static int PoseAutomation(this Document Doc, string LibraryPath, string Emotion)
     {
         SymbolItem RigSymbol = (Doc.Library.Items[LibraryPath] as SymbolItem)!;
@@ -730,16 +746,16 @@ static class SceneGenerator
         return offset;
     }
 
-    static void ParseSFX(this Document Doc, string SFXData)
+    static void ParseSFX(this Document Doc, string sceneData)
     {
         SingletonConfig config = SingletonConfig.Instance;
 
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, SFXLine>>>(SFXData, options)!;
+        var deserializedJson = JsonSerializer.Deserialize<SceneData>(sceneData)!;
+        var SFXData = deserializedJson.SFX;
 
-        foreach (var dialogueKey in deserializedJson["SFX"].Keys)
+        foreach (var dialogueKey in SFXData.Keys)
         {
-            var dialogueLine = deserializedJson["SFX"][dialogueKey];
+            var dialogueLine = SFXData[dialogueKey];
             string Alignment = dialogueLine.Alignment!;
             string SFX = dialogueLine.SFX!;
 
@@ -780,8 +796,9 @@ static class SceneGenerator
     static void PlaceIntroTypewriter(this Document Doc, string SceneData)
     {
         SingletonConfig config = SingletonConfig.Instance;
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, TypewriterData>>>(SceneData, options)!;
+
+        var deserializedJson = JsonSerializer.Deserialize<SceneData>(SceneData)!;
+        var typewriterData = deserializedJson.Typewriter;
 
         // Kid named D drive
         FontCollection fonts = new FontCollection();
@@ -794,108 +811,104 @@ static class SceneGenerator
 
         TextOptions textOptions = new TextOptions(font);
 
-        foreach (var typewriterIntroKey in deserializedJson["Typewriter"].Keys)
+        string Time = typewriterData.Time!;
+        string Location = typewriterData.Location!;
+
+        int FRAMES_BETWEEN_LETTERS = 3;
+        int FRAMES_BETWEEN_WORDS = 6;
+        int LETTER_SPACING = 2;
+        int BOUNDING_CUSHION = 5;
+
+        string TYPEWRITER_SFX = "AUDIO/SFX/sfx-typewriter.wav";
+
+        CsXFL.Rectangle TimeBounding = TextMeasurer.MeasureSize(Time, textOptions);
+        CsXFL.Rectangle LocationBounding = TextMeasurer.MeasureSize(Location, textOptions);
+
+        TimeBounding.Left = ((Doc.Width - TimeBounding.Right) / 2) - BOUNDING_CUSHION;
+        TimeBounding.Right += (TimeBounding.Left + (Time.Length * LETTER_SPACING)) + BOUNDING_CUSHION;
+        TimeBounding.Top = 560 * 2;
+        TimeBounding.Bottom = 620 * 2;
+
+        LocationBounding.Left = ((Doc.Width - LocationBounding.Right) / 2) - BOUNDING_CUSHION;
+        LocationBounding.Right += (LocationBounding.Left + (Location.Length * LETTER_SPACING)) + BOUNDING_CUSHION;
+        LocationBounding.Top = 620 * 2;
+        LocationBounding.Bottom = 670 * 2;
+
+        Doc.AddNewScene("Typewriter Intro");
+
+        Doc.CurrentTimeline = (Doc.Timelines.Count - 1);
+        Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
+
+        CreateLayerIfDoesntExist(Doc, "TEXTBOX");
+        CreateLayerIfDoesntExist(Doc, "TEXT1");
+        CreateLayerIfDoesntExist(Doc, "TEXT2");
+        CreateLayerIfDoesntExist(Doc, "SFX");
+        CreateLayerIfDoesntExist(Doc, "BACKGROUNDS");
+
+        int TEXTBOX_LAYER_INDEX = CurrentTimeline.FindLayerIndex("TEXTBOX")[0];
+        int TEXT1_LAYER_INDEX = CurrentTimeline.FindLayerIndex("TEXT1")[0];
+        int TEXT2_LAYER_INDEX = CurrentTimeline.FindLayerIndex("TEXT2")[0];
+        int SFX_LAYER_INDEX = CurrentTimeline.FindLayerIndex("SFX")[0];
+
+        if (CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("TEXTBOX")[0]].GetFrame(0).Elements.Count == 0)
         {
-            var dialogueLine = deserializedJson["Typewriter"][typewriterIntroKey];
-            string Time = dialogueLine.Time!;
-            string Location = dialogueLine.Location!;
-
-            int FRAMES_BETWEEN_LETTERS = 3;
-            int FRAMES_BETWEEN_WORDS = 6;
-            int LETTER_SPACING = 2;
-            int BOUNDING_CUSHION = 5;
-
-            string TYPEWRITER_SFX = "AUDIO/SFX/sfx-typewriter.wav";
-
-            CsXFL.Rectangle TimeBounding = TextMeasurer.MeasureSize(Time, textOptions);
-            CsXFL.Rectangle LocationBounding = TextMeasurer.MeasureSize(Location, textOptions);
-
-            TimeBounding.Left = ((Doc.Width - TimeBounding.Right) / 2) - BOUNDING_CUSHION;
-            TimeBounding.Right += (TimeBounding.Left + (Time.Length * LETTER_SPACING)) + BOUNDING_CUSHION;
-            TimeBounding.Top = 560 * 2;
-            TimeBounding.Bottom = 620 * 2;
-
-            LocationBounding.Left = ((Doc.Width - LocationBounding.Right) / 2) - BOUNDING_CUSHION;
-            LocationBounding.Right += (LocationBounding.Left + (Location.Length * LETTER_SPACING)) + BOUNDING_CUSHION;
-            LocationBounding.Top = 620 * 2;
-            LocationBounding.Bottom = 670 * 2;
-
-            Doc.AddNewScene("Typewriter Intro");
-
-            Doc.CurrentTimeline = (Doc.Timelines.Count - 1);
-            Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
-
-            CreateLayerIfDoesntExist(Doc, "TEXTBOX");
-            CreateLayerIfDoesntExist(Doc, "TEXT1");
-            CreateLayerIfDoesntExist(Doc, "TEXT2");
-            CreateLayerIfDoesntExist(Doc, "SFX");
-            CreateLayerIfDoesntExist(Doc, "BACKGROUNDS");
-
-            int TEXTBOX_LAYER_INDEX = CurrentTimeline.FindLayerIndex("TEXTBOX")[0];
-            int TEXT1_LAYER_INDEX = CurrentTimeline.FindLayerIndex("TEXT1")[0];
-            int TEXT2_LAYER_INDEX = CurrentTimeline.FindLayerIndex("TEXT2")[0];
-            int SFX_LAYER_INDEX = CurrentTimeline.FindLayerIndex("SFX")[0];
-
-            if (CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("TEXTBOX")[0]].GetFrame(0).Elements.Count == 0)
-            {
-                Doc.Library.AddItemToDocument("OTHER ASSETS/Textbox", CurrentTimeline.Layers[TEXTBOX_LAYER_INDEX].GetFrame(0), 0, 0);
-                SymbolInstance TextboxElement = (CurrentTimeline.Layers[TEXTBOX_LAYER_INDEX].GetFrame(0).Elements[0] as SymbolInstance)!;
-                TextboxElement.Loop = "single frame";
-                TextboxElement.FirstFrame = 1;
-                TextboxElement.ScaleX = 1.34164876055;
-                TextboxElement.ScaleY = 1.34152669671;
-                TextboxElement.Matrix.Tx = -7.3;
-                TextboxElement.Matrix.Ty = -6.9;
-            }
-
-            int CurrentFrame = 0;
-
-            for (var OperatingCharacter = 1; OperatingCharacter <= Time.Length; OperatingCharacter++)
-            {
-                string CurrentCharacter = Time.Substring(0, OperatingCharacter);
-                int FrameOp = CurrentCharacter.EndsWith(" ") ? FRAMES_BETWEEN_WORDS : FRAMES_BETWEEN_LETTERS;
-                CurrentTimeline.InsertFrames(CurrentCharacter.EndsWith(" ") ? FRAMES_BETWEEN_WORDS : FRAMES_BETWEEN_LETTERS, true, CurrentFrame);
-                CurrentTimeline.Layers[TEXT1_LAYER_INDEX].InsertBlankKeyframe(CurrentFrame);
-                CurrentTimeline.Layers[SFX_LAYER_INDEX].InsertBlankKeyframe(CurrentFrame);
-                CurrentFrame += FrameOp;
-
-                Text TimeText = CurrentTimeline.Layers[TEXT1_LAYER_INDEX].GetFrame(CurrentFrame).AddNewText(TimeBounding, CurrentCharacter);
-                TypewriterFormat(Doc, TimeText, LETTER_SPACING);
-
-                if (!CurrentCharacter.EndsWith(" "))
-                {
-                    Doc.Library.AddItemToDocument(TYPEWRITER_SFX, CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame), 0, 0);
-                    CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame).SoundSync = "stream";
-                }
-            }
-
-            CurrentTimeline.InsertFrames(12, true, CurrentFrame);
-            CurrentFrame += 12;
-
-            for (var OperatingCharacter = 1; OperatingCharacter <= Location.Length; OperatingCharacter++)
-            {
-                string CurrentCharacter = Location.Substring(0, OperatingCharacter);
-                int FrameOp = CurrentCharacter.EndsWith(" ") ? (FRAMES_BETWEEN_WORDS) : (FRAMES_BETWEEN_LETTERS);
-                CurrentTimeline.InsertFrames(CurrentCharacter.EndsWith(" ") ? FRAMES_BETWEEN_WORDS : FRAMES_BETWEEN_LETTERS, true, CurrentFrame);
-                CurrentTimeline.Layers[TEXT2_LAYER_INDEX].InsertBlankKeyframe(CurrentFrame);
-                CurrentTimeline.Layers[SFX_LAYER_INDEX].InsertBlankKeyframe(CurrentFrame);
-                CurrentFrame += FrameOp;
-
-                Text LocationText = CurrentTimeline.Layers[TEXT2_LAYER_INDEX].GetFrame(CurrentFrame).AddNewText(LocationBounding, CurrentCharacter);
-                TypewriterFormat(Doc, LocationText, LETTER_SPACING);
-
-                if (!CurrentCharacter.EndsWith(" "))
-                {
-                    Doc.Library.AddItemToDocument(TYPEWRITER_SFX, CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame), 0, 0);
-                    CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame).SoundSync = "stream";
-                }
-            }
-
-            CurrentTimeline.InsertFrames(45, true, CurrentFrame);
-            CurrentTimeline.ReorderLayer(TEXTBOX_LAYER_INDEX, CurrentTimeline.FindLayerIndex("SFX")[0], true);
-            CurrentTimeline.DeleteLayer(CurrentTimeline.FindLayerIndex("Layer_1")[0]);
-
+            Doc.Library.AddItemToDocument("OTHER ASSETS/Textbox", CurrentTimeline.Layers[TEXTBOX_LAYER_INDEX].GetFrame(0), 0, 0);
+            SymbolInstance TextboxElement = (CurrentTimeline.Layers[TEXTBOX_LAYER_INDEX].GetFrame(0).Elements[0] as SymbolInstance)!;
+            TextboxElement.Loop = "single frame";
+            TextboxElement.FirstFrame = 1;
+            TextboxElement.ScaleX = 1.34164876055;
+            TextboxElement.ScaleY = 1.34152669671;
+            TextboxElement.Matrix.Tx = -7.3;
+            TextboxElement.Matrix.Ty = -6.9;
         }
+
+        int CurrentFrame = 0;
+
+        for (var OperatingCharacter = 1; OperatingCharacter <= Time.Length; OperatingCharacter++)
+        {
+            string CurrentCharacter = Time.Substring(0, OperatingCharacter);
+            int FrameOp = CurrentCharacter.EndsWith(" ") ? FRAMES_BETWEEN_WORDS : FRAMES_BETWEEN_LETTERS;
+            CurrentTimeline.InsertFrames(CurrentCharacter.EndsWith(" ") ? FRAMES_BETWEEN_WORDS : FRAMES_BETWEEN_LETTERS, true, CurrentFrame);
+            CurrentTimeline.Layers[TEXT1_LAYER_INDEX].InsertBlankKeyframe(CurrentFrame);
+            CurrentTimeline.Layers[SFX_LAYER_INDEX].InsertBlankKeyframe(CurrentFrame);
+            CurrentFrame += FrameOp;
+
+            Text TimeText = CurrentTimeline.Layers[TEXT1_LAYER_INDEX].GetFrame(CurrentFrame).AddNewText(TimeBounding, CurrentCharacter);
+            TypewriterFormat(Doc, TimeText, LETTER_SPACING);
+
+            if (!CurrentCharacter.EndsWith(" "))
+            {
+                Doc.Library.AddItemToDocument(TYPEWRITER_SFX, CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame), 0, 0);
+                CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame).SoundSync = "stream";
+            }
+        }
+
+        CurrentTimeline.InsertFrames(12, true, CurrentFrame);
+        CurrentFrame += 12;
+
+        for (var OperatingCharacter = 1; OperatingCharacter <= Location.Length; OperatingCharacter++)
+        {
+            string CurrentCharacter = Location.Substring(0, OperatingCharacter);
+            int FrameOp = CurrentCharacter.EndsWith(" ") ? (FRAMES_BETWEEN_WORDS) : (FRAMES_BETWEEN_LETTERS);
+            CurrentTimeline.InsertFrames(CurrentCharacter.EndsWith(" ") ? FRAMES_BETWEEN_WORDS : FRAMES_BETWEEN_LETTERS, true, CurrentFrame);
+            CurrentTimeline.Layers[TEXT2_LAYER_INDEX].InsertBlankKeyframe(CurrentFrame);
+            CurrentTimeline.Layers[SFX_LAYER_INDEX].InsertBlankKeyframe(CurrentFrame);
+            CurrentFrame += FrameOp;
+
+            Text LocationText = CurrentTimeline.Layers[TEXT2_LAYER_INDEX].GetFrame(CurrentFrame).AddNewText(LocationBounding, CurrentCharacter);
+            TypewriterFormat(Doc, LocationText, LETTER_SPACING);
+
+            if (!CurrentCharacter.EndsWith(" "))
+            {
+                Doc.Library.AddItemToDocument(TYPEWRITER_SFX, CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame), 0, 0);
+                CurrentTimeline.Layers[SFX_LAYER_INDEX].GetFrame(CurrentFrame).SoundSync = "stream";
+            }
+        }
+
+        CurrentTimeline.InsertFrames(45, true, CurrentFrame);
+        CurrentTimeline.ReorderLayer(TEXTBOX_LAYER_INDEX, CurrentTimeline.FindLayerIndex("SFX")[0], true);
+        CurrentTimeline.DeleteLayer(CurrentTimeline.FindLayerIndex("Layer_1")[0]);
+
     }
 
     static void SceneFadeInOut(this Document Doc)
@@ -971,22 +984,24 @@ static class SceneGenerator
     {
         int JAM_FADE_DURATION = 12;
         string JAM_FADE_PATH = "OTHER ASSETS/Jam_Fade";
-        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(sceneData, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
 
-        var keys = deserializedJson["Dialogue"].Keys;
+        var deserializedJson = JsonSerializer.Deserialize<SceneData>(sceneData)!;
+        var dialogueLines = deserializedJson.Dialogue;
+
+        var keys = dialogueLines.Keys;
         string? previousCharacter = null; // Variable to store the previous character
         string? nextCharacter = null;
         for (int i = 0; i < keys.Count; i++)
         {
             var dialogueKey = keys.ElementAt(i);
-            var dialogueLine = deserializedJson["Dialogue"][dialogueKey];
+            var dialogueLine = dialogueLines[dialogueKey];
             string LineID = dialogueKey;
             string Character = dialogueLine.CharacterName!;
             int Id = int.Parse(dialogueKey.Substring(3, 3));
 
             if (i + 1 < keys.Count)
             {
-                nextCharacter = deserializedJson["Dialogue"][keys.ElementAt(i + 1)].CharacterName;
+                nextCharacter = dialogueLines[keys.ElementAt(i + 1)].CharacterName;
             }
 
             // Check if the previous character is the same as the current character or if the next character is equal to SingletonConfig.Instance.Defense
@@ -1185,7 +1200,8 @@ static class SceneGenerator
         // <!> If you can figure out what type the deserialized JSON is, you can deserialize it here
         // and pass it in to the required functions instead of deserializing at the start of each function.
 
-        Console.WriteLine(PathToOperatingDocument, PathToSceneData, PathToCFGs, PathToLines);
+        var deserializedJson = JsonSerializer.Deserialize<SceneData>(File.ReadAllText(PathToSceneData))!;
+        var ReadDataLabel = deserializedJson.DataLabels;
 
         Trace.Listeners.Add(new ConsoleTraceListener());
         Trace.AutoFlush = true;
@@ -1260,7 +1276,6 @@ static class SceneGenerator
         stpw.Reset();
 
         // Typewriter Intro
-
         PlaceIntroTypewriter(Doc, json);
         Doc.ReorderScene(Doc.Timelines.Count - 1, 0, true);
         stpw.Stop();
@@ -1297,7 +1312,7 @@ static class SceneGenerator
 
         // Scene Fading
         stpw.Start();
-        PlaceLabels(Doc, "Elements of Justice (3-3)", "SCENE 1", "INVESTIGATION");
+        PlaceLabels(Doc, ReadDataLabel.EpisodeText, ReadDataLabel.SceneText, ReadDataLabel.ModeText);
         stpw.Stop();
         Trace.WriteLine("Label Placing took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
@@ -1400,6 +1415,7 @@ static class SceneGenerator
                 string BaseFLA = Path.Combine(RootOperatingFolder, "Episode-Generator-Base.fla");
                 string NewFLA = Path.Combine(RootOperatingFolder, operatingEpisode + " " + operatingScene + ".fla");
 
+                if (File.Exists(NewFLA)) { File.Delete(NewFLA); }
                 File.Copy(BaseFLA, NewFLA);
 
                 // Do it.
