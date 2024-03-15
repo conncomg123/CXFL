@@ -1,7 +1,7 @@
 using System.Xml.Linq;
 namespace CsXFL;
 
-public class Timeline
+public class Timeline : IDisposable
 {
     public static class DefaultValues
     {
@@ -48,6 +48,13 @@ public class Timeline
         layers = new List<Layer>();
         library = other.library;
         LoadLayers(root);
+    }
+    public void Dispose()
+    {
+        foreach (Layer layer in layers)
+        {
+            layer.Dispose();
+        }
     }
     public void SetSelectedLayer(int layerIndex, bool appendToCurrentSelection = false)
     {
@@ -195,6 +202,7 @@ public class Timeline
                 layers[i].ParentLayerIndex--;
             }
         }
+        currentLayer.Dispose();
     }
     public void InsertFrames(int numFrames, bool allLayers = false, int? frameNumIndex = null, Layer? whereToInsert = null)
     {

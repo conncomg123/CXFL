@@ -33,11 +33,13 @@ public class Library
     private const int WAV_HEADER_SIZE = 44;
     private static readonly HashSet<string> SYMBOL_FILE_EXTENSIONS = new() { ".xml" }, AUDIO_FILE_EXTENSIONS = new() { ".mp3", ".wav", ".flac" }, IMAGE_FILE_EXTENSIONS = new() { ".png", ".jpg", ".jpeg", ".gif" };
     private readonly Dictionary<string, Item> items;
+    private readonly Dictionary<string, int> useCounts = new();
     private readonly Queue<ItemOperation> itemOperations;
     private readonly List<Item> unusedItems;
     private readonly Document containingDocument;
     private readonly XNamespace ns;
     public Dictionary<string, Item> Items { get { return items; } }
+    public Dictionary<string, int> UseCounts { get { return useCounts; } }
     public List<Item> UnusedItems { get { return unusedItems; } }
     private void LoadFolders(XElement foldersNode)
     {
@@ -81,7 +83,7 @@ public class Library
             symbolPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, symbolPath);
             XDocument? symbolTree = XDocument.Load(symbolPath);
             if (symbolTree is null) continue;
-            SymbolItem symbol = new(symbolTree.Root!, includeNode);
+            SymbolItem symbol = new(symbolTree.Root!, includeNode, this);
             items.Add(symbol.Name, symbol);
         }
     }
@@ -130,7 +132,7 @@ public class Library
             if (symbolEntry is null) continue;
             XDocument? symbolTree = XDocument.Load(symbolEntry!.Open());
             if (symbolTree is null) continue;
-            SymbolItem symbol = new(symbolTree.Root!, includeNode);
+            SymbolItem symbol = new(symbolTree.Root!, includeNode, this);
             items.Add(symbol.Name, symbol);
         }
     }
@@ -237,7 +239,7 @@ public class Library
         {
             itemName = Path.GetFileName(path);
         }
-        if(itemName.EndsWith(".xml")) itemName = itemName.Substring(0, itemName.Length - 4);
+        if (itemName.EndsWith(".xml")) itemName = itemName.Substring(0, itemName.Length - 4);
         string targetPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, itemName);
         while (items.ContainsKey(itemName)) // file.exists check is not required
         {
@@ -247,7 +249,7 @@ public class Library
         Item? imported = null;
         if (SYMBOL_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
-            imported = SymbolItem.FromFile(path);
+            imported = SymbolItem.FromFile(path, this);
             if (containingDocument.Root!.Element(ns + "symbols") is null) containingDocument.Root!.AddFirst(new XElement(ns + "symbols"));
             containingDocument.Root!.Element(ns + "symbols")!.Add((imported as SymbolItem)!.Include.Root);
             (imported as SymbolItem)!.Timeline.Name = Path.GetFileNameWithoutExtension(itemName);

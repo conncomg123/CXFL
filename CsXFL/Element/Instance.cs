@@ -1,7 +1,7 @@
 using System.Xml.Linq;
 namespace CsXFL;
 
-public class Instance : Element, ILibraryEventReceiver
+public class Instance : Element, ILibraryEventReceiver, IDisposable
 {
     private static readonly Dictionary<string, string> NodeNameToInstanceType = new Dictionary<string, string>
     {
@@ -13,6 +13,7 @@ public class Instance : Element, ILibraryEventReceiver
     private static readonly HashSet<string> AcceptableInstanceTypes = new HashSet<string> { "symbol", "bitmap", "embedded video", "linked video", "video", "compiled clip" };
     private readonly string instanceType;
     private string libraryItemName;
+    private Library library;
     public string InstanceType { get { return instanceType; } }
     public string LibraryItemName
     {
@@ -24,7 +25,7 @@ public class Instance : Element, ILibraryEventReceiver
         }
     }
 
-    internal Instance(in XElement elementNode) : base(elementNode, "instance")
+    internal Instance(in XElement elementNode, Library library) : base(elementNode, "instance")
     {
         instanceType = NodeNameToInstanceType[elementNode.Name.LocalName];
         if (!AcceptableInstanceTypes.Contains(instanceType))
@@ -32,7 +33,16 @@ public class Instance : Element, ILibraryEventReceiver
             throw new ArgumentException("Invalid instance type: " + instanceType);
         }
         libraryItemName = (string?)elementNode.Attribute("libraryItemName") ?? string.Empty;
+        this.library = library;
         LibraryEventMessenger.Instance.RegisterReceiver(libraryItemName, this);
+        if(library.UseCounts.TryGetValue(libraryItemName, out int value))
+        {
+            library.UseCounts[libraryItemName] = ++value;
+        }
+        else
+        {
+            library.UseCounts[libraryItemName] = 1;
+        }
     }
     internal Instance(in Instance other) : base(other)
     {
@@ -42,9 +52,18 @@ public class Instance : Element, ILibraryEventReceiver
         }
         instanceType = other.instanceType;
         libraryItemName = other.libraryItemName;
+        library = other.library;
         LibraryEventMessenger.Instance.RegisterReceiver(libraryItemName, this);
+        if(library.UseCounts.TryGetValue(libraryItemName, out int value))
+        {
+            library.UseCounts[libraryItemName] = ++value;
+        }
+        else
+        {
+            library.UseCounts[libraryItemName] = 1;
+        }
     }
-    internal Instance(in Item item, string instanceType, string nodeName) : base(item, "instance", nodeName)
+    internal Instance(in Item item, string instanceType, string nodeName, Library library) : base(item, "instance", nodeName)
     {
         if (!AcceptableInstanceTypes.Contains(instanceType))
         {
@@ -52,12 +71,22 @@ public class Instance : Element, ILibraryEventReceiver
         }
         this.instanceType = instanceType;
         libraryItemName = item.Name;
+        this.library = library;
         root!.SetAttributeValue("libraryItemName", libraryItemName);
         LibraryEventMessenger.Instance.RegisterReceiver(libraryItemName, this);
+        if(library.UseCounts.TryGetValue(libraryItemName, out int value))
+        {
+            library.UseCounts[libraryItemName] = ++value;
+        }
+        else
+        {
+            library.UseCounts[libraryItemName] = 1;
+        }
     }
-    ~Instance()
+    public void Dispose()
     {
         LibraryEventMessenger.Instance.UnregisterReceiver(libraryItemName, this);
+        library.UseCounts[libraryItemName]--;
     }
     void ILibraryEventReceiver.OnLibraryEvent(object sender, LibraryEventMessenger.LibraryEventArgs e)
     {

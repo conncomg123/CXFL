@@ -29,14 +29,14 @@ public class SymbolItem : Item
         timeline = new Timeline();
         include = new Include();
     }
-    internal SymbolItem(in XElement symbolItemNode, in XElement include) : base(symbolItemNode, (string?)symbolItemNode.Attribute("symbolType") ?? DefaultValues.SymbolType)
+    internal SymbolItem(in XElement symbolItemNode, in XElement include, Library? library) : base(symbolItemNode, (string?)symbolItemNode.Attribute("symbolType") ?? DefaultValues.SymbolType)
     {
         if (!AcceptableSymbolTypes.Contains((string?)symbolItemNode.Attribute("symbolType") ?? DefaultValues.SymbolType))
         {
             throw new ArgumentException("Invalid symbol type: " + (string)symbolItemNode.Attribute("symbolType")!);
         }
         symbolType = (string?)symbolItemNode.Attribute("symbolType") ?? DefaultValues.SymbolType;
-        timeline = new Timeline(symbolItemNode.Element(ns + "timeline")!.Element(ns + "DOMTimeline")!, null);
+        timeline = new Timeline(symbolItemNode.Element(ns + "timeline")!.Element(ns + "DOMTimeline")!, library);
         this.include = new Include(include);
     }
     internal SymbolItem(in SymbolItem other) : base(other)
@@ -45,7 +45,7 @@ public class SymbolItem : Item
         timeline = new Timeline(other.timeline);
         include = new Include(other.include);
     }
-    internal static SymbolItem FromFile(string path)
+    internal static SymbolItem FromFile(string path, Library? library = null)
     {
         XDocument? xflTree = XDocument.Load(path);
         if (xflTree.Root is null)
@@ -55,6 +55,6 @@ public class SymbolItem : Item
         XNamespace ns = xflTree.Root.Name.Namespace;
         XElement includeNode = new(ns + "Include");
         includeNode.SetAttributeValue("href", path);
-        return new SymbolItem(xflTree.Root, includeNode);
+        return new SymbolItem(xflTree.Root, includeNode, library);
     }
 }
