@@ -29,14 +29,19 @@ public class SymbolItem : Item
         timeline = new Lazy<Timeline>(() => new Timeline());
         include = new Include();
     }
-    internal SymbolItem(XElement symbolItemNode, in XElement include, Library? library) : base(symbolItemNode, (string?)symbolItemNode.Attribute("symbolType") ?? DefaultValues.SymbolType)
+    internal SymbolItem(XElement symbolItemNode, in XElement include, Library? library, string? timelineName = null) : base(symbolItemNode, (string?)symbolItemNode.Attribute("symbolType") ?? DefaultValues.SymbolType)
     {
         if (!AcceptableSymbolTypes.Contains((string?)symbolItemNode.Attribute("symbolType") ?? DefaultValues.SymbolType))
         {
             throw new ArgumentException("Invalid symbol type: " + (string)symbolItemNode.Attribute("symbolType")!);
         }
         symbolType = (string?)symbolItemNode.Attribute("symbolType") ?? DefaultValues.SymbolType;
-        timeline = new Lazy<Timeline>(() => new Timeline(symbolItemNode.Element(ns + "timeline")!.Element(ns + "DOMTimeline")!, library));
+        timeline = new Lazy<Timeline>(() =>
+{
+    var newTimeline = new Timeline(symbolItemNode.Element(ns + "timeline")!.Element(ns + "DOMTimeline")!, library);
+    newTimeline.Name = timelineName ?? Name;
+    return newTimeline;
+});
         this.include = new Include(include);
     }
     internal SymbolItem(SymbolItem other) : base(other)
@@ -45,7 +50,7 @@ public class SymbolItem : Item
         timeline = new Lazy<Timeline>(() => new Timeline(other.timeline.Value));
         include = new Include(other.include);
     }
-    internal static SymbolItem FromFile(string path, Library? library = null)
+    internal static SymbolItem FromFile(string path, Library? library = null, string? timelineName = null)
     {
         XDocument? xflTree = XDocument.Load(path);
         if (xflTree.Root is null)
@@ -55,6 +60,6 @@ public class SymbolItem : Item
         XNamespace ns = xflTree.Root.Name.Namespace;
         XElement includeNode = new(ns + "Include");
         includeNode.SetAttributeValue("href", path);
-        return new SymbolItem(xflTree.Root, includeNode, library);
+        return new SymbolItem(xflTree.Root, includeNode, library, timelineName);
     }
 }
