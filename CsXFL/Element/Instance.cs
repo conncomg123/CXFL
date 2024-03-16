@@ -57,7 +57,7 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
         instanceType = other.instanceType;
         libraryItemName = other.libraryItemName;
         library = other.library;
-        if (library is not null)
+        if (library is not null && CorrespondingItem is not null)
         {
             LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingItem!, this);
             library.Items[libraryItemName].UseCount++;
@@ -73,7 +73,7 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
         libraryItemName = item.Name;
         this.library = library;
         root!.SetAttributeValue("libraryItemName", libraryItemName);
-        if (library is not null)
+        if (library is not null && CorrespondingItem is not null)
         {
             LibraryEventMessenger.Instance.RegisterReceiver(item, this);
             library.Items[libraryItemName].UseCount++;
