@@ -24,7 +24,14 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
             root?.SetAttributeValue("libraryItemName", value);
         }
     }
-    public Item? CorrespondingItem { get { return library?.Items[libraryItemName]; } }
+    public Item? CorrespondingItem
+    {
+        get
+        {
+            if(library is null) return null;
+            return library.Items.TryGetValue(libraryItemName, out var item) ? item : null;
+        }
+    }
 
     internal Instance(in XElement elementNode, Library library) : base(elementNode, "instance")
     {
@@ -35,9 +42,9 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
         }
         libraryItemName = (string?)elementNode.Attribute("libraryItemName") ?? string.Empty;
         this.library = library;
-        if (library is not null)
+        if (library is not null && CorrespondingItem is not null)
         {
-            LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingItem!, this);
+            LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingItem, this);
             library.Items[libraryItemName].UseCount++;
         }
     }
@@ -74,7 +81,7 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
     }
     public void Dispose()
     {
-        if (library is null) return;
+        if (library is null || CorrespondingItem is null) return;
         LibraryEventMessenger.Instance.UnregisterReceiver(CorrespondingItem!, this);
         library.Items[libraryItemName].UseCount--;
     }
