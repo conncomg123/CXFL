@@ -81,8 +81,16 @@ public class Library
             symbolPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, symbolPath);
             XDocument? symbolTree = XDocument.Load(symbolPath);
             if (symbolTree is null) continue;
-            SymbolItem symbol = new(symbolTree.Root!, includeNode);
+            SymbolItem symbol = new(symbolTree.Root!, includeNode, this);
             items.Add(symbol.Name, symbol);
+        }
+        // init SymbolItem timelines
+        foreach (Item item in items.Values)
+        {
+            if (item is SymbolItem symbol)
+            {
+                _ = symbol.Timeline;
+            }
         }
     }
     private void LoadFLAFolders(XElement foldersNode)
@@ -130,8 +138,16 @@ public class Library
             if (symbolEntry is null) continue;
             XDocument? symbolTree = XDocument.Load(symbolEntry!.Open());
             if (symbolTree is null) continue;
-            SymbolItem symbol = new(symbolTree.Root!, includeNode);
+            SymbolItem symbol = new(symbolTree.Root!, includeNode, this);
             items.Add(symbol.Name, symbol);
+        }
+        // init SymbolItem timelines
+        foreach (Item item in items.Values)
+        {
+            if (item is SymbolItem symbol)
+            {
+                _ = symbol.Timeline;
+            }
         }
     }
     private void LoadFLALibrary(XElement documentNode)
@@ -237,7 +253,7 @@ public class Library
         {
             itemName = Path.GetFileName(path);
         }
-        if(itemName.EndsWith(".xml")) itemName = itemName.Substring(0, itemName.Length - 4);
+        if (itemName.EndsWith(".xml")) itemName = itemName.Substring(0, itemName.Length - 4);
         string targetPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, itemName);
         while (items.ContainsKey(itemName)) // file.exists check is not required
         {
@@ -247,7 +263,7 @@ public class Library
         Item? imported = null;
         if (SYMBOL_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
-            imported = SymbolItem.FromFile(path);
+            imported = SymbolItem.FromFile(path, this);
             if (containingDocument.Root!.Element(ns + "symbols") is null) containingDocument.Root!.AddFirst(new XElement(ns + "symbols"));
             containingDocument.Root!.Element(ns + "symbols")!.Add((imported as SymbolItem)!.Include.Root);
             (imported as SymbolItem)!.Timeline.Name = Path.GetFileNameWithoutExtension(itemName);
@@ -306,7 +322,7 @@ public class Library
         items.Remove(oldName);
         items.Add(newName, item);
         itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Rename, oldName + (isSymbol ? ".xml" : ""), null, newName + (isSymbol ? ".xml" : "")));
-        LibraryEventMessenger.Instance.NotifyItemRenamed(oldName, newName);
+        LibraryEventMessenger.Instance.NotifyItemRenamed(oldName, newName, item);
         return true;
     }
     public bool RemoveItem(string itemPath)
@@ -318,9 +334,9 @@ public class Library
             symbolItem.Include.Root?.Remove();
         }
         item.Root?.Remove();
+        LibraryEventMessenger.Instance.NotifyItemRemoved(item);
         items.Remove(itemPath);
         itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Remove, itemPath));
-        LibraryEventMessenger.Instance.NotifyItemRemoved(itemPath);
         return true;
     }
     private void MoveSingleItemToFolder(string folderName, Item itemToMove)

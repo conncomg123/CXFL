@@ -10,7 +10,7 @@ public class SymbolItem : Item
     private static readonly HashSet<string> AcceptableSymbolTypes = new HashSet<string> { "graphic", "button", "movie clip", "puppet", "puppetBase" };
     private readonly Include include;
     private readonly string symbolType;
-    private readonly Timeline timeline;
+    private readonly Lazy<Timeline> timeline;
     public string SymbolType
     {
         get { return symbolType; }
@@ -21,31 +21,31 @@ public class SymbolItem : Item
         }
     }
     internal Include Include { get { return include; } }
-    public Timeline Timeline { get { return timeline; } }
+    public Timeline Timeline { get { return timeline.Value; } }
     internal SymbolItem() : base()
     {
         ns = string.Empty;
         symbolType = string.Empty;
-        timeline = new Timeline();
+        timeline = new Lazy<Timeline>(() => new Timeline());
         include = new Include();
     }
-    internal SymbolItem(in XElement symbolItemNode, in XElement include) : base(symbolItemNode, (string?)symbolItemNode.Attribute("symbolType") ?? DefaultValues.SymbolType)
+    internal SymbolItem(XElement symbolItemNode, in XElement include, Library? library) : base(symbolItemNode, (string?)symbolItemNode.Attribute("symbolType") ?? DefaultValues.SymbolType)
     {
         if (!AcceptableSymbolTypes.Contains((string?)symbolItemNode.Attribute("symbolType") ?? DefaultValues.SymbolType))
         {
             throw new ArgumentException("Invalid symbol type: " + (string)symbolItemNode.Attribute("symbolType")!);
         }
         symbolType = (string?)symbolItemNode.Attribute("symbolType") ?? DefaultValues.SymbolType;
-        timeline = new Timeline(symbolItemNode.Element(ns + "timeline")!.Element(ns + "DOMTimeline")!, null);
+        timeline = new Lazy<Timeline>(() => new Timeline(symbolItemNode.Element(ns + "timeline")!.Element(ns + "DOMTimeline")!, library));
         this.include = new Include(include);
     }
-    internal SymbolItem(in SymbolItem other) : base(other)
+    internal SymbolItem(SymbolItem other) : base(other)
     {
         symbolType = other.symbolType;
-        timeline = new Timeline(other.timeline);
+        timeline = new Lazy<Timeline>(() => new Timeline(other.timeline.Value));
         include = new Include(other.include);
     }
-    internal static SymbolItem FromFile(string path)
+    internal static SymbolItem FromFile(string path, Library? library = null)
     {
         XDocument? xflTree = XDocument.Load(path);
         if (xflTree.Root is null)
@@ -55,6 +55,6 @@ public class SymbolItem : Item
         XNamespace ns = xflTree.Root.Name.Namespace;
         XElement includeNode = new(ns + "Include");
         includeNode.SetAttributeValue("href", path);
-        return new SymbolItem(xflTree.Root, includeNode);
+        return new SymbolItem(xflTree.Root, includeNode, library);
     }
 }

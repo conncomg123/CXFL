@@ -2,7 +2,7 @@ using System.Collections.ObjectModel;
 using System.Xml.Linq;
 namespace CsXFL;
 
-public class Layer
+public class Layer : IDisposable
 {
     private static readonly HashSet<string> AcceptableLayerTypes = new HashSet<string> { "normal", "guide", "guided", "mask", "masked", "folder", "camera" };
     internal static class DefaultValues
@@ -48,7 +48,7 @@ public class Layer
         if (frameNodes is null) return;
         foreach (XElement frameNode in frameNodes)
         {
-            frames.Add(new Frame(frameNode));
+            frames.Add(new Frame(frameNode, library));
         }
     }
     internal Layer(XElement layerNode, Library library)
@@ -86,9 +86,17 @@ public class Layer
         library = other.library;
         if (root is not null) LoadFrames(root);
     }
+    public void Dispose()
+    {
+        foreach (Frame frame in frames)
+        {
+            frame.Dispose();
+        }
+    }
     private void RemoveKeyframe(int keyframeIndex)
     {
         root?.Element(ns + "frames")?.Elements().ToList()[keyframeIndex].Remove();
+        frames[keyframeIndex].Dispose();
         frames.RemoveAt(keyframeIndex);
     }
 

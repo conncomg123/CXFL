@@ -10,9 +10,10 @@ public abstract class Item
     protected XNamespace ns;
     private readonly string itemType;
     private string name;
-
+    private int useCount;
     public string ItemType { get { return itemType; } }
     public string Name { get { return name; } set { name = value; root?.SetAttributeValue("name", value); } }
+    public int UseCount { get { return useCount; } set { useCount = value; } }
     public XNamespace Namespace { get { return ns; } }
     public XElement? Root { get { return root; } }
     public Item()
