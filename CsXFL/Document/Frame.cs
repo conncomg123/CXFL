@@ -106,11 +106,11 @@ public class Frame : ILibraryEventReceiver, IDisposable
             {
                 case "DOMBitmapInstance":
                     elements.Add(new BitmapInstance(elementNode, library));
-                    LibraryEventMessenger.Instance.RegisterReceiver((elements.Last() as BitmapInstance)!.CorrespondingItem, this);
+                    LibraryEventMessenger.Instance.RegisterReceiver((elements.Last() as BitmapInstance)!.CorrespondingItem!, this);
                     break;
                 case "DOMSymbolInstance":
                     elements.Add(new SymbolInstance(elementNode, library));
-                    LibraryEventMessenger.Instance.RegisterReceiver((elements.Last() as SymbolInstance)!.CorrespondingItem, this);
+                    LibraryEventMessenger.Instance.RegisterReceiver((elements.Last() as SymbolInstance)!.CorrespondingItem!, this);
                     break;
                 case "DOMStaticText":
                 case "DOMDynamicText":
@@ -219,7 +219,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         {
             if (element is Instance instance)
             {
-                LibraryEventMessenger.Instance.UnregisterReceiver(instance.CorrespondingItem, this);
+                LibraryEventMessenger.Instance.UnregisterReceiver(instance.CorrespondingItem!, this);
                 instance.Dispose();
             }
         }
@@ -252,7 +252,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
             SymbolInstance symbolInstance = new SymbolInstance(symbolItem, library);
             elements.Add(symbolInstance);
             root?.Element(ns + "elements")?.Add(symbolInstance.Root);
-            LibraryEventMessenger.Instance.RegisterReceiver(symbolInstance.CorrespondingItem, this);
+            LibraryEventMessenger.Instance.RegisterReceiver(symbolInstance.CorrespondingItem!, this);
             return symbolInstance;
         }
         if (item is BitmapItem bitmapItem)
@@ -260,7 +260,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
             BitmapInstance bitmapInstance = new BitmapInstance(bitmapItem, library);
             elements.Add(bitmapInstance);
             root?.Element(ns + "elements")?.Add(bitmapInstance.Root);
-            LibraryEventMessenger.Instance.RegisterReceiver(bitmapInstance.CorrespondingItem, this);
+            LibraryEventMessenger.Instance.RegisterReceiver(bitmapInstance.CorrespondingItem!, this);
             return bitmapInstance;
         }
         return null;
