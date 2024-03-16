@@ -102,4 +102,30 @@ public class LibraryTest
 
     }
 
+    // TODO: Create Test for MoveToFolder
+    // [Fact]
+    // public void MoveToFolder_ShouldDoSomething()
+    // {
+    //     // Arrange
+    //     Document doc = new("TestAssets/DOMDocument.xml");
+
+    //     // Act
+
+    //     // Assert
+
+    // }
+    
+    // TODO: Create Test for NewFolder
+    // [Fact]
+    // public void NewFolder_ShouldDoSomething()
+    // {
+    //     // Arrange
+    //     Document doc = new("TestAssets/DOMDocument.xml");
+
+    //     // Act
+
+    //     // Assert
+
+    // }
+
 }

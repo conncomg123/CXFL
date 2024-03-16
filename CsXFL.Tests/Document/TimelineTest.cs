@@ -296,4 +296,34 @@ public class TimelineTests
             Assert.DoesNotContain(deletedLayers[i], timeline.Layers);
         }
     }
+
+    // TODO: Make Test for Insert Frames
+    // [Fact]
+    // public void InsertFrames_ShouldDoAThing()
+    // {
+    //     // Arrange
+    //     Document doc = new("TestAssets/DOMDocument.xml");
+    //     Timeline timeline = doc.GetTimeline(0);
+
+    //     // Act
+
+    //     // Assert
+
+    // }
+
+    // TODO: Make Test for Remove Frames
+    // [Fact]
+    // public void RemoveFrames_ShouldDoAThing()
+    // {
+    //     // Arrange
+    //     Document doc = new("TestAssets/DOMDocument.xml");
+    //     Timeline timeline = doc.GetTimeline(0);
+
+    //     // Act
+
+    //     // Assert
+
+    // }
+
+
 }
