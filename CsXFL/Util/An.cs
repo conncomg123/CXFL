@@ -53,9 +53,18 @@ public static class An
         }
         filesToImport.Add(otherItemPath.Replace('\\', '/'));
         string otherDocumentLibraryRoot = Path.Combine(Path.GetDirectoryName(otherDocPath)!, Library.LIBRARY_PATH).Replace('\\', '/');
+        List<Item?> importedItems = new();
         foreach (string file in filesToImport)
         {
-            doc.Library.ImportItem(file, true, otherDocumentLibraryRoot);
+            importedItems.Add(doc.Library.ImportItem(file, true, otherDocumentLibraryRoot));
+        }
+        // init symbols
+        foreach (Item? item in importedItems)
+        {
+            if (item is SymbolItem symbol)
+            {
+                _ = symbol.Timeline;
+            }
         }
     }
 
@@ -136,9 +145,18 @@ public static class An
             filesToImport.Add(fileWithoutBackslashes);
         }
         string otherDocumentLibraryRoot = Path.Combine(Path.GetDirectoryName(otherDocPath)!, Library.LIBRARY_PATH).Replace('\\', '/');
+        List<Item?> importedItems = new();
         foreach (string file in filesToImport)
         {
-            doc.Library.ImportItem(file, true, otherDocumentLibraryRoot);
+            importedItems.Add(doc.Library.ImportItem(file, true, otherDocumentLibraryRoot));
+        }
+        // init symbols
+        foreach (Item? item in importedItems)
+        {
+            if (item is SymbolItem symbol)
+            {
+                _ = symbol.Timeline;
+            }
         }
     }
     public static bool ImportSceneFromOtherDocument(this Document doc, Document otherDoc, int sceneIndex)

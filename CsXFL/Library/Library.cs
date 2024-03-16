@@ -263,10 +263,9 @@ public class Library
         Item? imported = null;
         if (SYMBOL_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
-            imported = SymbolItem.FromFile(path, this);
+            imported = SymbolItem.FromFile(path, this, Path.GetFileNameWithoutExtension(itemName));
             if (containingDocument.Root!.Element(ns + "symbols") is null) containingDocument.Root!.AddFirst(new XElement(ns + "symbols"));
             containingDocument.Root!.Element(ns + "symbols")!.Add((imported as SymbolItem)!.Include.Root);
-            (imported as SymbolItem)!.Timeline.Name = Path.GetFileNameWithoutExtension(itemName);
         }
         else if (AUDIO_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
