@@ -9,11 +9,19 @@ using Esprima;
 using Jint;
 namespace SceneGenerator;
 
-// <!> Todo:
-// 2. Evidence API (Soundman will do this EVENTUALLY?)
-// 4. SFX parent to audio
+// <!> Feature Todo:
+// 2. Evidence API (Soundman will do this after 3-4)
 // 5. Typewriter exclusion for (Not Shown)
 // ∞. Do a full test
+
+// <!> Code sustainability ToDo:
+// 1. Deserialize the JSON one time, as a SceneData object, and pass that into functions as needed. This will clear up deserializing clutter.
+// 2. Move things like Typewriting, Rig Importing, to their own API files for code neatness.
+// 3. Need brevity for GenerateEpisode function, right now it's just a big nasty block.
+// 4. For error handling for Voice Lines & Lipsyncing, let's first check if the line is non-alphabet (!? !! ...) dialogue
+// 5. Some code comments in the more schizophrenic places, avoid using generic "type-data" variables
+// 6. Move config into own file.
+// 7. RigEntry is outmoded, remove it
 
 static class SceneGenerator
 {
@@ -330,6 +338,8 @@ static class SceneGenerator
 
         // <!> Always fake characters
         config.AddCharacter("Investigation", "Guard", "INVESTIGATION_Trucy.fla", "Trucy►", "Trucy►/Trucy►ScaledPoses");
+        config.AddCharacter("Investigation", "Guard #1", "INVESTIGATION_Trucy.fla", "Trucy►", "Trucy►/Trucy►ScaledPoses");
+        config.AddCharacter("Investigation", "Bailiff #1", "INVESTIGATION_Trucy.fla", "Trucy►", "Trucy►/Trucy►ScaledPoses");
 
         //Nameswaps
         config.AddNameswap("Turning Page", "Turning");
@@ -371,23 +381,48 @@ static class SceneGenerator
         if (Doc.Timelines[Doc.CurrentTimeline].FindLayerIndex(LayerName).Count == 0) { Doc.Timelines[Doc.CurrentTimeline].AddNewLayer(LayerName, LayerType); }
     }
 
-    static void ImportRigs(this Document doc)
+    static string CapitalizeCharacterName(string name)
+    {
+        string[] words = name.Split('_');
+        string capitalized = "";
+        foreach (var word in words)
+        {
+            capitalized += char.ToUpper(word[0]) + word.Substring(1) + " ";
+        }
+        return capitalized.Trim();
+    }
+
+    static void ImportRigs(this Document doc, string SceneData)
     {
         SingletonConfig config = SingletonConfig.Instance;
         CharacterConfig RigConfig = config.GetCharacterConfig("Investigation");
-        doc.Library.NewFolder("RIGS");
+
+        var deserializedJson = JsonSerializer.Deserialize<SceneData>(SceneData)!;
+        var dialogueLines = deserializedJson.Dialogue;
+
+        HashSet<string> charactersThatAppear = new HashSet<string>();
+
+        foreach (var dialogueKey in dialogueLines.Keys)
+        {
+            string characterName = CapitalizeCharacterName(dialogueLines[dialogueKey].CharacterName);
+            charactersThatAppear.Add(CapitalizeCharacterName(characterName));
+        }
+
         foreach (var character in RigConfig.Characters)
         {
-            string libraryPath = character.LibraryPath;
-            string? pathToRigFile = Path.Combine(Path.GetDirectoryName(config.PathToOperatingDocument), "rigs\\" + character.pathToRigFile);
-            string? libraryPathInRigFile = character.libraryPathInRigFile;
-
-            if (pathToRigFile != null && libraryPathInRigFile != null && !doc.Library.ItemExists(libraryPath))
+            if (charactersThatAppear.Contains(character.SimplifiedName))
             {
-                // assuming path to rig is a FOLDER
-                doc.ImportFolderFromOtherDocument(pathToRigFile, libraryPathInRigFile);
-                Item imported = doc.Library.Items[libraryPathInRigFile];
-                doc.Library.MoveToFolder("RIGS", imported);
+                string libraryPath = character.LibraryPath;
+                string? pathToRigFile = Path.Combine(Path.GetDirectoryName(config.PathToOperatingDocument), "rigs\\" + character.pathToRigFile);
+                string? libraryPathInRigFile = character.libraryPathInRigFile;
+
+                if (pathToRigFile != null && libraryPathInRigFile != null && !doc.Library.ItemExists(libraryPath))
+                {
+                    // Assuming path to rig is a FOLDER
+                    doc.ImportFolderFromOtherDocument(pathToRigFile, libraryPathInRigFile);
+                    Item imported = doc.Library.Items[libraryPathInRigFile];
+                    doc.Library.MoveToFolder("RIGS", imported);
+                }
             }
         }
     }
@@ -402,7 +437,7 @@ static class SceneGenerator
         var deserializedJson = JsonSerializer.Deserialize<SceneData>(SceneData)!;
         var dialogueLines = deserializedJson.Dialogue;
 
-        foreach (var dialogueKey in dialogueLines.Keys)
+       foreach (var dialogueKey in dialogueLines.Keys)
         {
             var dialogueLine = dialogueLines[dialogueKey];
 
@@ -537,14 +572,14 @@ static class SceneGenerator
             if (i != keys.Count - 1 && i % config.ChunkSize != config.ChunkSize - 1)
                 CurrentTimeline.Layers[CharacterLayerIndex].ConvertToKeyframes(OperatingFrameIndex + config.DefaultFrameDuration);
 
-            bool WasRigPlaced = Doc.Library.AddItemToDocument(config.GetLibraryPathByName(Character), CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex));
+            bool WasRigPlaced = Doc.Library.AddItemToDocument("RIGS/" + config.GetLibraryPathByName(Character), CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex));
             if (WasRigPlaced)
             {
                 SymbolInstance CharacterRig = (CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex).Elements[0] as SymbolInstance)!;
                 CharacterRig.TransformationPoint.X = 0;
                 CharacterRig.TransformationPoint.Y = 0;
                 CharacterRig.Loop = "single frame";
-                CharacterRig.FirstFrame = PoseAutomation(Doc, config.GetLibraryPathByName(Character), Emotion);
+                CharacterRig.FirstFrame = PoseAutomation(Doc, "RIGS/" + config.GetLibraryPathByName(Character), Emotion);
             }
             else { throw new Exception("An error occured when attempting rig placement."); }
 
@@ -1200,6 +1235,8 @@ static class SceneGenerator
         // <!> If you can figure out what type the deserialized JSON is, you can deserialize it here
         // and pass it in to the required functions instead of deserializing at the start of each function.
 
+        // <!> It's a SceneData type now.
+
         var deserializedJson = JsonSerializer.Deserialize<SceneData>(File.ReadAllText(PathToSceneData))!;
         var ReadDataLabel = deserializedJson.DataLabels;
 
@@ -1217,6 +1254,24 @@ static class SceneGenerator
         config.PathToCFGs = PathToCFGs;
         config.PathToLines = PathToLines;
 
+        // Extract the protagonist via arbitrary rules
+        // <!> This code snippet may need heavy tending to as the case goes on.
+        var characterSet = new HashSet<string>();
+        var dialogueLines = deserializedJson.Dialogue;
+        foreach (var dialogueKey in dialogueLines.Keys)
+        {
+            characterSet.Add(dialogueLines[dialogueKey].CharacterName);
+        }
+
+        if (characterSet.Contains("Apollo"))
+        {
+            config.Defense = "Apollo";
+        }
+        else if (characterSet.Contains("Sonata"))
+        {
+            config.Defense = "Sonata";
+        }
+
         string json = File.ReadAllText(config.PathToSceneData!);
         Document Doc = new(config.PathToOperatingDocument!);
 
@@ -1226,8 +1281,8 @@ static class SceneGenerator
         stpw.Reset();
         stpw.Start();
 
-        // <!> Fix me hahahaha
-        Doc.ImportRigs();
+        // Rig Importing
+        Doc.ImportRigs(json);
         stpw.Stop();
         Trace.WriteLine("Rig Import took " + stpw.ElapsedMilliseconds + " ms.");
 
