@@ -13,7 +13,7 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
     private static readonly HashSet<string> AcceptableInstanceTypes = new HashSet<string> { "symbol", "bitmap", "embedded video", "linked video", "video", "compiled clip" };
     private readonly string instanceType;
     private string libraryItemName;
-    private Library library;
+    private Library? library;
     public string InstanceType { get { return instanceType; } }
     public string LibraryItemName
     {
@@ -24,7 +24,7 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
             root?.SetAttributeValue("libraryItemName", value);
         }
     }
-    public Item CorrespondingItem { get { return library.Items[libraryItemName]; } }
+    public Item? CorrespondingItem { get { return library?.Items[libraryItemName]; } }
 
     internal Instance(in XElement elementNode, Library library) : base(elementNode, "instance")
     {
@@ -35,8 +35,11 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
         }
         libraryItemName = (string?)elementNode.Attribute("libraryItemName") ?? string.Empty;
         this.library = library;
-        LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingItem, this);
-        library.Items[libraryItemName].UseCount++;
+        if (library is not null)
+        {
+            LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingItem!, this);
+            library.Items[libraryItemName].UseCount++;
+        }
     }
     internal Instance(in Instance other) : base(other)
     {
@@ -47,8 +50,11 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
         instanceType = other.instanceType;
         libraryItemName = other.libraryItemName;
         library = other.library;
-        LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingItem, this);
-        library.Items[libraryItemName].UseCount++;
+        if (library is not null)
+        {
+            LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingItem!, this);
+            library.Items[libraryItemName].UseCount++;
+        }
     }
     internal Instance(in Item item, string instanceType, string nodeName, Library library) : base(item, "instance", nodeName)
     {
@@ -65,7 +71,8 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
     }
     public void Dispose()
     {
-        LibraryEventMessenger.Instance.UnregisterReceiver(CorrespondingItem, this);
+        if (library is null) return;
+        LibraryEventMessenger.Instance.UnregisterReceiver(CorrespondingItem!, this);
         library.Items[libraryItemName].UseCount--;
     }
     void ILibraryEventReceiver.OnLibraryEvent(object sender, LibraryEventMessenger.LibraryEventArgs e)
