@@ -106,11 +106,15 @@ public class Frame : ILibraryEventReceiver, IDisposable
             {
                 case "DOMBitmapInstance":
                     elements.Add(new BitmapInstance(elementNode, library));
-                    LibraryEventMessenger.Instance.RegisterReceiver((elements.Last() as BitmapInstance)!.CorrespondingItem!, this);
+                    var CorrespondingItem = (elements.Last() as BitmapInstance)!.CorrespondingItem;
+                    if (CorrespondingItem is not null)
+                        LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingItem, this);
                     break;
                 case "DOMSymbolInstance":
                     elements.Add(new SymbolInstance(elementNode, library));
-                    LibraryEventMessenger.Instance.RegisterReceiver((elements.Last() as SymbolInstance)!.CorrespondingItem!, this);
+                    CorrespondingItem = (elements.Last() as SymbolInstance)!.CorrespondingItem;
+                    if (CorrespondingItem is not null)
+                        LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingItem, this);
                     break;
                 case "DOMStaticText":
                 case "DOMDynamicText":
@@ -163,7 +167,8 @@ public class Frame : ILibraryEventReceiver, IDisposable
             LoadEases(root);
         }
         registeredForSoundItem = SoundName != DefaultValues.SoundName;
-        if (registeredForSoundItem) {
+        if (registeredForSoundItem)
+        {
             LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingSoundItem!, this);
             CorrespondingSoundItem!.UseCount++;
         }
@@ -194,7 +199,8 @@ public class Frame : ILibraryEventReceiver, IDisposable
             LoadEases(root);
         }
         registeredForSoundItem = SoundName != DefaultValues.SoundName;
-        if (registeredForSoundItem) {
+        if (registeredForSoundItem)
+        {
             LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingSoundItem!, this);
             CorrespondingSoundItem!.UseCount++;
         }
@@ -219,8 +225,11 @@ public class Frame : ILibraryEventReceiver, IDisposable
         {
             if (element is Instance instance)
             {
-                LibraryEventMessenger.Instance.UnregisterReceiver(instance.CorrespondingItem!, this);
-                instance.Dispose();
+                if (instance.CorrespondingItem is not null)
+                {
+                    LibraryEventMessenger.Instance.UnregisterReceiver(instance.CorrespondingItem, this);
+                    instance.Dispose();
+                }
             }
         }
     }

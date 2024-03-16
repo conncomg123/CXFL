@@ -56,7 +56,7 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
             library.Items[libraryItemName].UseCount++;
         }
     }
-    internal Instance(in Item item, string instanceType, string nodeName, Library library) : base(item, "instance", nodeName)
+    internal Instance(in Item item, string instanceType, string nodeName, Library? library) : base(item, "instance", nodeName)
     {
         if (!AcceptableInstanceTypes.Contains(instanceType))
         {
@@ -66,8 +66,11 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
         libraryItemName = item.Name;
         this.library = library;
         root!.SetAttributeValue("libraryItemName", libraryItemName);
-        LibraryEventMessenger.Instance.RegisterReceiver(item, this);
-        library.Items[libraryItemName].UseCount++;
+        if (library is not null)
+        {
+            LibraryEventMessenger.Instance.RegisterReceiver(item, this);
+            library.Items[libraryItemName].UseCount++;
+        }
     }
     public void Dispose()
     {
