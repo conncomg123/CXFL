@@ -4,9 +4,6 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using SixLabors.Fonts;
-using static SceneGenerator.SceneGenerator;
-using Esprima;
-using Jint;
 namespace SceneGenerator;
 
 // <!> Feature Todo:
@@ -398,13 +395,13 @@ static class SceneGenerator
         CharacterConfig RigConfig = config.GetCharacterConfig("Investigation");
 
         var deserializedJson = JsonSerializer.Deserialize<SceneData>(SceneData)!;
-        var dialogueLines = deserializedJson.Dialogue;
+        var dialogueLines = deserializedJson.Dialogue!;
 
         HashSet<string> charactersThatAppear = new HashSet<string>();
 
         foreach (var dialogueKey in dialogueLines.Keys)
         {
-            string characterName = CapitalizeCharacterName(dialogueLines[dialogueKey].CharacterName);
+            string characterName = CapitalizeCharacterName(dialogueLines[dialogueKey].CharacterName!);
             charactersThatAppear.Add(CapitalizeCharacterName(characterName));
         }
 
@@ -413,7 +410,7 @@ static class SceneGenerator
             if (charactersThatAppear.Contains(character.SimplifiedName))
             {
                 string libraryPath = character.LibraryPath;
-                string? pathToRigFile = Path.Combine(Path.GetDirectoryName(config.PathToOperatingDocument), "rigs\\" + character.pathToRigFile);
+                string? pathToRigFile = Path.Combine(Path.GetDirectoryName(config.PathToOperatingDocument)!, "rigs\\" + character.pathToRigFile);
                 string? libraryPathInRigFile = character.libraryPathInRigFile;
 
                 if (pathToRigFile != null && libraryPathInRigFile != null && !doc.Library.ItemExists(libraryPath))
@@ -437,7 +434,7 @@ static class SceneGenerator
         var deserializedJson = JsonSerializer.Deserialize<SceneData>(SceneData)!;
         var dialogueLines = deserializedJson.Dialogue;
 
-       foreach (var dialogueKey in dialogueLines.Keys)
+       foreach (var dialogueKey in dialogueLines!.Keys)
         {
             var dialogueLine = dialogueLines[dialogueKey];
 
@@ -533,7 +530,7 @@ static class SceneGenerator
         SingletonConfig config = SingletonConfig.Instance;
 
         var deserializedJson = JsonSerializer.Deserialize<SceneData>(SceneData)!;
-        var dialogueLines = deserializedJson.Dialogue;
+        var dialogueLines = deserializedJson.Dialogue!;
 
         string previousCharacter = "";
         var keys = dialogueLines.Keys.ToList();
@@ -727,7 +724,7 @@ static class SceneGenerator
             }
 
             // Delete the default Layer_1
-            if (CurrentTimeline.FindLayerIndex("Layer_1")[0] != null)
+            if (CurrentTimeline.FindLayerIndex("Layer_1").Any())
             {
                 int DefaultLayerIndex = CurrentTimeline.FindLayerIndex("Layer_1")[0];
                 CurrentTimeline.DeleteLayer(DefaultLayerIndex);
@@ -786,7 +783,7 @@ static class SceneGenerator
         SingletonConfig config = SingletonConfig.Instance;
 
         var deserializedJson = JsonSerializer.Deserialize<SceneData>(sceneData)!;
-        var SFXData = deserializedJson.SFX;
+        var SFXData = deserializedJson.SFX!;
 
         foreach (var dialogueKey in SFXData.Keys)
         {
@@ -833,7 +830,7 @@ static class SceneGenerator
         SingletonConfig config = SingletonConfig.Instance;
 
         var deserializedJson = JsonSerializer.Deserialize<SceneData>(SceneData)!;
-        var typewriterData = deserializedJson.Typewriter;
+        var typewriterData = deserializedJson.Typewriter!;
 
         // Kid named D drive
         FontCollection fonts = new FontCollection();
@@ -960,7 +957,7 @@ static class SceneGenerator
             if (SceneIndex == 0)
             {
                 Doc.Library.AddItemToDocument(FadePath, CurrentLayer.GetFrame(0), Doc.Width/2, Doc.Height/2);
-                SymbolInstance FadeInstance = CurrentLayer.GetFrame(0).Elements[0] as SymbolInstance;
+                SymbolInstance FadeInstance = (CurrentLayer.GetFrame(0).Elements[0] as SymbolInstance)!;
                 FadeInstance.Loop = "play once reverse";
                 FadeInstance.FirstFrame = 20;
 
@@ -974,7 +971,7 @@ static class SceneGenerator
                 int OperatingFrameIndex = CurrentLayer.GetFrameCount() - 1;
                 CurrentLayer.ConvertToKeyframes(OperatingFrameIndex);
                 Doc.Library.AddItemToDocument(FadePath, CurrentLayer.GetFrame(OperatingFrameIndex), Doc.Width / 2, Doc.Height / 2);
-                SymbolInstance FadeInstance = CurrentLayer.GetFrame(OperatingFrameIndex).Elements[0] as SymbolInstance;
+                SymbolInstance FadeInstance = (CurrentLayer.GetFrame(OperatingFrameIndex).Elements[0] as SymbolInstance)!;
                 FadeInstance.Loop = "loop";
                 FadeInstance.FirstFrame = 0;
                 CurrentTimeline.InsertFrames(20, true, OperatingFrameIndex);
@@ -1021,7 +1018,7 @@ static class SceneGenerator
         string JAM_FADE_PATH = "OTHER ASSETS/Jam_Fade";
 
         var deserializedJson = JsonSerializer.Deserialize<SceneData>(sceneData)!;
-        var dialogueLines = deserializedJson.Dialogue;
+        var dialogueLines = deserializedJson.Dialogue!;
 
         var keys = dialogueLines.Keys;
         string? previousCharacter = null; // Variable to store the previous character
@@ -1060,7 +1057,7 @@ static class SceneGenerator
                 JamLayer.ConvertToKeyframes(CurrentTimeline.CurrentFrame);
                 Doc.Library.AddItemToDocument(JAM_FADE_PATH, JamLayer.GetFrame(CurrentTimeline.CurrentFrame), Doc.Width / 2, Doc.Height / 2);
                 CurrentTimeline.InsertFrames(JAM_FADE_DURATION / 2, true, CurrentTimeline.CurrentFrame);
-                SymbolInstance JamInstance = JamLayer.GetFrame(CurrentTimeline.CurrentFrame).Elements[0] as SymbolInstance;
+                SymbolInstance JamInstance = (JamLayer.GetFrame(CurrentTimeline.CurrentFrame).Elements[0] as SymbolInstance)!;
                 JamInstance.FirstFrame = (JAM_FADE_DURATION / 2) + 1;
                 JamLayer.ConvertToKeyframes((JAM_FADE_DURATION / 2) - 1);
                 JamLayer.GetFrame((JAM_FADE_DURATION / 2) - 1).ClearElements();
@@ -1238,7 +1235,7 @@ static class SceneGenerator
         // <!> It's a SceneData type now.
 
         var deserializedJson = JsonSerializer.Deserialize<SceneData>(File.ReadAllText(PathToSceneData))!;
-        var ReadDataLabel = deserializedJson.DataLabels;
+        var ReadDataLabel = deserializedJson.DataLabels!;
 
         Trace.Listeners.Add(new ConsoleTraceListener());
         Trace.AutoFlush = true;
@@ -1257,10 +1254,10 @@ static class SceneGenerator
         // Extract the protagonist via arbitrary rules
         // <!> This code snippet may need heavy tending to as the case goes on.
         var characterSet = new HashSet<string>();
-        var dialogueLines = deserializedJson.Dialogue;
+        var dialogueLines = deserializedJson.Dialogue!;
         foreach (var dialogueKey in dialogueLines.Keys)
         {
-            characterSet.Add(dialogueLines[dialogueKey].CharacterName);
+            characterSet.Add(dialogueLines[dialogueKey].CharacterName!);
         }
 
         if (characterSet.Contains("Apollo"))
@@ -1367,7 +1364,7 @@ static class SceneGenerator
 
         // Scene Fading
         stpw.Start();
-        PlaceLabels(Doc, ReadDataLabel.EpisodeText, ReadDataLabel.SceneText, ReadDataLabel.ModeText);
+        PlaceLabels(Doc, ReadDataLabel.EpisodeText!, ReadDataLabel.SceneText!, ReadDataLabel.ModeText!);
         stpw.Stop();
         Trace.WriteLine("Label Placing took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
@@ -1452,13 +1449,13 @@ static class SceneGenerator
         {
             string json = File.ReadAllText(file);
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var sceneData = JsonSerializer.Deserialize<Dictionary<string, object>>(json, options);
+            var sceneData = JsonSerializer.Deserialize<Dictionary<string, object>>(json, options)!;
 
             if (sceneData.ContainsKey("DataLabels") && sceneData["DataLabels"] is JsonElement dataLabels)
             {
-                string episodeText = dataLabels.GetProperty("EpisodeText").GetString();
-                string sceneText = dataLabels.GetProperty("SceneText").GetString();
-                string modeText = dataLabels.GetProperty("ModeText").GetString();
+                string episodeText = dataLabels.GetProperty("EpisodeText").GetString()!;
+                string sceneText = dataLabels.GetProperty("SceneText").GetString()!;
+                string modeText = dataLabels.GetProperty("ModeText").GetString()!;
 
                 string operatingEpisode = episodeText;
                 string operatingScene = sceneText;
