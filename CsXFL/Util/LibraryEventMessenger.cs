@@ -7,7 +7,7 @@ public class LibraryEventMessenger
 {
     private static LibraryEventMessenger? instance;
     private LibraryEventMessenger() { }
-    private readonly Dictionary<string, List<WeakReference<ILibraryEventReceiver>>> itemToReceiversMap = new();
+    private readonly Dictionary<Item, List<WeakReference<ILibraryEventReceiver>>> itemToReceiversMap = new();
     public static LibraryEventMessenger Instance
     {
         get
@@ -20,7 +20,7 @@ public class LibraryEventMessenger
     {
         public string? OldName { get; set; }
         public string? NewName { get; set; }
-        public string? Name { get; set; }
+        public Item? Item { get; set; }
         public LibraryEvent EventType { get; set; }
     }
 
@@ -29,29 +29,29 @@ public class LibraryEventMessenger
         ItemRenamed,
         ItemRemoved
     }
-internal void RegisterReceiver(string itemName, ILibraryEventReceiver receiver)
+internal void RegisterReceiver(Item item, ILibraryEventReceiver receiver)
 {
-    if (!itemToReceiversMap.TryGetValue(itemName, out var receivers))
+    if (!itemToReceiversMap.TryGetValue(item, out var receivers))
     {
         receivers = new List<WeakReference<ILibraryEventReceiver>>();
-        itemToReceiversMap[itemName] = receivers;
+        itemToReceiversMap[item] = receivers;
     }
     receivers.Add(new WeakReference<ILibraryEventReceiver>(receiver));
 }
-    internal void UnregisterReceiver(string itemName, ILibraryEventReceiver receiver)
+    internal void UnregisterReceiver(Item item, ILibraryEventReceiver receiver)
     {
-        if (itemToReceiversMap.TryGetValue(itemName, out var receivers))
+        if (itemToReceiversMap.TryGetValue(item, out var receivers))
         {
             receivers.RemoveAll(receiverRef => receiverRef.TryGetTarget(out var target) && ReferenceEquals(target, receiver));
             if (receivers.Count == 0)
             {
-                itemToReceiversMap.Remove(itemName);
+                itemToReceiversMap.Remove(item);
             }
         }
     }
-    internal void NotifyItemRenamed(string oldName, string newName)
+    internal void NotifyItemRenamed(string oldName, string newName, Item item)
     {
-        if (itemToReceiversMap.TryGetValue(oldName, out var receivers))
+        if (itemToReceiversMap.TryGetValue(item, out var receivers))
         {
             for (int i = receivers.Count - 1; i >= 0; i--)
             {
@@ -61,23 +61,21 @@ internal void RegisterReceiver(string itemName, ILibraryEventReceiver receiver)
                     receiver.OnLibraryEvent(this, new LibraryEventArgs { OldName = oldName, NewName = newName, EventType = LibraryEvent.ItemRenamed });
                 }
             }
-            itemToReceiversMap.Remove(oldName);
-            itemToReceiversMap[newName] = receivers;
         }
     }
-    internal void NotifyItemRemoved(string name)
+    internal void NotifyItemRemoved(Item item)
     {
-        if (itemToReceiversMap.TryGetValue(name, out var receivers))
+        if (itemToReceiversMap.TryGetValue(item, out var receivers))
         {
             for (int i = receivers.Count - 1; i >= 0; i--)
             {
                 var receiverRef = receivers[i];
                 if (receiverRef.TryGetTarget(out var receiver))
                 {
-                    receiver.OnLibraryEvent(this, new LibraryEventArgs { Name = name, EventType = LibraryEvent.ItemRemoved });
+                    receiver.OnLibraryEvent(this, new LibraryEventArgs { Item = item, EventType = LibraryEvent.ItemRemoved });
                 }
             }
-            itemToReceiversMap.Remove(name);
+            itemToReceiversMap.Remove(item);
         }
     }
 }

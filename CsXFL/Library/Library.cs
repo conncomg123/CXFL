@@ -33,13 +33,11 @@ public class Library
     private const int WAV_HEADER_SIZE = 44;
     private static readonly HashSet<string> SYMBOL_FILE_EXTENSIONS = new() { ".xml" }, AUDIO_FILE_EXTENSIONS = new() { ".mp3", ".wav", ".flac" }, IMAGE_FILE_EXTENSIONS = new() { ".png", ".jpg", ".jpeg", ".gif" };
     private readonly Dictionary<string, Item> items;
-    private readonly Dictionary<string, int> useCounts = new();
     private readonly Queue<ItemOperation> itemOperations;
     private readonly List<Item> unusedItems;
     private readonly Document containingDocument;
     private readonly XNamespace ns;
     public Dictionary<string, Item> Items { get { return items; } }
-    public Dictionary<string, int> UseCounts { get { return useCounts; } }
     public List<Item> UnusedItems { get { return unusedItems; } }
     private void LoadFolders(XElement foldersNode)
     {
@@ -85,6 +83,14 @@ public class Library
             if (symbolTree is null) continue;
             SymbolItem symbol = new(symbolTree.Root!, includeNode, this);
             items.Add(symbol.Name, symbol);
+        }
+        // init SymbolItem timelines
+        foreach (Item item in items.Values)
+        {
+            if (item is SymbolItem symbol)
+            {
+                _ = symbol.Timeline;
+            }
         }
     }
     private void LoadFLAFolders(XElement foldersNode)
@@ -134,6 +140,14 @@ public class Library
             if (symbolTree is null) continue;
             SymbolItem symbol = new(symbolTree.Root!, includeNode, this);
             items.Add(symbol.Name, symbol);
+        }
+        // init SymbolItem timelines
+        foreach (Item item in items.Values)
+        {
+            if (item is SymbolItem symbol)
+            {
+                _ = symbol.Timeline;
+            }
         }
     }
     private void LoadFLALibrary(XElement documentNode)
@@ -308,7 +322,7 @@ public class Library
         items.Remove(oldName);
         items.Add(newName, item);
         itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Rename, oldName + (isSymbol ? ".xml" : ""), null, newName + (isSymbol ? ".xml" : "")));
-        LibraryEventMessenger.Instance.NotifyItemRenamed(oldName, newName);
+        LibraryEventMessenger.Instance.NotifyItemRenamed(oldName, newName, item);
         return true;
     }
     public bool RemoveItem(string itemPath)
@@ -320,9 +334,9 @@ public class Library
             symbolItem.Include.Root?.Remove();
         }
         item.Root?.Remove();
+        LibraryEventMessenger.Instance.NotifyItemRemoved(item);
         items.Remove(itemPath);
         itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Remove, itemPath));
-        LibraryEventMessenger.Instance.NotifyItemRemoved(itemPath);
         return true;
     }
     private void MoveSingleItemToFolder(string folderName, Item itemToMove)

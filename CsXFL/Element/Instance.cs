@@ -24,6 +24,7 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
             root?.SetAttributeValue("libraryItemName", value);
         }
     }
+    public Item CorrespondingItem { get { return library.Items[libraryItemName]; } }
 
     internal Instance(in XElement elementNode, Library library) : base(elementNode, "instance")
     {
@@ -34,15 +35,8 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
         }
         libraryItemName = (string?)elementNode.Attribute("libraryItemName") ?? string.Empty;
         this.library = library;
-        LibraryEventMessenger.Instance.RegisterReceiver(libraryItemName, this);
-        if(library.UseCounts.TryGetValue(libraryItemName, out int value))
-        {
-            library.UseCounts[libraryItemName] = ++value;
-        }
-        else
-        {
-            library.UseCounts[libraryItemName] = 1;
-        }
+        LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingItem, this);
+        library.Items[libraryItemName].UseCount++;
     }
     internal Instance(in Instance other) : base(other)
     {
@@ -53,15 +47,8 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
         instanceType = other.instanceType;
         libraryItemName = other.libraryItemName;
         library = other.library;
-        LibraryEventMessenger.Instance.RegisterReceiver(libraryItemName, this);
-        if(library.UseCounts.TryGetValue(libraryItemName, out int value))
-        {
-            library.UseCounts[libraryItemName] = ++value;
-        }
-        else
-        {
-            library.UseCounts[libraryItemName] = 1;
-        }
+        LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingItem, this);
+        library.Items[libraryItemName].UseCount++;
     }
     internal Instance(in Item item, string instanceType, string nodeName, Library library) : base(item, "instance", nodeName)
     {
@@ -73,20 +60,13 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
         libraryItemName = item.Name;
         this.library = library;
         root!.SetAttributeValue("libraryItemName", libraryItemName);
-        LibraryEventMessenger.Instance.RegisterReceiver(libraryItemName, this);
-        if(library.UseCounts.TryGetValue(libraryItemName, out int value))
-        {
-            library.UseCounts[libraryItemName] = ++value;
-        }
-        else
-        {
-            library.UseCounts[libraryItemName] = 1;
-        }
+        LibraryEventMessenger.Instance.RegisterReceiver(item, this);
+        library.Items[libraryItemName].UseCount++;
     }
     public void Dispose()
     {
-        LibraryEventMessenger.Instance.UnregisterReceiver(libraryItemName, this);
-        library.UseCounts[libraryItemName]--;
+        LibraryEventMessenger.Instance.UnregisterReceiver(CorrespondingItem, this);
+        library.Items[libraryItemName].UseCount--;
     }
     void ILibraryEventReceiver.OnLibraryEvent(object sender, LibraryEventMessenger.LibraryEventArgs e)
     {

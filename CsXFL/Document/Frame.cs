@@ -60,14 +60,24 @@ public class Frame : ILibraryEventReceiver, IDisposable
         get { return soundName; }
         set
         {
-            var oldName = soundName;
+            SoundItem? oldSoundItem = CorrespondingSoundItem;
             soundName = value;
+            SoundItem? newSoundItem = CorrespondingSoundItem;
             root?.SetOrRemoveAttribute("soundName", value, DefaultValues.SoundName);
             registeredForSoundItem = value != DefaultValues.SoundName;
-            LibraryEventMessenger.Instance.UnregisterReceiver(oldName, this);
-            if (registeredForSoundItem) LibraryEventMessenger.Instance.RegisterReceiver(value, this);
+            if (oldSoundItem is not null)
+            {
+                LibraryEventMessenger.Instance.UnregisterReceiver(oldSoundItem, this);
+                oldSoundItem.UseCount--;
+            }
+            if (registeredForSoundItem && newSoundItem is not null)
+            {
+                LibraryEventMessenger.Instance.RegisterReceiver(newSoundItem!, this);
+                newSoundItem.UseCount++;
+            }
         }
     }
+    public SoundItem? CorrespondingSoundItem { get { return library.Items.TryGetValue(SoundName, out Item? item) ? item as SoundItem : null; } }
     public string SoundSync
     {
         get { return soundSync; }
@@ -96,11 +106,11 @@ public class Frame : ILibraryEventReceiver, IDisposable
             {
                 case "DOMBitmapInstance":
                     elements.Add(new BitmapInstance(elementNode, library));
-                    LibraryEventMessenger.Instance.RegisterReceiver((elements.Last() as BitmapInstance)!.LibraryItemName, this);
+                    LibraryEventMessenger.Instance.RegisterReceiver((elements.Last() as BitmapInstance)!.CorrespondingItem, this);
                     break;
                 case "DOMSymbolInstance":
                     elements.Add(new SymbolInstance(elementNode, library));
-                    LibraryEventMessenger.Instance.RegisterReceiver((elements.Last() as SymbolInstance)!.LibraryItemName, this);
+                    LibraryEventMessenger.Instance.RegisterReceiver((elements.Last() as SymbolInstance)!.CorrespondingItem, this);
                     break;
                 case "DOMStaticText":
                 case "DOMDynamicText":
@@ -153,7 +163,10 @@ public class Frame : ILibraryEventReceiver, IDisposable
             LoadEases(root);
         }
         registeredForSoundItem = SoundName != DefaultValues.SoundName;
-        if (registeredForSoundItem) LibraryEventMessenger.Instance.RegisterReceiver(SoundName, this);
+        if (registeredForSoundItem) {
+            LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingSoundItem!, this);
+            CorrespondingSoundItem!.UseCount++;
+        }
     }
 
     internal Frame(Frame other, bool isBlank = false)
@@ -181,13 +194,17 @@ public class Frame : ILibraryEventReceiver, IDisposable
             LoadEases(root);
         }
         registeredForSoundItem = SoundName != DefaultValues.SoundName;
-        if (registeredForSoundItem) LibraryEventMessenger.Instance.RegisterReceiver(SoundName, this);
+        if (registeredForSoundItem) {
+            LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingSoundItem!, this);
+            CorrespondingSoundItem!.UseCount++;
+        }
     }
     public void Dispose()
     {
         if (registeredForSoundItem)
         {
-            LibraryEventMessenger.Instance.UnregisterReceiver(SoundName, this);
+            LibraryEventMessenger.Instance.UnregisterReceiver(CorrespondingSoundItem!, this);
+            CorrespondingSoundItem!.UseCount--;
         }
         CleanupElements();
     }
@@ -202,7 +219,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         {
             if (element is Instance instance)
             {
-                LibraryEventMessenger.Instance.UnregisterReceiver(instance.LibraryItemName, this);
+                LibraryEventMessenger.Instance.UnregisterReceiver(instance.CorrespondingItem, this);
                 instance.Dispose();
             }
         }
@@ -235,7 +252,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
             SymbolInstance symbolInstance = new SymbolInstance(symbolItem, library);
             elements.Add(symbolInstance);
             root?.Element(ns + "elements")?.Add(symbolInstance.Root);
-            LibraryEventMessenger.Instance.RegisterReceiver(symbolInstance.LibraryItemName, this);
+            LibraryEventMessenger.Instance.RegisterReceiver(symbolInstance.CorrespondingItem, this);
             return symbolInstance;
         }
         if (item is BitmapItem bitmapItem)
@@ -243,7 +260,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
             BitmapInstance bitmapInstance = new BitmapInstance(bitmapItem, library);
             elements.Add(bitmapInstance);
             root?.Element(ns + "elements")?.Add(bitmapInstance.Root);
-            LibraryEventMessenger.Instance.RegisterReceiver(bitmapInstance.LibraryItemName, this);
+            LibraryEventMessenger.Instance.RegisterReceiver(bitmapInstance.CorrespondingItem, this);
             return bitmapInstance;
         }
         return null;
@@ -256,14 +273,14 @@ public class Frame : ILibraryEventReceiver, IDisposable
         }
         if (e.EventType == LibraryEventMessenger.LibraryEvent.ItemRemoved)
         {
-            if (SoundName == e.Name)
+            if (SoundName == e.Item!.Name)
             {
                 SoundName = DefaultValues.SoundName;
             }
             for (int i = elements.Count - 1; i >= 0; i--)
             {
                 Element element = elements[i];
-                if (element is Instance instance && instance.LibraryItemName == e.Name)
+                if (element is Instance instance && instance.CorrespondingItem == e.Item)
                 {
                     elements.RemoveAt(i);
                     instance.Root?.Remove();
