@@ -49,7 +49,7 @@ static class LineAdderAPI
                         PlaceLine(AttemptFile, FrameToConsider.StartFrame + 5, OperatingScene, Doc);
                     } else
                     {
-                        Console.WriteLine(AttemptFile + " Does not Exist.");
+                        Console.WriteLine("Error: Could not find file '" + AttemptFile + "'");
                     }
                 }
             }
