@@ -4,272 +4,148 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using SixLabors.Fonts;
+using System.Runtime.CompilerServices;
+using System.Globalization;
 namespace SceneGenerator;
 
 // <!> Feature Todo:
 // 2. Evidence API (Soundman will do this after 3-4)
-// 5. Typewriter exclusion for (Not Shown)
-// ∞. Do a full test
+// 3. Interjection! + Courtroom swipe support for SFX api, if Courtmode.
+// 5. Typewriter exclusion for (Not Shown) [Do this when making 3-4]
+// ∞. Do a full test [For 3-4]
+// <!> Get the Pinkerton Detective Agency to see if these lines are a-ligned or not (They probably aren't)
 
 // <!> Code sustainability ToDo:
 // 1. Deserialize the JSON one time, as a SceneData object, and pass that into functions as needed. This will clear up deserializing clutter.
-// 2. Move things like Typewriting, Rig Importing, to their own API files for code neatness.
-// 3. Need brevity for GenerateEpisode function, right now it's just a big nasty block.
-// 4. For error handling for Voice Lines & Lipsyncing, let's first check if the line is non-alphabet (!? !! ...) dialogue
+// 2. Move things like Typewriting, Rig Importing, to their own API files for code neatness. (If it doesn't require the SceneData class for iteration)
+// 4. For error handling for Voice Lines & Lipsyncing, let's first check if the line is non-alphabet (!? !! ...) dialogue, normalize error styling
 // 5. Some code comments in the more schizophrenic places, avoid using generic "type-data" variables
-// 6. Move config into own file.
-// 7. RigEntry is outmoded, remove it
+// 6. Move Config function into other file <?>
+
+public class NameswapConfig
+{
+    public string OriginalName { get; }
+    public string TruncatedName { get; }
+
+    public NameswapConfig(string originalName, string truncatedName)
+    {
+        OriginalName = originalName;
+        TruncatedName = truncatedName;
+    }
+}
+
+public class LetterspacingConfig
+{
+    public string CharacterName { get; }
+    public int CorrectedSpacing { get; }
+
+    public LetterspacingConfig(string characterName, int correctedSpacing)
+    {
+        CharacterName = characterName;
+        CorrectedSpacing = correctedSpacing;
+    }
+}
+
+public class SymbolConfig
+{
+    public string LibraryPath { get; set; }
+    public double Tx { get; set; }
+    public double Ty { get; set; }
+
+    public SymbolConfig(string libraryPath, double tx, double ty)
+    {
+        LibraryPath = libraryPath;
+        Tx = tx;
+        Ty = ty;
+    }
+}
+
+public class CharacterConfig
+{
+    public List<(string SimplifiedName, string LibraryPath, string? pathToRigFile, string? libraryPathInRigFile, int TransX, int TransY)> Characters { get; }
+
+    public CharacterConfig()
+    {
+        Characters = new List<(string, string, string?, string?, int, int)>();
+    }
+
+    public void AddCharacter(string simplifiedName, string libraryPath, string? pathToRigFile = null, string? libraryPathInRigFile = null, int TransX = 0, int TransY = 0)
+    {
+        Characters.Add((simplifiedName, libraryPath, pathToRigFile, libraryPathInRigFile, TransX, TransY));
+    }
+}
+
+public class SceneData
+{
+    public Dictionary<string, DialogueLine>? Dialogue { get; set; }
+    public Dictionary<string, SFXLine>? SFX { get; set; }
+    public TypewriterData? Typewriter { get; set; }
+    public DataLabels? DataLabels { get; set; }
+}
+
+public class DialogueLine
+{
+    public string? CharacterName { get; set; }
+    public string? LineText { get; set; }
+    public string? Emotion { get; set; }
+}
+
+public class SFXLine
+{
+    public string? Alignment { get; set; }
+    public string? SFX { get; set; }
+}
+
+public class TypewriterData
+{
+    public string? Time { get; set; }
+    public string? Location { get; set; }
+}
+
+public class DataLabels
+{
+    public string? EpisodeText { get; set; }
+    public string? SceneText { get; set; }
+    public string? ModeText { get; set; }
+}
+
+public class DoubleIntPair
+{
+    public double DoubleValue { get; set; }
+    public int IntValue { get; set; }
+
+    public DoubleIntPair(double d, int i)
+    {
+        DoubleValue = d;
+        IntValue = i;
+    }
+}
 
 static class SceneGenerator
 {
-    public sealed class SingletonConfig
+    // Doesn't align correctly, don't care for right now lol
+    static void MeasureAndTrace<T>(Action<T> action, T item, string description)
     {
-        private static readonly SingletonConfig instance = new SingletonConfig();
+        Stopwatch stpw = new Stopwatch();
+        stpw.Start();
+        action(item);
+        stpw.Stop();
 
-        private SingletonConfig() { }
+        int tabLength = 7;
+        int descriptionLength = description.Length + (description.Count(c => c == '\t') * (tabLength - 1));
+        int spacerLength = Math.Max(0, tabLength - (descriptionLength + stpw.ElapsedMilliseconds.ToString().Length) / 8);
+        string spacer = new string('\t', spacerLength);
 
-        public static SingletonConfig Instance
-        {
-            get { return instance; }
-        }
-
-        //Core Settings
-        public int DefaultFrameDuration { get; set; }
-        public string? ViewMode { get; set; }
-        public string? Defense { get; set; }
-        public string? Prosecutor { get; set; }
-        public string? Judge { get; set; }
-        public string? Cocouncil { get; set; }
-        public List<string>? Witnesses { get; set; }
-        public List<RigEntry> RigConfigs { get; set; } = new();
-
-        public string? EEBias { get; set; }
-        public int ChunkSize { get; set; }
-
-        //Skip Settings
-        public bool SkipRigs { get; set; }
-        public bool SkipBGs { get; set; }
-        public bool SkipTypewriter { get; set; }
-        public bool SkipLines { get; set; }
-        public bool SkipFades { get; set; }
-        public bool SkipBlinks { get; set; }
-
-        //Paths
-        public string? PathToOperatingDocument { get; set; }
-        public string? PathToSceneData { get; set; }
-        public string? PathToCFGs { get; set; }
-        public string? PathToLines { get; set; }
-
-        //Backgrounds
-        public SymbolConfig DefenseBackground { get; } = new SymbolConfig("BACKGROUNDS/Full-Courtroom", 7254, -738);
-        public SymbolConfig ProsecutorBackground { get; } = new SymbolConfig("BACKGROUNDS/Full-Courtroom", -4694, -738);
-        public SymbolConfig JudgeBackground { get; } = new SymbolConfig("BACKGROUNDS/JudgeBackground", 1280, 720);
-        public SymbolConfig CocouncilBackground { get; } = new SymbolConfig("BACKGROUNDS/CocouncilBG", 1280, 720);
-        public SymbolConfig WitnessBackground { get; } = new SymbolConfig("BACKGROUNDS/Full-Courtroom", 1280, 720);
-
-        //Desks
-        public SymbolConfig DefenseDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/desk_Defense", 1180, 1290);
-        public SymbolConfig ProsecutorDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/desk_Prosecution", 1390, 1290);
-        public SymbolConfig JudgeDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/desk_Judge", 1280, 720);
-        public SymbolConfig WitnessDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/desk_Witness", 1280, 720);
-
-        //Characters
-        private Dictionary<string, CharacterConfig> characterConfigs = new Dictionary<string, CharacterConfig>();
-
-        //Nameswaps
-        private Dictionary<string, NameswapConfig> nameswapConfigs = new Dictionary<string, NameswapConfig>();
-
-        //Letterspacing
-        private Dictionary<string, LetterspacingConfig> letterspacingConfigs = new Dictionary<string, LetterspacingConfig>();
-
-        public void AddCharacter(string configName, string simplifiedName, string pathToRigFile, string libraryPathInRigFile, string libraryPath)
-        {
-            if (!characterConfigs.ContainsKey(configName))
-            {
-                characterConfigs[configName] = new CharacterConfig();
-            }
-            characterConfigs[configName].AddCharacter(simplifiedName, libraryPath, pathToRigFile, libraryPathInRigFile);
-        }
-
-        public CharacterConfig GetCharacterConfig(string configName)
-        {
-            if (characterConfigs.ContainsKey(configName))
-            {
-                return characterConfigs[configName];
-            }
-            else
-            {
-                throw new Exception($"Character configuration {configName} did not return anything. Check your configuration.");
-            }
-        }
-
-        public string GetLibraryPathByName(string characterName)
-        {
-            foreach (var config in characterConfigs.Values)
-            {
-                foreach (var character in config.Characters)
-                {
-                    if (character.SimplifiedName == characterName)
-                    {
-                        return character.LibraryPath;
-                    }
-                }
-            }
-            SingletonConfig readConfig = SingletonConfig.Instance;
-            if (characterName != readConfig.Defense)
-            {
-                throw new Exception($"Library path for {characterName}'s rig was not located.");
-            }
-            else
-            {
-                return "DefenseRig";
-            }
-
-        }
-
-        public void AddNameswap(string originalName, string truncatedName)
-        {
-            nameswapConfigs[originalName] = new NameswapConfig(originalName, truncatedName);
-        }
-
-        public string GetTruncatedName(string originalName)
-        {
-            if (nameswapConfigs.ContainsKey(originalName))
-            {
-                return nameswapConfigs[originalName].TruncatedName;
-            }
-            else
-            {
-                return originalName;
-            }
-        }
-
-        public void AddLetterspacing(string referenceName, int correctedSpacing)
-        {
-            letterspacingConfigs[referenceName] = new LetterspacingConfig(referenceName, correctedSpacing);
-        }
-
-        public int GetLetterspacing(string referenceName)
-        {
-            if (letterspacingConfigs.ContainsKey(referenceName))
-            {
-                return letterspacingConfigs[referenceName].CorrectedSpacing;
-            }
-            else
-            {
-                return 2;
-            }
-        }
-        public void AddRigEntry(string characterName, string flaName, string rigFolderPath)
-        {
-            RigConfigs?.Add(new RigEntry(characterName, flaName, rigFolderPath));
-        }
-    }
-    public class NameswapConfig
-    {
-        public string OriginalName { get; }
-        public string TruncatedName { get; }
-
-        public NameswapConfig(string originalName, string truncatedName)
-        {
-            OriginalName = originalName;
-            TruncatedName = truncatedName;
-        }
+        Trace.WriteLine(description + spacer + " took " + stpw.ElapsedMilliseconds + " ms.");
+        stpw.Reset();
     }
 
-    public class LetterspacingConfig
-    {
-        public string CharacterName { get; }
-        public int CorrectedSpacing { get; }
-
-        public LetterspacingConfig(string characterName, int correctedSpacing)
-        {
-            CharacterName = characterName;
-            CorrectedSpacing = correctedSpacing;
-        }
-    }
-
-    public class SymbolConfig
-    {
-        public string LibraryPath { get; set; }
-        public double Tx { get; set; }
-        public double Ty { get; set; }
-
-        public SymbolConfig(string libraryPath, double tx, double ty)
-        {
-            LibraryPath = libraryPath;
-            Tx = tx;
-            Ty = ty;
-        }
-    }
-
-    public class CharacterConfig
-    {
-        public List<(string SimplifiedName, string LibraryPath, string? pathToRigFile, string? libraryPathInRigFile)> Characters { get; }
-
-        public CharacterConfig()
-        {
-            Characters = new List<(string, string, string?, string?)>();
-        }
-
-        public void AddCharacter(string simplifiedName, string libraryPath, string? pathToRigFile = null, string? libraryPathInRigFile = null)
-        {
-            Characters.Add((simplifiedName, libraryPath, pathToRigFile, libraryPathInRigFile));
-        }
-    }
-
-    public class SceneData
-    {
-        public Dictionary<string, DialogueLine>? Dialogue { get; set; }
-        public Dictionary<string, SFXLine>? SFX { get; set; }
-        public TypewriterData? Typewriter { get; set; }
-        public DataLabels? DataLabels { get; set; }
-    }
-
-    public class DialogueLine
-    {
-        public string? CharacterName { get; set; }
-        public string? LineText { get; set; }
-        public string? Emotion { get; set; }
-    }
-
-    public class SFXLine
-    {
-        public string? Alignment { get; set; }
-        public string? SFX { get; set; }
-    }
-
-    public class TypewriterData
-    {
-        public string? Time { get; set; }
-        public string? Location { get; set; }
-    }
-
-    public class DataLabels
-    {
-        public string? EpisodeText { get; set; }
-        public string? SceneText { get; set; }
-        public string? ModeText { get; set; }
-    }
-
-    public class RigEntry
-    {
-        string CharacterName { get; set; }
-        string FLAName { get; set; }
-        string RigFolderPath { get; set; }
-        public RigEntry(string characterName, string flaName, string rigFolderPath)
-        {
-            CharacterName = characterName;
-            FLAName = flaName;
-            RigFolderPath = rigFolderPath;
-        }
-    }
     static void SetConfiguration()
     {
         SingletonConfig config = SingletonConfig.Instance;
 
-        //Core Settings
-        config.ViewMode = "InvestigationMode";
+        // Core Settings
+        config.ViewMode = "";
         config.DefaultFrameDuration = 24;
 
         config.Defense = "Apollo";
@@ -278,10 +154,9 @@ static class SceneGenerator
         config.Cocouncil = "Phoenix";
         config.Witnesses = new List<string> { "Witness 1, Witness 2, Witness 3" };
 
-        config.EEBias = "";
         config.ChunkSize = 70;
 
-        //Skip Settings
+        // Skip Settings
         config.SkipRigs = false;
         config.SkipBGs = false;
         config.SkipTypewriter = false;
@@ -289,7 +164,6 @@ static class SceneGenerator
         config.SkipFades = false;
         config.SkipBlinks = false;
 
-        //Paths
         // No more ping pong, specify your operating folder path in the startup args
         config.PathToOperatingDocument = "";
         config.PathToSceneData = "";
@@ -329,7 +203,7 @@ static class SceneGenerator
 
         config.AddCharacter("Investigation", "Sweetie Belle", "INVESTIGATION_SweetieBelle.fla", "SWEETIEBELLE", "SWEETIEBELLE/SweetieBelle►ScaledPoses");
         config.AddCharacter("Investigation", "Trixie", "INVESTIGATION_Trixie.fla", "Trixie►", "Trixie►/Trixie►ScaledPoses");
-        config.AddCharacter("Investigation", "Trucy", "INVESTIGATION_Trucy.fla", "Trucy►", "Trucy►/Trucy►ScaledPoses");
+        config.AddCharacter("Investigation", "Trucy", "INVESTIGATION_Trucy.fla", "Trucy►", "Trucy►/Trucy►ScaledPoses", 500, 500);
         config.AddCharacter("Investigation", "Twilight", "INVESTIGATION_Twilight.fla", "TWILIGHT►", "TWILIGHT►/Twilight►PoseScaled");
         config.AddCharacter("LogicChess", "Sonata", "LOGICCHESS_Sonata.fla", "SonataLogicChess►", "SonataLogicChess►/SonataLogicChess►ScaledPoses");
 
@@ -338,18 +212,75 @@ static class SceneGenerator
         config.AddCharacter("Investigation", "Guard #1", "INVESTIGATION_Trucy.fla", "Trucy►", "Trucy►/Trucy►ScaledPoses");
         config.AddCharacter("Investigation", "Bailiff #1", "INVESTIGATION_Trucy.fla", "Trucy►", "Trucy►/Trucy►ScaledPoses");
 
-        //Nameswaps
+        // Nameswaps
         config.AddNameswap("Turning Page", "Turning");
         config.AddNameswap("Sweetie Belle", "Sweetie");
         config.AddNameswap("Diamond Tiara", "Diamond");       
 
-        //Letter Spacing
+        // Letter Spacing
         config.AddLetterspacing("Royal Order", 1);
+    }
+
+    static double LevenshteinRatio(string s1, string s2)
+    {
+        int maxLen = Math.Max(s1.Length, s2.Length);
+        if (maxLen == 0)
+            return 1.0;
+
+        int distance = LevenshteinDistance(s1, s2);
+        return 1.0 - (double)distance / maxLen;
+    }
+
+    //Yeah a human wrote this
+    static int LevenshteinDistance(string s1, string s2)
+    {
+        int[,] matrix = new int[s1.Length + 1, s2.Length + 1];
+        for (int i = 0; i <= s1.Length; i++) { matrix[i, 0] = i; }
+        for (int j = 0; j <= s2.Length; j++) { matrix[0, j] = j; }
+        for (int i = 1; i <= s1.Length; i++)
+        {
+            for (int j = 1; j <= s2.Length; j++)
+            {
+                int cost = (s1[i - 1] == s2[j - 1]) ? 0 : 1;
+                matrix[i, j] = Math.Min(Math.Min(matrix[i - 1, j] + 1, matrix[i, j - 1] + 1),
+                                         matrix[i - 1, j - 1] + cost);
+            }
+        }
+        return matrix[s1.Length, s2.Length];
+    }
+
+    static DoubleIntPair FindMaxDouble(List<DoubleIntPair> pairs)
+    {
+        if (pairs.Count == 0)
+            throw new ArgumentException("List is empty");
+
+        DoubleIntPair maxPair = pairs[0];
+        foreach (var pair in pairs)
+        {
+            if (pair.DoubleValue > maxPair.DoubleValue)
+            {
+                maxPair = pair;
+            }
+        }
+        return maxPair;
+    }
+
+    static void TypewriterFormat(this Document Doc, Text TextOp, int LetterSpacing)
+    {
+        TextOp.SetTextAttr("face", "Suburga 2 Semi-condensed Regular");
+        TextOp.SetTextAttr("size", 80);
+        TextOp.SetTextAttr("fillColor", "#00FF33");
+        TextOp.SetTextAttr("letterSpacing", LetterSpacing);
+        TextOp.SetTextAttr("lineSpacing", 2);
+        TextOp.SetTextAttr("alignment", "left");
+        TextOp.FontRenderingMode = "standard";
+        TextOp.TextType = "static";
     }
 
     static void InputValidation(this Document Doc)
     {
         SingletonConfig config = SingletonConfig.Instance;
+        // <!> Mode ambiguity
         CharacterConfig RigConfig = config.GetCharacterConfig("Investigation");
 
         foreach (var character in RigConfig.Characters)
@@ -360,7 +291,7 @@ static class SceneGenerator
             if (!Doc.Library.ItemExists(character.LibraryPath)) { Debug.Assert(true, $"{character}'s rig ({character.LibraryPath}) does not exist."); }
         }
 
-        //Paths Exist
+        // Do our paths exist?
         if (!File.Exists(config.PathToSceneData)) throw new Exception("Scene data file does not exist.");
 
         if (!config.SkipLines)
@@ -369,7 +300,7 @@ static class SceneGenerator
             if (!Directory.Exists(config.PathToLines)) throw new FileNotFoundException("Line directory does not exist.");
         }
 
-        //Skip logic
+        // Skip logic
         if (!config.SkipLines && config.SkipRigs) throw new Exception("Cannot generate when skipping rigs but not line placement.");
     }
 
@@ -378,19 +309,27 @@ static class SceneGenerator
         if (Doc.Timelines[Doc.CurrentTimeline].FindLayerIndex(LayerName).Count == 0) { Doc.Timelines[Doc.CurrentTimeline].AddNewLayer(LayerName, LayerType); }
     }
 
-    static string CapitalizeCharacterName(string name)
+    static void goToVoiceLine(this Document Doc, string inputString)
     {
-        string[] words = name.Split('_');
-        string capitalized = "";
-        foreach (var word in words)
+        int LineIndex = int.Parse(inputString.Substring(3, 3));
+        int SceneIndex = (int)(Math.Ceiling((double)LineIndex / (double)SingletonConfig.Instance.ChunkSize)) - 1;
+
+        Timeline CurrentTimeline = Doc.Timelines[SceneIndex];
+        Layer TextLayer = CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("TEXT")[0]];
+
+        for (int i = 0; i < TextLayer.KeyFrames.Count; i++)
         {
-            capitalized += char.ToUpper(word[0]) + word.Substring(1) + " ";
+            if (TextLayer.KeyFrames[i].Name == inputString)
+            {
+                CurrentTimeline.CurrentFrame = TextLayer.KeyFrames[i].StartFrame;
+                break;
+            }
         }
-        return capitalized.Trim();
     }
 
     static void ImportRigs(this Document doc, string SceneData)
     {
+        // <!> ViewMode ambiguity
         SingletonConfig config = SingletonConfig.Instance;
         CharacterConfig RigConfig = config.GetCharacterConfig("Investigation");
 
@@ -401,8 +340,9 @@ static class SceneGenerator
 
         foreach (var dialogueKey in dialogueLines.Keys)
         {
-            string characterName = CapitalizeCharacterName(dialogueLines[dialogueKey].CharacterName!);
-            charactersThatAppear.Add(CapitalizeCharacterName(characterName));
+            TextInfo textInfo = CultureInfo.CurrentCulture.TextInfo;
+            string CapitalizedCharacterName = textInfo.ToTitleCase(dialogueLines[dialogueKey].CharacterName!);
+            charactersThatAppear.Add(CapitalizedCharacterName);
         }
 
         foreach (var character in RigConfig.Characters)
@@ -516,7 +456,7 @@ static class SceneGenerator
 
             CurrentTimeline.Layers[TextLayerIndex].GetFrame(OperatingFrameIndex).Name = LineID;
         }
-        // remove one frame from the end of each chunk
+        // Remove one frame from the end of each chunk
         for (int i = 0; i < Doc.Timelines.Count; i++)
         {
             Timeline CurrentTimeline = Doc.GetTimeline(i);
@@ -525,7 +465,7 @@ static class SceneGenerator
         }
     }
 
-    static void PlaceRigs(this Document Doc, string SceneData)
+    static void PlaceRigs(this Document Doc, string SceneData, string ModeText)
     {
         SingletonConfig config = SingletonConfig.Instance;
 
@@ -554,7 +494,6 @@ static class SceneGenerator
             Doc.CurrentTimeline = (SceneIndex - 1);
             Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
 
-
             CreateLayerIfDoesntExist(Doc, "VECTOR_CHARACTERS", "folder");
             CreateLayerIfDoesntExist(Doc, CharacterLayerName);
 
@@ -569,14 +508,30 @@ static class SceneGenerator
             if (i != keys.Count - 1 && i % config.ChunkSize != config.ChunkSize - 1)
                 CurrentTimeline.Layers[CharacterLayerIndex].ConvertToKeyframes(OperatingFrameIndex + config.DefaultFrameDuration);
 
-            bool WasRigPlaced = Doc.Library.AddItemToDocument("RIGS/" + config.GetLibraryPathByName(Character), CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex));
+            CharacterConfig CurrentCharacterConfiguration = config.GetCharacterConfig(ModeText);
+
+            string LibraryPath = "";
+            int TransX = 0;
+            int TransY = 0;
+
+            foreach (var character in CurrentCharacterConfiguration.Characters)
+            {
+                if (Character.Contains(character.SimplifiedName))
+                {
+                    LibraryPath = character.LibraryPath;
+                    TransX = character.TransX;
+                    TransY = character.TransY;
+                }
+            }
+
+            bool WasRigPlaced = Doc.Library.AddItemToDocument("RIGS/" + LibraryPath, CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex));
             if (WasRigPlaced)
             {
                 SymbolInstance CharacterRig = (CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex).Elements[0] as SymbolInstance)!;
-                CharacterRig.TransformationPoint.X = 0;
-                CharacterRig.TransformationPoint.Y = 0;
+                CharacterRig.Matrix.Tx = TransX;
+                CharacterRig.Matrix.Ty = TransY;
                 CharacterRig.Loop = "single frame";
-                CharacterRig.FirstFrame = PoseAutomation(Doc, "RIGS/" + config.GetLibraryPathByName(Character), Emotion);
+                CharacterRig.FirstFrame = PoseAutomation(Doc, "RIGS/" + LibraryPath, Emotion);
             }
             else { throw new Exception("An error occured when attempting rig placement."); }
 
@@ -585,71 +540,12 @@ static class SceneGenerator
         }
     }
 
-    public class DoubleIntPair
-    {
-        public double DoubleValue { get; set; }
-        public int IntValue { get; set; }
-
-        public DoubleIntPair(double d, int i)
-        {
-            DoubleValue = d;
-            IntValue = i;
-        }
-    }
-    static double LevenshteinRatio(string s1, string s2)
-    {
-        int maxLen = Math.Max(s1.Length, s2.Length);
-        if (maxLen == 0)
-            return 1.0;
-
-        int distance = LevenshteinDistance(s1, s2);
-
-        return 1.0 - (double)distance / maxLen;
-    }
-
-    //Yeah a human wrote this
-    static int LevenshteinDistance(string s1, string s2)
-    {
-        int[,] matrix = new int[s1.Length + 1, s2.Length + 1];
-
-        for (int i = 0; i <= s1.Length; i++) { matrix[i, 0] = i; }
-
-        for (int j = 0; j <= s2.Length; j++) { matrix[0, j] = j; }
-
-        for (int i = 1; i <= s1.Length; i++)
-        {
-            for (int j = 1; j <= s2.Length; j++)
-            {
-                int cost = (s1[i - 1] == s2[j - 1]) ? 0 : 1;
-
-                matrix[i, j] = Math.Min(Math.Min(matrix[i - 1, j] + 1, matrix[i, j - 1] + 1),
-                                         matrix[i - 1, j - 1] + cost);
-            }
-        }
-
-        return matrix[s1.Length, s2.Length];
-    }
-    static DoubleIntPair FindMaxDouble(List<DoubleIntPair> pairs)
-    {
-        if (pairs.Count == 0)
-            throw new ArgumentException("List is empty");
-
-        DoubleIntPair maxPair = pairs[0];
-        foreach (var pair in pairs)
-        {
-            if (pair.DoubleValue > maxPair.DoubleValue)
-            {
-                maxPair = pair;
-            }
-        }
-        return maxPair;
-    }
-
     static int PoseAutomation(this Document Doc, string LibraryPath, string Emotion)
     {
         SymbolItem RigSymbol = (Doc.Library.Items[LibraryPath] as SymbolItem)!;
         Layer RigEE_Data = RigSymbol.Timeline.Layers[RigSymbol.Timeline.Layers.Count - 1];
 
+        // Assume nonexistent emotion is neutral.
         if (Emotion == "") { Emotion = "-"; }
 
         List<DoubleIntPair> pairs = new List<DoubleIntPair>();
@@ -657,6 +553,11 @@ static class SceneGenerator
         foreach (Frame ConsiderKeyframe in RigEE_Data.KeyFrames)
         {
             pairs.Add(new DoubleIntPair(LevenshteinRatio(Emotion, ConsiderKeyframe.Name), ConsiderKeyframe.StartFrame));
+        }
+
+        if (pairs.Count == 0)
+        {
+            Console.WriteLine("Warning: No EmotionEngine data for " + LibraryPath);
         }
 
         DoubleIntPair maxPair = FindMaxDouble(pairs);
@@ -742,6 +643,7 @@ static class SceneGenerator
             string fileContent = File.ReadAllText(filePath);
 
             // Extract the specific variable content using regex
+            // I can't believe this shit actually works
             string pattern = $@"var\s+{Regex.Escape(targetVariable)}\s*=\s*{{\s*(.*?)}};";
             Match match = Regex.Match(fileContent, pattern, RegexOptions.Singleline);
 
@@ -811,18 +713,6 @@ static class SceneGenerator
             Doc.PlaceSFX(SFX + ".wav", (int)(StartingPosition + (SFX_Offset * Doc.FrameRate)));
 
         }
-    }
-
-    static void TypewriterFormat(this Document Doc, Text TextOp, int LetterSpacing)
-    {
-        TextOp.SetTextAttr("face", "Suburga 2 Semi-condensed Regular");
-        TextOp.SetTextAttr("size", 80);
-        TextOp.SetTextAttr("fillColor", "#00FF33");
-        TextOp.SetTextAttr("letterSpacing", LetterSpacing);
-        TextOp.SetTextAttr("lineSpacing", 2);
-        TextOp.SetTextAttr("alignment", "left");
-        TextOp.FontRenderingMode = "standard";
-        TextOp.TextType = "static";
     }
 
     static void PlaceIntroTypewriter(this Document Doc, string SceneData)
@@ -940,7 +830,6 @@ static class SceneGenerator
         CurrentTimeline.InsertFrames(45, true, CurrentFrame);
         CurrentTimeline.ReorderLayer(TEXTBOX_LAYER_INDEX, CurrentTimeline.FindLayerIndex("SFX")[0], true);
         CurrentTimeline.DeleteLayer(CurrentTimeline.FindLayerIndex("Layer_1")[0]);
-
     }
 
     static void SceneFadeInOut(this Document Doc)
@@ -983,24 +872,6 @@ static class SceneGenerator
         }
     }
 
-    static void goToVoiceLine(this Document Doc, string inputString)
-    {
-        int LineIndex = int.Parse(inputString.Substring(3, 3));
-        int SceneIndex = (int)(Math.Ceiling((double)LineIndex / (double)SingletonConfig.Instance.ChunkSize)) - 1;
-
-        Timeline CurrentTimeline = Doc.Timelines[SceneIndex];
-        Layer TextLayer = CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("TEXT")[0]];
-
-        for (int i = 0; i < TextLayer.KeyFrames.Count; i++)
-        {
-            if (TextLayer.KeyFrames[i].Name == inputString)
-            {
-                CurrentTimeline.CurrentFrame = TextLayer.KeyFrames[i].StartFrame;
-                break;
-            }
-        }
-    }
-
     // <!> Person in the future who came here to fix the pointless Defense => Other Character fade:
     // The problem is not going from Defense => Other Character, because that is intended behavior, but when
     // the visible character is a leftover from when the Defense appeared. To illustrate:
@@ -1021,8 +892,9 @@ static class SceneGenerator
         var dialogueLines = deserializedJson.Dialogue!;
 
         var keys = dialogueLines.Keys;
-        string? previousCharacter = null; // Variable to store the previous character
+        string? previousCharacter = null;
         string? nextCharacter = null;
+
         for (int i = 0; i < keys.Count; i++)
         {
             var dialogueKey = keys.ElementAt(i);
@@ -1080,6 +952,96 @@ static class SceneGenerator
                 JamLayer.ConvertToKeyframes(CurrentTimeline.CurrentFrame + (JAM_FADE_DURATION / 2));
                 JamLayer.GetFrame(CurrentTimeline.CurrentFrame + (JAM_FADE_DURATION / 2)).ClearElements();
             }
+        }
+    }
+
+    static void PlaceDesks(this Document doc, string sceneData)
+    {
+        var characterToDeskMap = new Dictionary<string, SymbolConfig?>
+        {
+            {SingletonConfig.Instance.Defense!, SingletonConfig.Instance.DefenseDesk },
+            {SingletonConfig.Instance.Prosecutor!, SingletonConfig.Instance.ProsecutorDesk },
+            {SingletonConfig.Instance.Judge!, SingletonConfig.Instance.JudgeDesk },
+            {SingletonConfig.Instance.Cocouncil!, null }
+        };
+
+        foreach (string witness in SingletonConfig.Instance.Witnesses!)
+        {
+            characterToDeskMap.Add(witness, SingletonConfig.Instance.WitnessDesk);
+        }
+
+        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(sceneData, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        for (int i = 0; i < deserializedJson.Count; i++)
+        {
+            if (i % SingletonConfig.Instance.ChunkSize == 0)
+            {
+                doc.CurrentTimeline = i / SingletonConfig.Instance.ChunkSize;
+                doc.Timelines[doc.CurrentTimeline].CurrentFrame = 0;
+                doc.CreateLayerIfDoesntExist("DESKS");
+            }
+            var currentTimeline = doc.Timelines[doc.CurrentTimeline];
+            var currentLayer = currentTimeline.Layers[currentTimeline.FindLayerIndex("DESKS")[0]];
+            if (currentTimeline.CurrentFrame != 0)
+            {
+                currentLayer.InsertBlankKeyframe(currentTimeline.CurrentFrame);
+            }
+            string character = deserializedJson["Dialogue"].Values.ElementAt(i).CharacterName!;
+            SymbolConfig? desk = characterToDeskMap[character];
+            if (desk != null)
+            {
+                doc.Library.AddItemToDocument(desk.LibraryPath, currentLayer.GetFrame(currentTimeline.CurrentFrame), desk.Tx, desk.Ty);
+            }
+            currentTimeline.CurrentFrame += SingletonConfig.Instance.DefaultFrameDuration;
+        }
+    }
+
+    static void PlaceInvestigationBG(this Document Doc)
+    {
+        string PATH_TO_DEFAULT_BACKGROUND = "BACKGROUNDS/Background";
+
+        for (int SceneIndex = 0; SceneIndex < Doc.Timelines.Count; SceneIndex++)
+        {
+            Doc.CurrentTimeline = SceneIndex;
+            Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
+            CreateLayerIfDoesntExist(Doc, "BACKGROUNDS");
+            Doc.Library.AddItemToDocument(PATH_TO_DEFAULT_BACKGROUND, CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("BACKGROUNDS")[0]].GetFrame(0), 1280, 720);
+        }
+    }
+
+    static void PlaceCourtBGs(this Document doc, string sceneData)
+    {
+        var characterToBgMap = new Dictionary<string, SymbolConfig>
+        {
+            { SingletonConfig.Instance.Defense!, SingletonConfig.Instance.DefenseBackground },
+            {SingletonConfig.Instance.Prosecutor!, SingletonConfig.Instance.ProsecutorBackground },
+            {SingletonConfig.Instance.Judge!, SingletonConfig.Instance.JudgeBackground },
+            {SingletonConfig.Instance.Cocouncil!, SingletonConfig.Instance.CocouncilBackground }
+        };
+
+        foreach (string witness in SingletonConfig.Instance.Witnesses!)
+        {
+            characterToBgMap.Add(witness, SingletonConfig.Instance.WitnessBackground);
+        }
+
+        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(sceneData, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        for (int i = 0; i < deserializedJson.Count; i++)
+        {
+            if (i % SingletonConfig.Instance.ChunkSize == 0)
+            {
+                doc.CurrentTimeline = i / SingletonConfig.Instance.ChunkSize;
+                doc.Timelines[doc.CurrentTimeline].CurrentFrame = 0;
+                doc.CreateLayerIfDoesntExist("BACKGROUNDS");
+            }
+            var currentTimeline = doc.Timelines[doc.CurrentTimeline];
+            var currentLayer = currentTimeline.Layers[currentTimeline.FindLayerIndex("BACKGROUNDS")[0]];
+            if (currentTimeline.CurrentFrame != 0)
+            {
+                currentLayer.InsertBlankKeyframe(currentTimeline.CurrentFrame);
+            }
+            string character = deserializedJson["Dialogue"].Values.ElementAt(i).CharacterName!;
+            SymbolConfig bg = characterToBgMap[character];
+            doc.Library.AddItemToDocument(bg.LibraryPath, currentLayer.GetFrame(currentTimeline.CurrentFrame), bg.Tx, bg.Ty);
+            currentTimeline.CurrentFrame += SingletonConfig.Instance.DefaultFrameDuration;
         }
     }
 
@@ -1141,103 +1103,18 @@ static class SceneGenerator
         }
     }
 
-    static void PlaceDesks(this Document doc, string sceneData)
-    {
-        var characterToDeskMap = new Dictionary<string, SymbolConfig?>
-        {
-            {SingletonConfig.Instance.Defense!, SingletonConfig.Instance.DefenseDesk },
-            {SingletonConfig.Instance.Prosecutor!, SingletonConfig.Instance.ProsecutorDesk },
-            {SingletonConfig.Instance.Judge!, SingletonConfig.Instance.JudgeDesk },
-            {SingletonConfig.Instance.Cocouncil!, null }
-        };
-        foreach (string witness in SingletonConfig.Instance.Witnesses!)
-        {
-            characterToDeskMap.Add(witness, SingletonConfig.Instance.WitnessDesk);
-        }
-        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(sceneData, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-        for (int i = 0; i < deserializedJson.Count; i++)
-        {
-            if (i % SingletonConfig.Instance.ChunkSize == 0)
-            {
-                doc.CurrentTimeline = i / SingletonConfig.Instance.ChunkSize;
-                doc.Timelines[doc.CurrentTimeline].CurrentFrame = 0;
-                doc.CreateLayerIfDoesntExist("DESKS");
-            }
-            var currentTimeline = doc.Timelines[doc.CurrentTimeline];
-            var currentLayer = currentTimeline.Layers[currentTimeline.FindLayerIndex("DESKS")[0]];
-            if (currentTimeline.CurrentFrame != 0)
-            {
-                currentLayer.InsertBlankKeyframe(currentTimeline.CurrentFrame);
-            }
-            string character = deserializedJson["Dialogue"].Values.ElementAt(i).CharacterName!;
-            SymbolConfig? desk = characterToDeskMap[character];
-            if (desk != null)
-            {
-                doc.Library.AddItemToDocument(desk.LibraryPath, currentLayer.GetFrame(currentTimeline.CurrentFrame), desk.Tx, desk.Ty);
-            }
-            currentTimeline.CurrentFrame += SingletonConfig.Instance.DefaultFrameDuration;
-        }
-    }
-
-    static void PlaceInvestigationBG(this Document Doc)
-    {
-        string PATH_TO_DEFAULT_BACKGROUND = "BACKGROUNDS/Background";
-
-        for (int SceneIndex = 0; SceneIndex < Doc.Timelines.Count; SceneIndex++)
-        {
-            Doc.CurrentTimeline = SceneIndex;
-            Timeline CurrentTimeline = Doc.GetTimeline(Doc.CurrentTimeline);
-            CreateLayerIfDoesntExist(Doc, "BACKGROUNDS");
-            Doc.Library.AddItemToDocument(PATH_TO_DEFAULT_BACKGROUND, CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("BACKGROUNDS")[0]].GetFrame(0), 1280, 720);
-        }
-    }
-
-    static void PlaceCourtBGs(this Document doc, string sceneData)
-    {
-        var characterToBgMap = new Dictionary<string, SymbolConfig>
-        {
-            { SingletonConfig.Instance.Defense!, SingletonConfig.Instance.DefenseBackground },
-            {SingletonConfig.Instance.Prosecutor!, SingletonConfig.Instance.ProsecutorBackground },
-            {SingletonConfig.Instance.Judge!, SingletonConfig.Instance.JudgeBackground },
-            {SingletonConfig.Instance.Cocouncil!, SingletonConfig.Instance.CocouncilBackground }
-        };
-        foreach (string witness in SingletonConfig.Instance.Witnesses!)
-        {
-            characterToBgMap.Add(witness, SingletonConfig.Instance.WitnessBackground);
-        }
-        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(sceneData, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-        for (int i = 0; i < deserializedJson.Count; i++)
-        {
-            if (i % SingletonConfig.Instance.ChunkSize == 0)
-            {
-                doc.CurrentTimeline = i / SingletonConfig.Instance.ChunkSize;
-                doc.Timelines[doc.CurrentTimeline].CurrentFrame = 0;
-                doc.CreateLayerIfDoesntExist("BACKGROUNDS");
-            }
-            var currentTimeline = doc.Timelines[doc.CurrentTimeline];
-            var currentLayer = currentTimeline.Layers[currentTimeline.FindLayerIndex("BACKGROUNDS")[0]];
-            if (currentTimeline.CurrentFrame != 0)
-            {
-                currentLayer.InsertBlankKeyframe(currentTimeline.CurrentFrame);
-            }
-            string character = deserializedJson["Dialogue"].Values.ElementAt(i).CharacterName!;
-            SymbolConfig bg = characterToBgMap[character];
-            doc.Library.AddItemToDocument(bg.LibraryPath, currentLayer.GetFrame(currentTimeline.CurrentFrame), bg.Tx, bg.Ty);
-            currentTimeline.CurrentFrame += SingletonConfig.Instance.DefaultFrameDuration;
-        }
-    }
-
     static void GenerateScene(string PathToOperatingDocument, string PathToSceneData, string PathToCFGs, string PathToLines)
     {
-        // <!> If you can figure out what type the deserialized JSON is, you can deserialize it here
-        // and pass it in to the required functions instead of deserializing at the start of each function.
-
-        // <!> It's a SceneData type now.
-
         var deserializedJson = JsonSerializer.Deserialize<SceneData>(File.ReadAllText(PathToSceneData))!;
+        var ReadDialogue = deserializedJson.Dialogue!;
+        var ReadSFX = deserializedJson.SFX!;
+        var ReadTypewriter = deserializedJson.Typewriter!;
         var ReadDataLabel = deserializedJson.DataLabels!;
 
-        Trace.Listeners.Add(new ConsoleTraceListener());
+        // Stupid quick fix
+        TextInfo textInfo = CultureInfo.CurrentCulture.TextInfo;
+        ReadDataLabel.ModeText = textInfo.ToTitleCase(ReadDataLabel.ModeText.ToLower());
+
         Trace.AutoFlush = true;
         Stopwatch stpw = new Stopwatch();
 
@@ -1251,13 +1128,16 @@ static class SceneGenerator
         config.PathToCFGs = PathToCFGs;
         config.PathToLines = PathToLines;
 
+        // THIS IS WHERE WE SET THE MODE
+        config.ViewMode = ReadDataLabel.ModeText;
+
         // Extract the protagonist via arbitrary rules
-        // <!> This code snippet may need heavy tending to as the case goes on.
+        // <!> This code snippet may need heavy tending to as the series progresses.
         var characterSet = new HashSet<string>();
-        var dialogueLines = deserializedJson.Dialogue!;
-        foreach (var dialogueKey in dialogueLines.Keys)
+
+        foreach (var dialogueKey in ReadDialogue.Keys)
         {
-            characterSet.Add(dialogueLines[dialogueKey].CharacterName!);
+            characterSet.Add(ReadDialogue[dialogueKey].CharacterName!);
         }
 
         if (characterSet.Contains("Apollo"))
@@ -1269,6 +1149,11 @@ static class SceneGenerator
             config.Defense = "Sonata";
         }
 
+        // After careful deliberation and realizing how short I am on time, I am not refactoring all this shit to take in
+        // the correct class from just one deserialized JSON here. But it is possible now!
+
+        Trace.WriteLine("[!] Now working " + ReadDataLabel.EpisodeText + " " + ReadDataLabel.SceneText);
+
         string json = File.ReadAllText(config.PathToSceneData!);
         Document Doc = new(config.PathToOperatingDocument!);
 
@@ -1276,98 +1161,42 @@ static class SceneGenerator
         stpw.Stop();
         Trace.WriteLine("Setup took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
-        stpw.Start();
 
-        // Rig Importing
-        Doc.ImportRigs(json);
-        stpw.Stop();
-        Trace.WriteLine("Rig Import took " + stpw.ElapsedMilliseconds + " ms.");
+        // "More human readable"
+        MeasureAndTrace(doc => doc.ImportRigs(json), Doc, "Importing Rigs");
+        MeasureAndTrace(doc => PlaceText(doc, json), Doc, "Text");
+        // <!> Rigs need a default Matrix Tx & Ty constructor, for courtroom modes. Default to 0, 0 as we do now.
+        if (!config.SkipRigs) { MeasureAndTrace(doc => PlaceRigs(Doc, json, ReadDataLabel.ModeText), Doc, "Rigs"); };
+        MeasureAndTrace(doc => doc.InsertLinesChunked(config.PathToLines!), Doc, "Inserting Chunked Lines");
 
-        // Text Placement
-        stpw.Start();
-        PlaceText(Doc, json);
-        stpw.Stop();
-        Trace.WriteLine("Text Placement took " + stpw.ElapsedMilliseconds + " ms.");
-        stpw.Reset();
-
-        // Rig Placement
-        stpw.Start();
-        if (!config.SkipRigs) { PlaceRigs(Doc, json); };
-        stpw.Stop();
-        Trace.WriteLine("Rig Placement took " + stpw.ElapsedMilliseconds + " ms.");
-        stpw.Reset();
-
-        // Line Insertion
-        stpw.Start();
-        Doc.InsertLinesChunked(config.PathToLines!);
-        stpw.Stop();
-        Trace.WriteLine("Line Insertion took " + stpw.ElapsedMilliseconds + " ms.");
-        stpw.Reset();
-
-        // Automatic Lipsyncing
-        stpw.Start();
         string[] IgnoreLipsync = new string[] { config.Defense!.ToUpper() };
-        Doc.LipsyncChunkedDocument(config.PathToCFGs!, IgnoreLipsync);
-        stpw.Stop();
-        Trace.WriteLine("Lipsyncing took " + stpw.ElapsedMilliseconds + " ms.");
-        stpw.Reset();
+        MeasureAndTrace(doc => Doc.LipsyncChunkedDocument(config.PathToCFGs!, IgnoreLipsync), Doc, "Lipsyncing");
 
-        // Organize Layers
-        stpw.Start();
         string[] LayerOrder = new string[] { "FLASH", "INTERJECTION", "FADE", "GAVEL", "TEXT", "TEXTBOX", "EVIDENCE", "DESKS", "JAM_MASK", "BACKGROUNDS" };
-        OrganizeLayerStructure(Doc, LayerOrder);
-        stpw.Stop();
-        Trace.WriteLine("Layer Organization took " + stpw.ElapsedMilliseconds + " ms.");
-        stpw.Reset();
+        MeasureAndTrace(doc => OrganizeLayerStructure(Doc, LayerOrder), Doc, "Organizing Layers");
 
-        // Jam Mask Fading
-        stpw.Start();
-        JamMaskFades(Doc, json);
-        stpw.Stop();
-        Trace.WriteLine("Jam Mask Fading took " + stpw.ElapsedMilliseconds + " ms.");
-        stpw.Reset();
+        if (config.ViewMode == "Investigation") { MeasureAndTrace(doc => JamMaskFades(Doc, json), Doc, "Jam Fading"); }
 
-        // Typewriter Intro
-        PlaceIntroTypewriter(Doc, json);
+        MeasureAndTrace(doc => PlaceIntroTypewriter(Doc, json), Doc, "Typewriter Intro");
         Doc.ReorderScene(Doc.Timelines.Count - 1, 0, true);
-        stpw.Stop();
-        Trace.WriteLine("Typewriter Automation took " + stpw.ElapsedMilliseconds + " ms.");
-        stpw.Reset();
 
-        // BG Placement
-        stpw.Start();
-        PlaceInvestigationBG(Doc);
-        stpw.Stop();
-        Trace.WriteLine("Background Placement took " + stpw.ElapsedMilliseconds + " ms.");
-        stpw.Reset();
+        if (config.ViewMode == "Investigation")
+        {
+            MeasureAndTrace(doc => PlaceInvestigationBG(Doc), Doc, "Investigation Backgrounds");
+        } else if (config.ViewMode == "Courtroom")
+        {
+            MeasureAndTrace(doc => PlaceCourtBGs(Doc, json), Doc, "Courtroom Backgrounds");
+        } else if (config.ViewMode == "Logic Chess")
+        {
+            MeasureAndTrace(doc => PlaceCourtBGs(Doc, json), Doc, "Courtroom Backgrounds");
+            // <!> May want to nest some additional patching logic in here for forcing the LC scenes to work as Courtroom scenes
+            // i.e. binding the first appearing non-config.Defense character to config.Prosecution. Assuming they're the LC opponent.
+        }
 
-        //SFX Automation
-        stpw.Start();
-        ParseSFX(Doc, json);
-        stpw.Stop();
-        Trace.WriteLine("SFX Placement took " + stpw.ElapsedMilliseconds + " ms.");
-        stpw.Reset();
-
-        // Blink Automation
-        stpw.Start();
-        Doc.AutomaticBlinking(3);
-        stpw.Stop();
-        Trace.WriteLine("Automatic Blinking took " + stpw.ElapsedMilliseconds + " ms.");
-        stpw.Reset();
-
-        // Scene Fading
-        stpw.Start();
-        SceneFadeInOut(Doc);
-        stpw.Stop();
-        Trace.WriteLine("Scene Fading took " + stpw.ElapsedMilliseconds + " ms.");
-        stpw.Reset();
-
-        // Scene Fading
-        stpw.Start();
-        PlaceLabels(Doc, ReadDataLabel.EpisodeText!, ReadDataLabel.SceneText!, ReadDataLabel.ModeText!);
-        stpw.Stop();
-        Trace.WriteLine("Label Placing took " + stpw.ElapsedMilliseconds + " ms.");
-        stpw.Reset();
+        MeasureAndTrace(doc => ParseSFX(Doc, json), Doc, "SFX");
+        MeasureAndTrace(doc => Doc.AutomaticBlinking(3), Doc, "Blinking");
+        MeasureAndTrace(doc => SceneFadeInOut(Doc), Doc, "Scene Fading");
+        MeasureAndTrace(doc => PlaceLabels(Doc, ReadDataLabel.EpisodeText!, ReadDataLabel.SceneText!, ReadDataLabel.ModeText!.ToUpper()), Doc, "Labels");
 
         // Parent SFX track.
         for (int i = 0; i < Doc.Timelines.Count; i++)
@@ -1388,12 +1217,13 @@ static class SceneGenerator
         stpw.Stop();
         Trace.WriteLine("Document Saving took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
-
         Trace.Close();
     }
 
+    // <!> Allow skipping ARGs EVENTUALLY
     static void Main(string[] args)
     {
+        Trace.Listeners.Add(new ConsoleTraceListener());
         string RootOperatingFolder = "";
         bool displayHelp = false;
 
@@ -1407,12 +1237,11 @@ static class SceneGenerator
             }
             else if (i == 0)
             {
-                // Process FLAs
                 RootOperatingFolder = arg;
             }
         }
 
-        // <!> Technically can run within the same directory. Keep this for testing purposes until final build.
+        // <!> Technically should run within the same directory. Keep this for testing purposes until final build.
         if (displayHelp)
         {
             Console.WriteLine("");
@@ -1474,6 +1303,5 @@ static class SceneGenerator
                 GenerateScene(NewFLA, file, PathToCFGs, PathToLines);
             }
         }
-
     }
 }
