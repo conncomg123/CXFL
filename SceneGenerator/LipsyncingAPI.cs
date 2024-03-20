@@ -259,11 +259,16 @@ static class LipsyncAPI
         PlaceKeyframes(Doc, startFrame, layerIndex, poseStartFrame, phonemes);
     }
 
-    public static void LipsyncChunkedDocument(this Document Doc, string PathToCFGs, string[] IgnoreCharacters = null)
+    public static void LipsyncChunkedDocument(this Document Doc, string PathToCFGs, string[] IgnoreCharacters = null, string[] IgnoreLines = null)
     {
         if (IgnoreCharacters == null)
         {
             IgnoreCharacters = new string[0]; // Default to an empty string list if null is passed
+        }
+
+        if (IgnoreLines == null)
+        {
+            IgnoreLines = new string[0]; // Default to an empty string list if null is passed
         }
 
         for (int OperatingScene = 0; OperatingScene < Doc.Timelines.Count; OperatingScene++)
@@ -278,6 +283,7 @@ static class LipsyncAPI
 
                 if (!IgnoreCharacters.Contains(ExpectedCharacterLayerName))
                 {
+                    if (IgnoreLines.Contains(LineID)) { continue; }
                     int ExpectedCharacterLayerIndex = CurrentTimeline.FindLayerIndex(ExpectedCharacterLayerName)[0];
                     PlaceKeyframes(Doc, ConsiderKeyframe.StartFrame, ExpectedCharacterLayerIndex, (CurrentTimeline.Layers[ExpectedCharacterLayerIndex].GetFrame(ConsiderKeyframe.StartFrame).Elements[0] as SymbolInstance)!.FirstFrame, ParseCFG(PathToCFGs + "\\" + LineID + ".cfg"));
                 }

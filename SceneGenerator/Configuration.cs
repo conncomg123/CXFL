@@ -153,7 +153,8 @@ public sealed class SingletonConfig
         config.AddCharacter("Courtroom", "Luna", "COURTROOM_Luna.fla", "LunaProsecutor►", "LunaProsecutor►/LunaProsecutor►PoseScaled");
         config.AddCharacter("Courtroom", "Sonata", "COURTROOM_Sonata.fla", "SonataDefenseBench►", "SonataDefenseBench►/SonataDefenseBench►ScaledPoses", 1280, 775);
         config.AddCharacter("Courtroom", "Trixie", "COURTROOM_Trixie.fla", "TrixieProsecution►", "TrixieProsecution►/TrixieProsecution►ScaledPoses");
-        config.AddCharacter("Courtroom", "Judge", "COURTROOM_Judge.fla", "JUDGE", "JUDGE/JUDGE►ScaledPoses");
+        config.AddCharacter("Courtroom", "Judge", "COURTROOM_Judge.fla", "JUDGE", "JUDGE/JUDGE►ScaledPoses", -9, 0);
+        config.AddCharacter("Courtroom", "Phoenix", "CO-COUNCIL_Phoenix.fla", "WRIGHT►", "WRIGHT►/PhoenixScaledPoses");
 
         config.AddCharacter("Investigation", "Amber", "INVESTIGATION_AmberGleam.fla", "AmberGleam►", "AmberGleam►/AmberGleam►PoseScaled");
         config.AddCharacter("Investigation", "Applejack", "INVESTIGATION_Applejack.fla", "APPLEJACK►", "APPLEJACK►/APPLEJACK►PoseScaled");
