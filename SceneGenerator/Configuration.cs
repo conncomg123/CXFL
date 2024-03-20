@@ -44,17 +44,17 @@ public sealed class SingletonConfig
     public string? PathToLines { get; set; }
 
     // Backgrounds
-    public SymbolConfig DefenseBackground { get; } = new SymbolConfig("BACKGROUNDS/Courtroom-Tinted", 7254, -738);
-    public SymbolConfig ProsecutorBackground { get; } = new SymbolConfig("BACKGROUNDS/Courtroom-Tinted", -4694, -738);
+    public SymbolConfig DefenseBackground { get; } = new SymbolConfig("BACKGROUNDS/Courtroom-Tinted", 5973.3, -23.55);
+    public SymbolConfig ProsecutorBackground { get; } = new SymbolConfig("BACKGROUNDS/Courtroom-Tinted", -5973.3, -23.55);
     public SymbolConfig JudgeBackground { get; } = new SymbolConfig("BACKGROUNDS/JudgeBG-Tinted", 1280, 720);
     public SymbolConfig CocouncilBackground { get; } = new SymbolConfig("BACKGROUNDS/CocouncilBG-Tinted", 1280, 720);
-    public SymbolConfig WitnessBackground { get; } = new SymbolConfig("BACKGROUNDS/Courtroom-Tinted", 1280, 720);
+    public SymbolConfig WitnessBackground { get; } = new SymbolConfig("BACKGROUNDS/Courtroom-Tinted", 0, -23.55);
 
     // Desks
-    public SymbolConfig DefenseDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/DEFENSE-BENCH", 1180, 1290);
-    public SymbolConfig ProsecutorDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/PROSECUTION-BENCH", 1390, 1290);
+    public SymbolConfig DefenseDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/DEFENSE-BENCH", 560, 1290);
+    public SymbolConfig ProsecutorDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/PROSECUTION-BENCH", 1220, 1290);
     public SymbolConfig JudgeDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/Judge-Table-Final", 1280, 720);
-    public SymbolConfig WitnessDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/WitnessStand", 1280, 720);
+    public SymbolConfig WitnessDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/WitnessStand", 1280, 735);
 
     // Set up class configurations
     public Dictionary<string, CharacterConfig> characterConfigs = new Dictionary<string, CharacterConfig>();
@@ -121,7 +121,7 @@ public sealed class SingletonConfig
         SingletonConfig config = SingletonConfig.Instance;
 
         //Core Settings
-        config.ViewMode = "Investigation";
+        config.ViewMode = "";
         config.DefaultFrameDuration = 24;
 
         config.Defense = "";
@@ -150,9 +150,10 @@ public sealed class SingletonConfig
         // Characters
         config.AddCharacter("Courtroom", "Twilight", "CO-COUNCIL_Twilight.fla", "TWILIGHT SPARKLE/TwilightCouncil►", "TWILIGHT SPARKLE/TwilightCouncil►/TwilightCouncil►All");
         config.AddCharacter("Courtroom", "Celestia", "COURTROOM_Celestia.fla", "CELESTIA►", "CELESTIA►/Celestia►ScaledPoses");
-        config.AddCharacter("Courtroom", "Luna", "COURTROOM_Luna.fla", "RIGS/VECTOR CHARACTERS/LunaProsecutor►", "RIGS/VECTOR CHARACTERS/LunaProsecutor►/LunaProsecutor►PoseScaled");
-        config.AddCharacter("Courtroom", "Sonata", "COURTROOM_Sonata.fla", "SonataDefenseBench►", "SonataDefenseBench►/SonataDefenseBench►ScaledPoses");
+        config.AddCharacter("Courtroom", "Luna", "COURTROOM_Luna.fla", "LunaProsecutor►", "LunaProsecutor►/LunaProsecutor►PoseScaled");
+        config.AddCharacter("Courtroom", "Sonata", "COURTROOM_Sonata.fla", "SonataDefenseBench►", "SonataDefenseBench►/SonataDefenseBench►ScaledPoses", 1280, 775);
         config.AddCharacter("Courtroom", "Trixie", "COURTROOM_Trixie.fla", "TrixieProsecution►", "TrixieProsecution►/TrixieProsecution►ScaledPoses");
+        config.AddCharacter("Courtroom", "Judge", "COURTROOM_Judge.fla", "JUDGE", "JUDGE/JUDGE►ScaledPoses");
 
         config.AddCharacter("Investigation", "Amber", "INVESTIGATION_AmberGleam.fla", "AmberGleam►", "AmberGleam►/AmberGleam►PoseScaled");
         config.AddCharacter("Investigation", "Applejack", "INVESTIGATION_Applejack.fla", "APPLEJACK►", "APPLEJACK►/APPLEJACK►PoseScaled");
@@ -168,11 +169,12 @@ public sealed class SingletonConfig
 
         config.AddCharacter("Investigation", "Overall", "INVESTIGATION_OverallConcept.fla", "Overall►", "Overall►/Overall►PoseScaled");
         config.AddCharacter("Investigation", "Philo Reed", "INVESTIGATION_PhiloReed.fla", "PhiloReed►", "PhiloReed►/PoseScaled");
+        config.AddCharacter("Investigation", "Philo", "INVESTIGATION_PhiloReed.fla", "PhiloReed►", "PhiloReed►/PhiloReed►PoseScaled");
         config.AddCharacter("Investigation", "Phoenix", "INVESTIGATION_Phoenix.fla", "Wright►", "Wright►/Wright►ScaledPoses");
         config.AddCharacter("Investigation", "Pinkie", "INVESTIGATION_Pinkie.fla", "PINKIE_PIE►", "PINKIE_PIE►PoseScaled");
-        config.AddCharacter("Investigation", "Private Eye", "INVESTIGATION_PrivateEye.fla", "PRIVATE_EYE►", "PRIVATE_EYE►/Private►PoseScaled");
+        config.AddCharacter("Investigation", "Private Eye", "INVESTIGATION_PrivateEye.fla", "PRIVATE_EYE►", "PRIVATE_EYE►/Private►PoseScaled", 365, -344);
 
-        config.AddCharacter("Investigation", "Rainbow Dash", "INVESTIGATION_Rainbow_Dash.fla", "RAINBOW►", "RAINBOW►/RAINBOW►PoseScaled");
+        config.AddCharacter("Investigation", "Rainbow", "INVESTIGATION_Rainbow_Dash.fla", "RAINBOW►", "RAINBOW►/RAINBOW►PoseScaled");
         config.AddCharacter("Investigation", "Rarity", "INVESTIGATION_Rarity.fla", "RARITY►", "RARITY►/Rarity►PoseScaled");
         config.AddCharacter("Investigation", "Spike", "INVESTIGATION_Spike.fla", "SPIKE►", "SPIKE►/Spike►PoseScaled");
         config.AddCharacter("Investigation", "Spitfire", "INVESTIGATION_Spitfire.fla", "Spitfire►", "Spitfire►/Spitfire►ScaledPoses");
