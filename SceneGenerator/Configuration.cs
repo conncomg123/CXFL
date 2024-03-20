@@ -44,17 +44,17 @@ public sealed class SingletonConfig
     public string? PathToLines { get; set; }
 
     // Backgrounds
-    public SymbolConfig DefenseBackground { get; } = new SymbolConfig("BACKGROUNDS/Full-Courtroom", 7254, -738);
-    public SymbolConfig ProsecutorBackground { get; } = new SymbolConfig("BACKGROUNDS/Full-Courtroom", -4694, -738);
-    public SymbolConfig JudgeBackground { get; } = new SymbolConfig("BACKGROUNDS/JudgeBackground", 1280, 720);
-    public SymbolConfig CocouncilBackground { get; } = new SymbolConfig("BACKGROUNDS/CocouncilBG", 1280, 720);
-    public SymbolConfig WitnessBackground { get; } = new SymbolConfig("BACKGROUNDS/Full-Courtroom", 1280, 720);
+    public SymbolConfig DefenseBackground { get; } = new SymbolConfig("BACKGROUNDS/Courtroom-Tinted", 7254, -738);
+    public SymbolConfig ProsecutorBackground { get; } = new SymbolConfig("BACKGROUNDS/Courtroom-Tinted", -4694, -738);
+    public SymbolConfig JudgeBackground { get; } = new SymbolConfig("BACKGROUNDS/JudgeBG-Tinted", 1280, 720);
+    public SymbolConfig CocouncilBackground { get; } = new SymbolConfig("BACKGROUNDS/CocouncilBG-Tinted", 1280, 720);
+    public SymbolConfig WitnessBackground { get; } = new SymbolConfig("BACKGROUNDS/Courtroom-Tinted", 1280, 720);
 
     // Desks
-    public SymbolConfig DefenseDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/desk_Defense", 1180, 1290);
-    public SymbolConfig ProsecutorDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/desk_Prosecution", 1390, 1290);
-    public SymbolConfig JudgeDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/desk_Judge", 1280, 720);
-    public SymbolConfig WitnessDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/desk_Witness", 1280, 720);
+    public SymbolConfig DefenseDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/DEFENSE-BENCH", 1180, 1290);
+    public SymbolConfig ProsecutorDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/PROSECUTION-BENCH", 1390, 1290);
+    public SymbolConfig JudgeDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/Judge-Table-Final", 1280, 720);
+    public SymbolConfig WitnessDesk { get; } = new SymbolConfig("OTHER ASSETS/DESKS/WitnessStand", 1280, 720);
 
     // Set up class configurations
     public Dictionary<string, CharacterConfig> characterConfigs = new Dictionary<string, CharacterConfig>();
@@ -121,14 +121,14 @@ public sealed class SingletonConfig
         SingletonConfig config = SingletonConfig.Instance;
 
         //Core Settings
-        config.ViewMode = "InvestigationMode";
+        config.ViewMode = "Investigation";
         config.DefaultFrameDuration = 24;
 
-        config.Defense = "Apollo";
-        config.Prosecutor = "Luna";
-        config.Judge = "Judge";
-        config.Cocouncil = "Phoenix";
-        config.Witnesses = new List<string> { "Witness 1, Witness 2, Witness 3" };
+        config.Defense = "";
+        config.Prosecutor = "";
+        config.Judge = "";
+        config.Cocouncil = "";
+        config.Witnesses = new List<string> { };
 
         config.EEBias = "";
         config.ChunkSize = 70;

@@ -36,8 +36,6 @@ static class SFXAPI
             "FLASH", "INTERJECTION", "FADE", "GAVEL", "EVIDENCE", "TEXT"
         };
 
-    // Will only "screenshake" if Layer_1 is layer 0
-
     public static void PlaceSFX(this Document Doc, string sfxName, int FrameIndex)
     {
 
