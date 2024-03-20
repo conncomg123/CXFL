@@ -1264,10 +1264,10 @@ static class SceneGenerator
             MeasureAndTrace(doc => Doc.LipsyncChunkedDocument(config.PathToCFGs!, IgnoreLipsync, IgnoreLines), Doc, "Lipsyncing"); 
         }
 
-        string[] LayerOrder = new string[] { "FLASH", "INTERJECTION", "FADE", "GAVEL", "TEXT", "TEXTBOX", "EVIDENCE", "DESKS", "JAM_MASK", "BACKGROUNDS" };
+        string[] LayerOrder = new string[] { "FLASH", "INTERJECTION", "FADE", "GAVEL", "TEXT", "TEXTBOX", "EVIDENCE", "DESKS", "JAM_MASK", "BACKGROUNDS", "SFX" };
         MeasureAndTrace(doc => OrganizeLayerStructure(Doc, LayerOrder), Doc, "Organizing Layers");
 
-        if (config.ViewMode == "Investiga   tion") { MeasureAndTrace(doc => JamMaskFades(Doc, json), Doc, "Jam Fading"); }
+        if (config.ViewMode == "Investigation") { MeasureAndTrace(doc => JamMaskFades(Doc, json), Doc, "Jam Fading"); }
 
         MeasureAndTrace(doc => PlaceIntroTypewriter(Doc, json), Doc, "Typewriter Intro");
         Doc.ReorderScene(Doc.Timelines.Count - 1, 0, true);
@@ -1278,14 +1278,16 @@ static class SceneGenerator
         MeasureAndTrace(doc => PlaceLabels(Doc, ReadDataLabel.EpisodeText!, ReadDataLabel.SceneText!, ReadDataLabel.ModeText!.ToUpper()), Doc, "Labels");
 
         // <!> Parent SFX track. Why is this fucking up now?
-        //for (int i = 0; i < Doc.Timelines.Count; i++)
-        //{
-        //    if (!Doc.GetTimeline(i).Name.Contains("Scene")) continue;
-        //    Doc.CurrentTimeline = i;
-        //    Timeline CurrentTimeline = Doc.Timelines[i];
-        //    CurrentTimeline.ReorderLayer(CurrentTimeline.FindLayerIndex("SFX")[0], CurrentTimeline.FindLayerIndex("AUDIO")[0], false);
-        //    CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("SFX")[0]].ParentLayerIndex = CurrentTimeline.FindLayerIndex("AUDIO")[0];
-        //}
+        // Answer: Don't run this shit on typewriter scenes
+        for (int i = 1; i < Doc.Timelines.Count; i++)
+        {
+            if (!Doc.GetTimeline(i).Name.Contains("Scene")) continue;
+            Doc.CurrentTimeline = i;
+            Timeline CurrentTimeline = Doc.Timelines[i];
+            CurrentTimeline.CurrentFrame = 0;
+            CurrentTimeline.ReorderLayer(CurrentTimeline.FindLayerIndex("SFX")[0], CurrentTimeline.FindLayerIndex("AUDIO")[0], false);
+            CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("SFX")[0]].ParentLayerIndex = CurrentTimeline.FindLayerIndex("AUDIO")[0];
+        }
 
         // User starts at the start.
         Doc.CurrentTimeline = 1;
