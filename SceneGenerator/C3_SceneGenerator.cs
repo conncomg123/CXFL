@@ -700,7 +700,8 @@ static class SceneGenerator
                 if (FrameToConsider.Name == dialogueKey) { StartingPosition = FrameToConsider.StartFrame; }
             }
 
-            Doc.PlaceSFX(SFX + ".wav", (int)(StartingPosition + (SFX_Offset * Doc.FrameRate)));
+            // 2 frame offset to make it align a little better ;)
+            Doc.PlaceSFX(SFX + ".wav", (int)(StartingPosition + (SFX_Offset * Doc.FrameRate) + 2));
 
         }
     }
@@ -1242,7 +1243,25 @@ static class SceneGenerator
         else 
         {
             string[] IgnoreLipsync = new string[] { "GALLERY PONY 1", "GALLERY PONY 2", "GALLERY PONY 3", "GALLERY PONY 4", "GALLERY PONY 5", "GALLERY PONY 6", "GALLERY PONY 7", "GALLERY PONY 8", "GALLERY PONY 9" };
-            MeasureAndTrace(doc => Doc.LipsyncChunkedDocument(config.PathToCFGs!, IgnoreLipsync), Doc, "Lipsyncing"); 
+            string[] IgnoreLines = new string[] { };
+
+            var dialogueLines = deserializedJson.Dialogue;
+
+            foreach (var dialogueKey in dialogueLines!.Keys)
+            {
+                var dialogueLine = dialogueLines[dialogueKey];
+                string LineID = dialogueKey;
+                string Dialogue = dialogueLine.LineText!;
+
+                if (Dialogue.Contains("("))
+                {
+                    // Add the LineID to the IgnoreLines array
+                    Array.Resize(ref IgnoreLines, IgnoreLines.Length + 1);
+                    IgnoreLines[IgnoreLines.Length - 1] = LineID;
+                }
+            }
+
+            MeasureAndTrace(doc => Doc.LipsyncChunkedDocument(config.PathToCFGs!, IgnoreLipsync, IgnoreLines), Doc, "Lipsyncing"); 
         }
 
         string[] LayerOrder = new string[] { "FLASH", "INTERJECTION", "FADE", "GAVEL", "TEXT", "TEXTBOX", "EVIDENCE", "DESKS", "JAM_MASK", "BACKGROUNDS" };
