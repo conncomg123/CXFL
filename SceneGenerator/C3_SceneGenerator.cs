@@ -13,14 +13,7 @@ namespace SceneGenerator;
 // 3. Interjection! + Courtroom swipe support for SFX api, if Courtmode.
 // 5. Typewriter exclusion for (Not Shown) [Do this when making 3-4]
 // ∞. Do a full test [For 3-4]
-// <!> Get the Pinkerton Detective Agency to see if these lines are a-ligned or not (They probably aren't)
-
-// <!> Code sustainability ToDo:
-// 1. Deserialize the JSON one time, as a SceneData object, and pass that into functions as needed. This will clear up deserializing clutter.
-// 2. Move things like Typewriting, Rig Importing, to their own API files for code neatness. (If it doesn't require the SceneData class for iteration)
-// 4. For error handling for Voice Lines & Lipsyncing, let's first check if the line is non-alphabet (!? !! ...) dialogue, normalize error styling
-// 5. Some code comments in the more schizophrenic places, avoid using generic "type-data" variables
-// 6. Move Config function into other file <?>
+// <!> JamFades are 6 frames off
 
 public class NameswapConfig
 {
@@ -176,6 +169,7 @@ static class SceneGenerator
         config.AddCharacter("Courtroom", "Luna", "COURTROOM_Luna.fla", "RIGS/VECTOR CHARACTERS/LunaProsecutor►", "RIGS/VECTOR CHARACTERS/LunaProsecutor►/LunaProsecutor►PoseScaled");
         config.AddCharacter("Courtroom", "Sonata", "COURTROOM_Sonata.fla", "SonataDefenseBench►", "SonataDefenseBench►/SonataDefenseBench►ScaledPoses");
         config.AddCharacter("Courtroom", "Trixie", "COURTROOM_Trixie.fla", "TrixieProsecution►", "TrixieProsecution►/TrixieProsecution►ScaledPoses");
+        config.AddCharacter("Courtroom", "Judge", "COURTROOM_Judge.fla", "JUDGE", "JUDGE/JUDGE►ScaledPoses");
 
         config.AddCharacter("Investigation", "Amber", "INVESTIGATION_AmberGleam.fla", "AmberGleam►", "AmberGleam►/AmberGleam►PoseScaled");
         config.AddCharacter("Investigation", "Applejack", "INVESTIGATION_Applejack.fla", "APPLEJACK►", "APPLEJACK►/APPLEJACK►PoseScaled");
@@ -203,7 +197,7 @@ static class SceneGenerator
 
         config.AddCharacter("Investigation", "Sweetie Belle", "INVESTIGATION_SweetieBelle.fla", "SWEETIEBELLE", "SWEETIEBELLE/SweetieBelle►ScaledPoses");
         config.AddCharacter("Investigation", "Trixie", "INVESTIGATION_Trixie.fla", "Trixie►", "Trixie►/Trixie►ScaledPoses");
-        config.AddCharacter("Investigation", "Trucy", "INVESTIGATION_Trucy.fla", "Trucy►", "Trucy►/Trucy►ScaledPoses", 500, 500);
+        config.AddCharacter("Investigation", "Trucy", "INVESTIGATION_Trucy.fla", "Trucy►", "Trucy►/Trucy►ScaledPoses");
         config.AddCharacter("Investigation", "Twilight", "INVESTIGATION_Twilight.fla", "TWILIGHT►", "TWILIGHT►/Twilight►PoseScaled");
         config.AddCharacter("LogicChess", "Sonata", "LOGICCHESS_Sonata.fla", "SonataLogicChess►", "SonataLogicChess►/SonataLogicChess►ScaledPoses");
 
@@ -277,11 +271,10 @@ static class SceneGenerator
         TextOp.TextType = "static";
     }
 
-    static void InputValidation(this Document Doc)
+    static void InputValidation(this Document Doc, string ModeText)
     {
         SingletonConfig config = SingletonConfig.Instance;
-        // <!> Mode ambiguity
-        CharacterConfig RigConfig = config.GetCharacterConfig("Investigation");
+        CharacterConfig RigConfig = config.GetCharacterConfig(ModeText);
 
         foreach (var character in RigConfig.Characters)
         {
@@ -327,11 +320,11 @@ static class SceneGenerator
         }
     }
 
-    static void ImportRigs(this Document doc, string SceneData)
+    static void ImportRigs(this Document doc, string SceneData, string ViewMode)
     {
-        // <!> ViewMode ambiguity
         SingletonConfig config = SingletonConfig.Instance;
-        CharacterConfig RigConfig = config.GetCharacterConfig("Investigation");
+        CharacterConfig RigConfig = config.GetCharacterConfig(ViewMode);
+        CharacterConfig Investigation_RigConfig = config.GetCharacterConfig("Investigation");
 
         var deserializedJson = JsonSerializer.Deserialize<SceneData>(SceneData)!;
         var dialogueLines = deserializedJson.Dialogue!;
@@ -348,6 +341,28 @@ static class SceneGenerator
         foreach (var character in RigConfig.Characters)
         {
             if (charactersThatAppear.Contains(character.SimplifiedName))
+            {
+                string libraryPath = character.LibraryPath;
+                string? pathToRigFile = Path.Combine(Path.GetDirectoryName(config.PathToOperatingDocument)!, "rigs\\" + character.pathToRigFile);
+                string? libraryPathInRigFile = character.libraryPathInRigFile;
+
+                if (pathToRigFile != null && libraryPathInRigFile != null && !doc.Library.ItemExists(libraryPath))
+                {
+                    // Assuming path to rig is a FOLDER
+                    doc.ImportFolderFromOtherDocument(pathToRigFile, libraryPathInRigFile);
+                    Item imported = doc.Library.Items[libraryPathInRigFile];
+                    doc.Library.MoveToFolder("RIGS", imported);
+                }
+            }
+        }
+
+        // If any rig was not found in RigConfig, search in Investigation_RigConfig
+        var remainingCharacters = charactersThatAppear.Except(RigConfig.Characters.Select(c => c.SimplifiedName));
+        foreach (var characterName in remainingCharacters)
+        {
+            var character = Investigation_RigConfig.Characters.FirstOrDefault(c => c.SimplifiedName == characterName);
+            // This probably won't work as a check
+            if (character.SimplifiedName != null)
             {
                 string libraryPath = character.LibraryPath;
                 string? pathToRigFile = Path.Combine(Path.GetDirectoryName(config.PathToOperatingDocument)!, "rigs\\" + character.pathToRigFile);
@@ -480,11 +495,13 @@ static class SceneGenerator
             var dialogueKey = keys[i];
             var dialogueLine = dialogueLines[dialogueKey];
             string Character = dialogueLine.CharacterName!;
-            if (Character == config.Defense)
+
+            if ((Character == config.Defense) && ModeText == "Investigation")
             {
                 if (string.IsNullOrEmpty(previousCharacter)) continue;
                 Character = previousCharacter;
             }
+
             string CharacterLayerName = Character.ToUpper();
             string Emotion = dialogueLine.Emotion!;
 
@@ -514,6 +531,7 @@ static class SceneGenerator
             int TransX = 0;
             int TransY = 0;
 
+            // Search for the character's rig in the specified view mode
             foreach (var character in CurrentCharacterConfiguration.Characters)
             {
                 if (Character.Contains(character.SimplifiedName))
@@ -521,19 +539,40 @@ static class SceneGenerator
                     LibraryPath = character.LibraryPath;
                     TransX = character.TransX;
                     TransY = character.TransY;
+                    break;
                 }
             }
 
-            bool WasRigPlaced = Doc.Library.AddItemToDocument("RIGS/" + LibraryPath, CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex));
-            if (WasRigPlaced)
+            // If rig is not found in the specified view mode, search in the Investigation configuration
+            if (string.IsNullOrEmpty(LibraryPath))
             {
-                SymbolInstance CharacterRig = (CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex).Elements[0] as SymbolInstance)!;
-                CharacterRig.Matrix.Tx = TransX;
-                CharacterRig.Matrix.Ty = TransY;
-                CharacterRig.Loop = "single frame";
-                CharacterRig.FirstFrame = PoseAutomation(Doc, "RIGS/" + LibraryPath, Emotion);
+                CharacterConfig InvestigationConfig = config.GetCharacterConfig("Investigation");
+                foreach (var character in InvestigationConfig.Characters)
+                {
+                    if (Character.Contains(character.SimplifiedName))
+                    {
+                        LibraryPath = character.LibraryPath;
+                        TransX = character.TransX;
+                        TransY = character.TransY;
+                        break; // Found the rig in Investigation, no need to search further
+                    }
+                }
             }
-            else { throw new Exception("An error occured when attempting rig placement."); }
+
+            if (!string.IsNullOrEmpty(LibraryPath))
+            {
+                bool WasRigPlaced = Doc.Library.AddItemToDocument("RIGS/" + LibraryPath, CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex));
+                if (WasRigPlaced)
+                {
+                    SymbolInstance CharacterRig = (CurrentTimeline.Layers[CharacterLayerIndex].GetFrame(OperatingFrameIndex).Elements[0] as SymbolInstance)!;
+                    CharacterRig.Matrix.Tx = TransX;
+                    CharacterRig.Matrix.Ty = TransY;
+                    CharacterRig.Loop = "single frame";
+                    CharacterRig.FirstFrame = PoseAutomation(Doc, "RIGS/" + LibraryPath, Emotion);
+                }
+                else { throw new Exception("An error occurred when attempting " + Character + "'s rig placement."); }
+            }
+            else { throw new Exception("Character rig not found for " + Character + " in view mode " + ModeText + " or Investigation config."); }
 
             CurrentTimeline.Layers[CharacterLayerIndex].ParentLayerIndex = CurrentTimeline.FindLayerIndex("VECTOR_CHARACTERS")[0];
             previousCharacter = Character;
@@ -957,12 +996,14 @@ static class SceneGenerator
 
     static void PlaceDesks(this Document doc, string sceneData)
     {
+        SingletonConfig config = SingletonConfig.Instance;
+
         var characterToDeskMap = new Dictionary<string, SymbolConfig?>
         {
-            {SingletonConfig.Instance.Defense!, SingletonConfig.Instance.DefenseDesk },
-            {SingletonConfig.Instance.Prosecutor!, SingletonConfig.Instance.ProsecutorDesk },
-            {SingletonConfig.Instance.Judge!, SingletonConfig.Instance.JudgeDesk },
-            {SingletonConfig.Instance.Cocouncil!, null }
+            {config.Defense!, config.DefenseDesk },
+            {config.Prosecutor!, config.ProsecutorDesk },
+            {config.Judge!,config.JudgeDesk },
+            {config.Cocouncil!, null }
         };
 
         foreach (string witness in SingletonConfig.Instance.Witnesses!)
@@ -1008,14 +1049,17 @@ static class SceneGenerator
         }
     }
 
-    static void PlaceCourtBGs(this Document doc, string sceneData)
+    // <!> Fucked up
+    static void PlaceCourtBGs(this Document Doc, string SceneData)
     {
+        SingletonConfig config = SingletonConfig.Instance;
+
         var characterToBgMap = new Dictionary<string, SymbolConfig>
         {
-            { SingletonConfig.Instance.Defense!, SingletonConfig.Instance.DefenseBackground },
-            {SingletonConfig.Instance.Prosecutor!, SingletonConfig.Instance.ProsecutorBackground },
-            {SingletonConfig.Instance.Judge!, SingletonConfig.Instance.JudgeBackground },
-            {SingletonConfig.Instance.Cocouncil!, SingletonConfig.Instance.CocouncilBackground }
+            {config.Defense!, config.DefenseBackground },
+            {config.Prosecutor!, config.ProsecutorBackground },
+            {config.Judge!, config.JudgeBackground },
+            {config.Cocouncil!, config.CocouncilBackground }
         };
 
         foreach (string witness in SingletonConfig.Instance.Witnesses!)
@@ -1023,24 +1067,39 @@ static class SceneGenerator
             characterToBgMap.Add(witness, SingletonConfig.Instance.WitnessBackground);
         }
 
-        var deserializedJson = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DialogueLine>>>(sceneData, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-        for (int i = 0; i < deserializedJson.Count; i++)
+        var deserializedJson = JsonSerializer.Deserialize<SceneData>(SceneData)!;
+        var dialogueLines = deserializedJson.Dialogue;
+
+        foreach (var dialogueKey in dialogueLines!.Keys)
         {
-            if (i % SingletonConfig.Instance.ChunkSize == 0)
+            var dialogueLine = dialogueLines[dialogueKey];
+            int LineIndex = int.Parse(dialogueKey.Substring(3, 3));
+
+            if ((LineIndex % SingletonConfig.Instance.ChunkSize == 0) || LineIndex == 1)
             {
-                doc.CurrentTimeline = i / SingletonConfig.Instance.ChunkSize;
-                doc.Timelines[doc.CurrentTimeline].CurrentFrame = 0;
-                doc.CreateLayerIfDoesntExist("BACKGROUNDS");
+                Doc.CurrentTimeline = LineIndex / SingletonConfig.Instance.ChunkSize;
+
+                // Skip non-scenes like Typewriters
+                if (!Doc.Timelines[Doc.CurrentTimeline].Name.Contains("Scene")) { Doc.CurrentTimeline = (LineIndex / SingletonConfig.Instance.ChunkSize) + 1; } ;
+
+                Doc.Timelines[Doc.CurrentTimeline].CurrentFrame = 0;
+                Doc.CreateLayerIfDoesntExist("BACKGROUNDS");
             }
-            var currentTimeline = doc.Timelines[doc.CurrentTimeline];
+
+            var currentTimeline = Doc.Timelines[Doc.CurrentTimeline];
             var currentLayer = currentTimeline.Layers[currentTimeline.FindLayerIndex("BACKGROUNDS")[0]];
+
+                        // End of file edge case
+            if (currentTimeline.CurrentFrame == currentLayer.GetFrameCount()) { continue; }
+
             if (currentTimeline.CurrentFrame != 0)
             {
                 currentLayer.InsertBlankKeyframe(currentTimeline.CurrentFrame);
             }
-            string character = deserializedJson["Dialogue"].Values.ElementAt(i).CharacterName!;
+
+            string character = dialogueLine.CharacterName!;
             SymbolConfig bg = characterToBgMap[character];
-            doc.Library.AddItemToDocument(bg.LibraryPath, currentLayer.GetFrame(currentTimeline.CurrentFrame), bg.Tx, bg.Ty);
+            Doc.Library.AddItemToDocument(bg.LibraryPath, currentLayer.GetFrame(currentTimeline.CurrentFrame), bg.Tx, bg.Ty);
             currentTimeline.CurrentFrame += SingletonConfig.Instance.DefaultFrameDuration;
         }
     }
@@ -1149,6 +1208,27 @@ static class SceneGenerator
             config.Defense = "Sonata";
         }
 
+        if (characterSet.Contains("Celestia"))
+        {
+            config.Judge = "Celestia";
+            config.Prosecutor = "Trixie";
+            config.Cocouncil = "";
+        }
+        else if (characterSet.Contains("Judge"))
+        {
+            config.Judge = "Judge";
+            config.Prosecutor = "Luna";
+            config.Cocouncil = "Phoenix";
+        }
+
+        foreach (var character in characterSet)
+        {
+            if (character != config.Defense && character != config.Prosecutor && character != config.Judge && character != config.Cocouncil)
+            {
+                config.Witnesses.Add(character);
+            }
+        }
+
         // After careful deliberation and realizing how short I am on time, I am not refactoring all this shit to take in
         // the correct class from just one deserialized JSON here. But it is possible now!
 
@@ -1157,20 +1237,40 @@ static class SceneGenerator
         string json = File.ReadAllText(config.PathToSceneData!);
         Document Doc = new(config.PathToOperatingDocument!);
 
-        InputValidation(Doc);
+        InputValidation(Doc, ReadDataLabel.ModeText);
         stpw.Stop();
         Trace.WriteLine("Setup took " + stpw.ElapsedMilliseconds + " ms.");
         stpw.Reset();
 
         // "More human readable"
-        MeasureAndTrace(doc => doc.ImportRigs(json), Doc, "Importing Rigs");
+        MeasureAndTrace(doc => doc.ImportRigs(json, config.ViewMode), Doc, "Importing Rigs");
         MeasureAndTrace(doc => PlaceText(doc, json), Doc, "Text");
-        // <!> Rigs need a default Matrix Tx & Ty constructor, for courtroom modes. Default to 0, 0 as we do now.
         if (!config.SkipRigs) { MeasureAndTrace(doc => PlaceRigs(Doc, json, ReadDataLabel.ModeText), Doc, "Rigs"); };
+
+        if (config.ViewMode == "Investigation")
+        {
+            MeasureAndTrace(doc => PlaceInvestigationBG(Doc), Doc, "Investigation Backgrounds");
+        }
+        else if (config.ViewMode == "Courtroom")
+        {
+            MeasureAndTrace(doc => PlaceCourtBGs(Doc, json), Doc, "Courtroom Backgrounds");
+        }
+        else if (config.ViewMode == "Logic Chess")
+        {
+            MeasureAndTrace(doc => PlaceCourtBGs(Doc, json), Doc, "Courtroom Backgrounds");
+            // <!> May want to nest some additional patching logic in here for forcing the LC scenes to work as Courtroom scenes
+            // i.e. binding the first appearing non-config.Defense character to config.Prosecution. Assuming they're the LC opponent.
+        }
+
         MeasureAndTrace(doc => doc.InsertLinesChunked(config.PathToLines!), Doc, "Inserting Chunked Lines");
 
-        string[] IgnoreLipsync = new string[] { config.Defense!.ToUpper() };
-        MeasureAndTrace(doc => Doc.LipsyncChunkedDocument(config.PathToCFGs!, IgnoreLipsync), Doc, "Lipsyncing");
+        // Only ignore the defense for lipsyncing if we're investigation
+        if (config.ViewMode == "Investigation")
+        {
+            string[] IgnoreLipsync = new string[] { config.Defense!.ToUpper() };
+            MeasureAndTrace(doc => Doc.LipsyncChunkedDocument(config.PathToCFGs!, IgnoreLipsync), Doc, "Lipsyncing");
+        }
+        else { MeasureAndTrace(doc => Doc.LipsyncChunkedDocument(config.PathToCFGs!), Doc, "Lipsyncing"); }
 
         string[] LayerOrder = new string[] { "FLASH", "INTERJECTION", "FADE", "GAVEL", "TEXT", "TEXTBOX", "EVIDENCE", "DESKS", "JAM_MASK", "BACKGROUNDS" };
         MeasureAndTrace(doc => OrganizeLayerStructure(Doc, LayerOrder), Doc, "Organizing Layers");
@@ -1180,33 +1280,20 @@ static class SceneGenerator
         MeasureAndTrace(doc => PlaceIntroTypewriter(Doc, json), Doc, "Typewriter Intro");
         Doc.ReorderScene(Doc.Timelines.Count - 1, 0, true);
 
-        if (config.ViewMode == "Investigation")
-        {
-            MeasureAndTrace(doc => PlaceInvestigationBG(Doc), Doc, "Investigation Backgrounds");
-        } else if (config.ViewMode == "Courtroom")
-        {
-            MeasureAndTrace(doc => PlaceCourtBGs(Doc, json), Doc, "Courtroom Backgrounds");
-        } else if (config.ViewMode == "Logic Chess")
-        {
-            MeasureAndTrace(doc => PlaceCourtBGs(Doc, json), Doc, "Courtroom Backgrounds");
-            // <!> May want to nest some additional patching logic in here for forcing the LC scenes to work as Courtroom scenes
-            // i.e. binding the first appearing non-config.Defense character to config.Prosecution. Assuming they're the LC opponent.
-        }
-
         MeasureAndTrace(doc => ParseSFX(Doc, json), Doc, "SFX");
         MeasureAndTrace(doc => Doc.AutomaticBlinking(3), Doc, "Blinking");
         MeasureAndTrace(doc => SceneFadeInOut(Doc), Doc, "Scene Fading");
         MeasureAndTrace(doc => PlaceLabels(Doc, ReadDataLabel.EpisodeText!, ReadDataLabel.SceneText!, ReadDataLabel.ModeText!.ToUpper()), Doc, "Labels");
 
-        // Parent SFX track.
-        for (int i = 0; i < Doc.Timelines.Count; i++)
-        {
-            if (!Doc.GetTimeline(i).Name.Contains("Scene")) continue;
-            Doc.CurrentTimeline = i;
-            Timeline CurrentTimeline = Doc.Timelines[i];
-            CurrentTimeline.ReorderLayer(CurrentTimeline.FindLayerIndex("SFX")[0], CurrentTimeline.FindLayerIndex("AUDIO")[0], false);
-            CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("SFX")[0]].ParentLayerIndex = CurrentTimeline.FindLayerIndex("AUDIO")[0];
-        }
+        // <!> Parent SFX track.
+        //for (int i = 0; i < Doc.Timelines.Count; i++)
+        //{
+        //    if (!Doc.GetTimeline(i).Name.Contains("Scene")) continue;
+        //    Doc.CurrentTimeline = i;
+        //    Timeline CurrentTimeline = Doc.Timelines[i];
+        //    CurrentTimeline.ReorderLayer(CurrentTimeline.FindLayerIndex("SFX")[0], CurrentTimeline.FindLayerIndex("AUDIO")[0], false);
+        //    CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("SFX")[0]].ParentLayerIndex = CurrentTimeline.FindLayerIndex("AUDIO")[0];
+        //}
 
         // User starts at the start.
         Doc.CurrentTimeline = 1;

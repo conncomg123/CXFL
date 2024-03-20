@@ -259,8 +259,13 @@ static class LipsyncAPI
         PlaceKeyframes(Doc, startFrame, layerIndex, poseStartFrame, phonemes);
     }
 
-    public static void LipsyncChunkedDocument(this Document Doc, string PathToCFGs, string[] IgnoreCharacters)
+    public static void LipsyncChunkedDocument(this Document Doc, string PathToCFGs, string[] IgnoreCharacters = null)
     {
+        if (IgnoreCharacters == null)
+        {
+            IgnoreCharacters = new string[0]; // Default to an empty string list if null is passed
+        }
+
         for (int OperatingScene = 0; OperatingScene < Doc.Timelines.Count; OperatingScene++)
         {
             Doc.CurrentTimeline = (OperatingScene);
