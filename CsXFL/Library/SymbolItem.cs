@@ -39,7 +39,7 @@ public class SymbolItem : Item
         timeline = new Lazy<Timeline>(() =>
 {
     var newTimeline = new Timeline(symbolItemNode.Element(ns + "timeline")!.Element(ns + "DOMTimeline")!, library);
-    newTimeline.Name = timelineName ?? Name;
+    newTimeline.Name = timelineName ?? Name.Substring(Name.LastIndexOf('/') + 1);
     return newTimeline;
 });
         this.include = new Include(include);
