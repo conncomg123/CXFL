@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using System.Reflection;
 namespace CsXFL.Tests;
 public class LayerTests
 {
@@ -158,20 +159,38 @@ public class LayerTests
         Assert.True(layer.KeyFrames.Count == keyFrames - 1); // 1 keyframe should be gone in this instance
     }
 
-    // TODO: Make test for CreateMotionTween
-    // [Fact]
-    // public void CreateMotionTween_ShouldDoAThing()
-    // {
-    //     // Arrange
-    //     Document doc = new("TestAssets/DOMDocument.xml");
-    //     Timeline timeline = doc.GetTimeline(0);
-    //     Layer layer = timeline.Layers[0];
+    [Fact]
+    public void CreateMotionTween_ShouldSetEndFrameEqual_WhenEndFrameIsNull()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Timeline timeline = doc.GetTimeline(0);
+        Layer layer = timeline.Layers[1];
+        int startFrame = 69;
+        int nextKeyFrame = layer.GetFrame(70).StartFrame + layer.GetFrame(69).Duration;
 
 
-    //     // Act
+        // Act
+        // layer.ConvertToKeyframes(400, 718);
+        layer.CreateMotionTween(startFrame);
         
 
-    //     // Assert
-    //     Assert.True(true);
-    // }
+        // Assert
+        Assert.False(layer.GetFrame(startFrame).IsEmpty());
+
+        Assert.True(layer.GetFrame(startFrame).TweenType == "motion");
+        // Assert.False(layer.GetFrame(nextKeyFrame).TweenType == "motion");
+
+        Assert.True(layer.GetFrame(startFrame).MotionTweenSnap);
+        // Assert.False(layer.GetFrame(nextKeyFrame).MotionTweenSnap);
+
+        Assert.True(layer.GetFrame(startFrame).EaseMethodName == "none");
+        // Reflection nonsense under construction
+        // Type frameType = typeof(Frame);
+        // FieldInfo[] fields = frameType.GetFields(
+        //                  BindingFlags.NonPublic | 
+        //                  BindingFlags.Instance);
+        // Assert.True(layer.GetFrame(startFrame));
+
+    }
 }
