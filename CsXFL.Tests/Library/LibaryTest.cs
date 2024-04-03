@@ -102,18 +102,22 @@ public class LibraryTest
 
     }
 
-    // TODO: Create Test for MoveToFolder
-    // [Fact]
-    // public void MoveToFolder_ShouldDoSomething()
-    // {
-    //     // Arrange
-    //     Document doc = new("TestAssets/DOMDocument.xml");
+    [Fact]
+    public void MoveToFolder_ShouldMoveItemToExistingFolder()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        doc.Library.NewFolder("YourMom");
+        Item item = doc.Library.Items["Loop.wav"];
 
-    //     // Act
+        // Act
+        doc.Library.MoveToFolder("YourMom", item);
 
-    //     // Assert
+        // Assert
+        Assert.True(doc.Library.ItemExists("YourMom/Loop.wav"));
 
-    // }
+
+    }
     
     // TODO: Create Test for NewFolder
     // [Fact]
