@@ -4,7 +4,7 @@ using System.Xml.Linq;
 namespace CsXFL;
 public class Library
 {
-    private static int uniqueSoundItemIndex = 0;
+    private static int uniqueBinaryDataItemIndex = 0;
     private class ItemOperation
     {
         public enum OperationType
@@ -460,12 +460,13 @@ public class Library
         if (File.Exists(targetPath)) return;
         if (!Directory.Exists(Path.GetDirectoryName(targetPath)!)) Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
 
+        Item item = operation.item;
+        if (item is SymbolItem) targetPath += targetPath.EndsWith(".xml") ? "" : ".xml";
         File.Copy(operation.NewItemPath!, targetPath);
         // update item's href
-        Item item = operation.item;
         if (item is SymbolItem symbol)
         {
-            symbol.Include.Href = operation.ItemName;
+            symbol.Include.Href = operation.ItemName + (operation.NewItemPath!.EndsWith(".xml") ? ".xml" : "");
         }
         if (item is SoundItem sound)
         {
@@ -473,7 +474,7 @@ public class Library
         }
         if (item is BitmapItem bitmap)
         {
-            bitmap.Href = operation.ItemName;
+            ProcessImageItemAdd(bitmap, targetPath, filename, operation.ItemName);
         }
     }
 
@@ -488,13 +489,49 @@ public class Library
             string datFileName, wavPath;
             do
             {
-                int currentIndex = Interlocked.Increment(ref uniqueSoundItemIndex) - 1;
+                int currentIndex = Interlocked.Increment(ref uniqueBinaryDataItemIndex) - 1;
                 datFileName = "M " + currentIndex + " " + unixTime + ".dat";
                 wavPath = Path.Combine(Path.GetDirectoryName(filename)!, BINARY_PATH, datFileName);
             } while (File.Exists(wavPath));
             using FileStream fs = new(wavPath, FileMode.Create);
             fs.Write(wavData.Array!, WAV_HEADER_SIZE, wavData.Array!.Length - WAV_HEADER_SIZE);
             sound.SoundDataHRef = datFileName;
+        }
+    }
+    private static void ProcessImageItemAdd(BitmapItem bitmap, string targetPath, string filename, string itemName)
+    {
+        bitmap.Href = itemName;
+        if (bitmap.Name.EndsWith(".png") || bitmap.Name.EndsWith(".bmp"))
+        {
+            byte[] datData = ImageUtils.ConvertRawImageToDat(targetPath);
+            long unixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            string datFileName, datPath;
+            do
+            {
+                int currentIndex = Interlocked.Increment(ref uniqueBinaryDataItemIndex) - 1;
+                datFileName = "M " + currentIndex + " " + unixTime + ".dat";
+                datPath = Path.Combine(Path.GetDirectoryName(filename)!, BINARY_PATH, datFileName);
+            } while (File.Exists(datPath));
+            File.WriteAllBytes(datPath, datData);
+            bitmap.BitmapDataHRef = datFileName;
+        }
+        else if (bitmap.Name.EndsWith(".jpg") || bitmap.Name.EndsWith(".jpeg"))
+        {
+            // just copy the jpg file to the bin folder with the unix time as the name and dat extension
+            long unixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            string datFileName, datPath;
+            do
+            {
+                int currentIndex = Interlocked.Increment(ref uniqueBinaryDataItemIndex) - 1;
+                datFileName = "M " + currentIndex + " " + unixTime + ".dat";
+                datPath = Path.Combine(Path.GetDirectoryName(filename)!, BINARY_PATH, datFileName);
+            } while (File.Exists(datPath));
+            File.Copy(targetPath, datPath);
+            bitmap.BitmapDataHRef = datFileName;
+        }
+        else if (bitmap.Name.EndsWith(".gif"))
+        {
+            throw new NotImplementedException("GIFs are not supported yet.");
         }
     }
 
