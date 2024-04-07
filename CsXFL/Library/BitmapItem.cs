@@ -8,6 +8,7 @@ public class BitmapItem : Item
     internal static class DefaultValues
     {
         public const string Href = "";
+        public const string BitmapDataHRef = "";
         public const bool AllowSmoothing = false;
         public const bool UseDeblocking = false;
         public const bool UseImportedJPEGQuality = false;
@@ -18,13 +19,14 @@ public class BitmapItem : Item
         public const string OriginalCompressionType = "photo";
         public const string SourceFilePath = "";
     }
-    private string href;
+    private string href, bitmapDataHRef;
     private bool allowSmoothing, useDeblocking, useImportedJPEGQuality;
     private readonly int hPixels, vPixels;
     private int quality;
     private string compressionType;
     private readonly string originalCompressionType, sourceFilePath;
     public string Href { get { return href; } set { href = value; Root?.SetAttributeValue("href", value); } }
+    internal string BitmapDataHRef { get { return bitmapDataHRef; } set { bitmapDataHRef = value; Root?.SetAttributeValue("bitmapDataHRef", value); } }
     public bool AllowSmoothing { get { return allowSmoothing; } set { allowSmoothing = value; Root?.SetOrRemoveAttribute("allowSmoothing", value, DefaultValues.AllowSmoothing); } }
     public bool UseDeblocking { get { return useDeblocking; } set { useDeblocking = value; Root?.SetOrRemoveAttribute("useDeblocking", value, DefaultValues.UseDeblocking); } }
     public bool UseImportedJPEGQuality { get { return useImportedJPEGQuality; } set { useImportedJPEGQuality = value; Root?.SetOrRemoveAttribute("useImportedJPEGQuality", value, DefaultValues.UseImportedJPEGQuality); } }
@@ -37,6 +39,7 @@ public class BitmapItem : Item
     internal BitmapItem() : base()
     {
         href = DefaultValues.Href;
+        bitmapDataHRef = DefaultValues.BitmapDataHRef;
         allowSmoothing = DefaultValues.AllowSmoothing;
         useDeblocking = DefaultValues.UseDeblocking;
         hPixels = DefaultValues.HPixels;
@@ -49,6 +52,7 @@ public class BitmapItem : Item
     internal BitmapItem(in XElement bitmapItemNode) : base(bitmapItemNode, "bitmap")
     {
         href = (string?)bitmapItemNode.Attribute("href") ?? DefaultValues.Href;
+        bitmapDataHRef = (string?)bitmapItemNode.Attribute("bitmapDataHRef") ?? DefaultValues.BitmapDataHRef;
         allowSmoothing = (bool?)bitmapItemNode.Attribute("allowSmoothing") ?? DefaultValues.AllowSmoothing;
         useDeblocking = (bool?)bitmapItemNode.Attribute("useDeblocking") ?? DefaultValues.UseDeblocking;
         hPixels = ((int?)bitmapItemNode.Attribute("frameRight") ?? DefaultValues.HPixels * SUBPIXELS_PER_PIXEL) / SUBPIXELS_PER_PIXEL;
@@ -61,6 +65,7 @@ public class BitmapItem : Item
     internal BitmapItem(in BitmapItem other) : base(other)
     {
         href = other.href;
+        bitmapDataHRef = other.bitmapDataHRef;
         allowSmoothing = other.allowSmoothing;
         useDeblocking = other.useDeblocking;
         hPixels = other.hPixels;
