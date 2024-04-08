@@ -287,14 +287,15 @@ static class SceneGenerator
 
             charactersThatAppear.Add(CapitalizedCharacterName);
         }
-
+        HashSet<string> alreadyImported = new HashSet<string>();
         foreach (var character in RigConfig.Characters)
         {
             if (charactersThatAppear.Contains(character.SimplifiedName))
             {
                 string libraryPath = character.LibraryPath;
                 string? pathToRigFile = Path.Combine(Path.GetDirectoryName(config.PathToOperatingDocument)!, "rigs\\" + character.PathToRigFile);
-                string? libraryPathInRigFile = character.LibraryPathInRigFile;
+                string libraryPathInRigFile = character.LibraryPathInRigFile!;
+                if(alreadyImported.Contains(libraryPathInRigFile)) continue;
 
                 if (pathToRigFile != null && libraryPathInRigFile != null && !doc.Library.ItemExists(libraryPath))
                 {
@@ -302,6 +303,7 @@ static class SceneGenerator
                     doc.ImportFolderFromOtherDocument(pathToRigFile, libraryPathInRigFile);
                     Item imported = doc.Library.Items[libraryPathInRigFile];
                     doc.Library.MoveToFolder("RIGS", imported);
+                    alreadyImported.Add(libraryPathInRigFile);
                 }
             }
         }
