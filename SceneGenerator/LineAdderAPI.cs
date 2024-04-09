@@ -46,7 +46,7 @@ static class LineAdderAPI
                         // Soundman, what the fuck is the number 5 doing here?
                         // Well, observant programmer, 5 is one less than half of a jam fade duration. This is a quick
                         // and dirty trick to re-align the audio after we do jam fading, but it works. 
-                        PlaceLine(AttemptFile, FrameToConsider.StartFrame + 5, OperatingScene, Doc);
+                        PlaceLine(AttemptFile, FrameToConsider.StartFrame + 1, OperatingScene, Doc);
                     } else
                     {
                         Console.WriteLine("Error: Could not find file '" + AttemptFile + "'");

@@ -295,7 +295,7 @@ static class SceneGenerator
                 string libraryPath = character.LibraryPath;
                 string? pathToRigFile = Path.Combine(Path.GetDirectoryName(config.PathToOperatingDocument)!, "rigs\\" + character.PathToRigFile);
                 string libraryPathInRigFile = character.LibraryPathInRigFile!;
-                if(alreadyImported.Contains(libraryPathInRigFile)) continue;
+                if (alreadyImported.Contains(libraryPathInRigFile)) continue;
 
                 if (pathToRigFile != null && libraryPathInRigFile != null && !doc.Library.ItemExists(libraryPath))
                 {
@@ -327,7 +327,8 @@ static class SceneGenerator
                     Item imported = doc.Library.Items[libraryPathInRigFile];
                     doc.Library.MoveToFolder("RIGS", imported);
                 }
-            } else { throw new Exception("Character rig not found for " + characterName + " in either " + ViewMode + " config or Investigation config."); }
+            }
+            else { throw new Exception("Character rig not found for " + characterName + " in either " + ViewMode + " config or Investigation config."); }
         }
     }
 
@@ -341,7 +342,7 @@ static class SceneGenerator
         var deserializedJson = JsonSerializer.Deserialize<SceneData>(SceneData)!;
         var dialogueLines = deserializedJson.Dialogue;
 
-       foreach (var dialogueKey in dialogueLines!.Keys)
+        foreach (var dialogueKey in dialogueLines!.Keys)
         {
             var dialogueLine = dialogueLines[dialogueKey];
 
@@ -838,7 +839,7 @@ static class SceneGenerator
             // Fade scene in
             if (SceneIndex == 0)
             {
-                Doc.Library.AddItemToDocument(FadePath, CurrentLayer.GetFrame(0), Doc.Width/2, Doc.Height/2);
+                Doc.Library.AddItemToDocument(FadePath, CurrentLayer.GetFrame(0), Doc.Width / 2, Doc.Height / 2);
                 SymbolInstance FadeInstance = (CurrentLayer.GetFrame(0).Elements[0] as SymbolInstance)!;
                 FadeInstance.Loop = "play once reverse";
                 FadeInstance.FirstFrame = 20;
@@ -878,8 +879,8 @@ static class SceneGenerator
     //
     static void JamMaskFades(this Document Doc, string sceneData)
     {
-        int JAM_FADE_DURATION = 12;
-        string JAM_FADE_PATH = "OTHER ASSETS/Jam_Fade";
+        const int JAM_FADE_DURATION = 12;
+        const string JAM_FADE_PATH = "OTHER ASSETS/Jam_Fade";
 
         var deserializedJson = JsonSerializer.Deserialize<SceneData>(sceneData)!;
         var dialogueLines = deserializedJson.Dialogue!;
@@ -910,7 +911,7 @@ static class SceneGenerator
 
             previousCharacter = Character;
 
-            Doc.CurrentTimeline = (int)Math.Ceiling((double)Id / (double)SingletonConfig.Instance.ChunkSize) - 1;
+            Doc.CurrentTimeline = (Id - 1) / SingletonConfig.Instance.ChunkSize;
             Timeline CurrentTimeline = Doc.Timelines[Doc.CurrentTimeline];
             Layer JamLayer = CurrentTimeline.Layers[Doc.Timelines[Doc.CurrentTimeline].FindLayerIndex("JAM_MASK")[0]];
 
@@ -926,14 +927,16 @@ static class SceneGenerator
                 JamInstance.FirstFrame = (JAM_FADE_DURATION / 2) + 1;
                 JamLayer.ConvertToKeyframes((JAM_FADE_DURATION / 2) - 1);
                 JamLayer.GetFrame((JAM_FADE_DURATION / 2) - 1).ClearElements();
-            } else if (Id % SingletonConfig.Instance.ChunkSize == 0)
+            }
+            else if (Id % SingletonConfig.Instance.ChunkSize == 0)
             {
                 // Last fade within a chunk
                 CurrentTimeline.CurrentFrame = JamLayer.GetFrameCount() - 1;
                 JamLayer.ConvertToKeyframes(CurrentTimeline.CurrentFrame);
                 Doc.Library.AddItemToDocument(JAM_FADE_PATH, JamLayer.GetFrame(CurrentTimeline.CurrentFrame), Doc.Width / 2, Doc.Height / 2);
                 CurrentTimeline.InsertFrames(JAM_FADE_DURATION / 2, true, CurrentTimeline.CurrentFrame);
-            } else
+            }
+            else
             {
                 // Regular chunk
                 goToVoiceLine(Doc, LineID);
@@ -1046,7 +1049,7 @@ static class SceneGenerator
                 Doc.CurrentTimeline = LineIndex / SingletonConfig.Instance.ChunkSize;
 
                 // Skip non-scenes like Typewriters
-                if (!Doc.Timelines[Doc.CurrentTimeline].Name.Contains("Scene")) { Doc.CurrentTimeline = (LineIndex / SingletonConfig.Instance.ChunkSize) + 1; } ;
+                if (!Doc.Timelines[Doc.CurrentTimeline].Name.Contains("Scene")) { Doc.CurrentTimeline = (LineIndex / SingletonConfig.Instance.ChunkSize) + 1; };
 
                 Doc.Timelines[Doc.CurrentTimeline].CurrentFrame = 0;
                 Doc.CreateLayerIfDoesntExist("BACKGROUNDS");
@@ -1133,7 +1136,7 @@ static class SceneGenerator
         }
     }
 
-    static void GenerateScene(string PathToOperatingDocument, string PathToSceneData, string PathToCFGs, string PathToLines)
+    static Document GenerateScene(string PathToOperatingDocument, string PathToSceneData, string PathToCFGs, string PathToLines)
     {
         var deserializedJson = JsonSerializer.Deserialize<SceneData>(File.ReadAllText(PathToSceneData))!;
         var ReadDialogue = deserializedJson.Dialogue!;
@@ -1242,7 +1245,7 @@ static class SceneGenerator
             string[] IgnoreLipsync = new string[] { config.Defense!.ToUpper() };
             MeasureAndTrace(doc => Doc.LipsyncChunkedDocument(config.PathToCFGs!, IgnoreLipsync), Doc, "Lipsyncing");
         }
-        else 
+        else
         {
             string[] IgnoreLipsync = new string[] { "GALLERY PONY 1", "GALLERY PONY 2", "GALLERY PONY 3", "GALLERY PONY 4", "GALLERY PONY 5", "GALLERY PONY 6", "GALLERY PONY 7", "GALLERY PONY 8", "GALLERY PONY 9" };
             string[] IgnoreLines = new string[] { };
@@ -1263,7 +1266,7 @@ static class SceneGenerator
                 }
             }
 
-            MeasureAndTrace(doc => Doc.LipsyncChunkedDocument(config.PathToCFGs!, IgnoreLipsync, IgnoreLines), Doc, "Lipsyncing"); 
+            MeasureAndTrace(doc => Doc.LipsyncChunkedDocument(config.PathToCFGs!, IgnoreLipsync, IgnoreLines), Doc, "Lipsyncing");
         }
 
         string[] LayerOrder = new string[] { "FLASH", "INTERJECTION", "FADE", "GAVEL", "TEXT", "TEXTBOX", "EVIDENCE", "DESKS", "JAM_MASK", "BACKGROUNDS", "SFX" };
@@ -1289,23 +1292,24 @@ static class SceneGenerator
             CurrentTimeline.CurrentFrame = 0;
             CurrentTimeline.ReorderLayer(CurrentTimeline.FindLayerIndex("SFX")[0], CurrentTimeline.FindLayerIndex("AUDIO")[0], false);
             CurrentTimeline.Layers[CurrentTimeline.FindLayerIndex("SFX")[0]].ParentLayerIndex = CurrentTimeline.FindLayerIndex("AUDIO")[0];
+            // for every voice layer (has _VOX in it), remove one frame the beginning and insert one frame at the end
+            foreach (Layer voiceLayer in CurrentTimeline.Layers.Where(t => t.Name.EndsWith("_VOX")))
+            {
+                CurrentTimeline.RemoveFrames(1, false, 0, voiceLayer);
+                CurrentTimeline.InsertFrames(1, false, voiceLayer.GetFrameCount() - 1, voiceLayer);
+            }
         }
 
         // User starts at the start.
         Doc.CurrentTimeline = 1;
 
-        // Doc Saving
-        stpw.Start();
-        Doc.Save();
-        stpw.Stop();
-        Trace.WriteLine("Document Saving took " + stpw.ElapsedMilliseconds + " ms.");
-        stpw.Reset();
-        Trace.Close();
+        return Doc;
     }
 
     // <!> Allow skipping ARGs EVENTUALLY
     static void Main(string[] args)
     {
+        Stopwatch mainTimer = Stopwatch.StartNew();
         Trace.Listeners.Add(new ConsoleTraceListener());
         string RootOperatingFolder = "";
         bool displayHelp = false;
@@ -1355,7 +1359,7 @@ static class SceneGenerator
                 throw new FileNotFoundException($"The path '{path}' does not exist.");
             }
         }
-
+        List<Document> docs = new();
         // Iterate over sceneData
         foreach (var file in Directory.GetFiles(RootSceneDataFolder))
         {
@@ -1383,8 +1387,15 @@ static class SceneGenerator
                 File.Copy(BaseFLA, NewFLA);
 
                 // Do it.
-                GenerateScene(NewFLA, file, PathToCFGs, PathToLines);
+                docs.Add(GenerateScene(NewFLA, file, PathToCFGs, PathToLines));
             }
         }
+        // save in parallel
+        Stopwatch stpw = Stopwatch.StartNew();
+        Parallel.ForEach(docs, doc => doc.Save());
+        stpw.Stop();
+        Trace.WriteLine("Saving took " + stpw.ElapsedMilliseconds + " ms.");
+        mainTimer.Stop();
+        Trace.WriteLine("Total time: " + mainTimer.ElapsedMilliseconds + " ms.");
     }
 }
