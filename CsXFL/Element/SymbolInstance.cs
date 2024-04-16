@@ -31,7 +31,7 @@ public class SymbolInstance : Instance
         // todo: implement
         throw new NotImplementedException("pls be patient");
     }
-    internal SymbolInstance(in XElement elementNode, Library library) : base(elementNode, library)
+    internal SymbolInstance(in XElement elementNode, Library? library) : base(elementNode, library)
     {
         firstFrame = (int?)elementNode.Attribute("firstFrame") ?? DefaultValues.FirstFrame;
         lastFrame = (int?)elementNode.Attribute("lastFrame");
@@ -46,7 +46,7 @@ public class SymbolInstance : Instance
         loop = other.loop;
     }
     // cast from SymbolItem to SymbolInstance
-    internal SymbolInstance(in SymbolItem item, Library library) : base(item, "symbol", "DOMSymbolInstance", library)
+    internal SymbolInstance(in SymbolItem item, Library? library) : base(item, "symbol", "DOMSymbolInstance", library)
     {
         firstFrame = DefaultValues.FirstFrame;
         lastFrame = null;

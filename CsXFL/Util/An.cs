@@ -111,6 +111,10 @@ public static class An
         {
             foreach (Frame f in l.KeyFrames)
             {
+                if(f.SoundName != Frame.DefaultValues.SoundName)
+                {
+                    dependencies.Add(f.SoundName);
+                }
                 foreach (Element e in f.Elements)
                 {
                     if (e is Instance i)
@@ -182,6 +186,10 @@ public static class An
         {
             foreach (Frame f in l.KeyFrames)
             {
+                if(f.SoundName != Frame.DefaultValues.SoundName)
+                {
+                    filesToImport.Add(f.SoundName);
+                }
                 foreach (Element e in f.Elements)
                 {
                     if (e is Instance i)

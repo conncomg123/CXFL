@@ -37,7 +37,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
     private int startFrame, duration, keyMode, inPoint44;
     private string labelType, name, soundName, soundSync, tweenType, easeMethodName;
     private bool registeredForSoundItem, motionTweenSnap, hasCustomEase, bookmark;
-    private Library library;
+    private Library? library;
     internal XElement? Root { get { return root; } }
     public int StartFrame { get { return startFrame; } set { startFrame = value; root?.SetAttributeValue("index", value); } }
     public int Duration { get { return duration; } set { duration = value; root?.SetOrRemoveAttribute("duration", value, DefaultValues.Duration); } }
@@ -77,7 +77,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
             }
         }
     }
-    public SoundItem? CorrespondingSoundItem { get { return library.Items.TryGetValue(SoundName, out Item? item) ? item as SoundItem : null; } }
+    public SoundItem? CorrespondingSoundItem { get { return library is not null && library.Items.TryGetValue(SoundName, out Item? item) ? item as SoundItem : null; } }
     public string SoundSync
     {
         get { return soundSync; }
@@ -142,7 +142,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
             }
         }
     }
-    internal Frame(in XElement frameNode, Library library, bool isBlank = false)
+    internal Frame(in XElement frameNode, Library? library, bool isBlank = false)
     {
         root = frameNode;
         ns = root.Name.Namespace;
@@ -167,7 +167,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
             LoadEases(root);
         }
         registeredForSoundItem = SoundName != DefaultValues.SoundName;
-        if (registeredForSoundItem)
+        if (registeredForSoundItem && library is not null)
         {
             LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingSoundItem!, this);
             CorrespondingSoundItem!.UseCount++;

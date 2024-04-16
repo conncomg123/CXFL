@@ -20,7 +20,7 @@ public class Layer : IDisposable
     private readonly List<Frame> frames;
     private bool locked, current, selected;
     int? parentLayerIndex;
-    private readonly Library library;
+    private readonly Library? library;
     internal XElement? Root { get { return root; } }
     public string Color { get { return color; } set { color = value; root?.SetAttributeValue("color", value); } }
     public string LayerType
@@ -51,7 +51,7 @@ public class Layer : IDisposable
             frames.Add(new Frame(frameNode, library));
         }
     }
-    internal Layer(XElement layerNode, Library library)
+    internal Layer(XElement layerNode, Library? library)
     {
         root = layerNode;
         ns = root.Name.Namespace;
@@ -190,7 +190,8 @@ public class Layer : IDisposable
         {
             if (e is SymbolInstance si)
             {
-                Item item = library.Items[si.LibraryItemName];
+                Item? item = library?.Items[si.LibraryItemName];
+                if (item is null) continue;
                 switch (si.Loop)
                 {
                     case "loop":

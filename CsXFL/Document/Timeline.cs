@@ -25,7 +25,7 @@ public class Timeline : IDisposable
         if (layerNodes is null) return;
         foreach (XElement layerNode in layerNodes)
         {
-            layers.Add(new Layer(layerNode, library!));
+            layers.Add(new Layer(layerNode, library));
         }
     }
     internal Timeline(in XElement timelineNode, Library? library)
