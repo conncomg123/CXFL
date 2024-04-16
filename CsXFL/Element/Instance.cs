@@ -33,7 +33,7 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
         }
     }
 
-    internal Instance(in XElement elementNode, Library library) : base(elementNode, "instance")
+    internal Instance(in XElement elementNode, Library? library) : base(elementNode, "instance")
     {
         instanceType = NodeNameToInstanceType[elementNode.Name.LocalName];
         if (!AcceptableInstanceTypes.Contains(instanceType))
