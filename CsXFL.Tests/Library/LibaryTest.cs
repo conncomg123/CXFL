@@ -119,17 +119,18 @@ public class LibraryTest
 
     }
     
-    // TODO: Create Test for NewFolder
-    // [Fact]
-    // public void NewFolder_ShouldDoSomething()
-    // {
-    //     // Arrange
-    //     Document doc = new("TestAssets/DOMDocument.xml");
+    [Fact]
+    public void NewFolder_ShouldCreateDirectoryItem()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
 
-    //     // Act
+        // Act
+        doc.Library.NewFolder("YourMom");
 
-    //     // Assert
+        // Assert
+        Assert.True(doc.Library.ItemExists("YourMom"));
 
-    // }
+    }
 
 }

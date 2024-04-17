@@ -297,33 +297,38 @@ public class TimelineTests
         }
     }
 
-    // TODO: Make Test for Insert Frames
-    // [Fact]
-    // public void InsertFrames_ShouldDoAThing()
-    // {
-    //     // Arrange
-    //     Document doc = new("TestAssets/DOMDocument.xml");
-    //     Timeline timeline = doc.GetTimeline(0);
+    [Fact]
+    public void InsertFrames_ShouldAddFramesToTimeline()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Timeline timeline = doc.GetTimeline(0);
+        int initialFrameCount = timeline.GetFrameCount();
 
-    //     // Act
+        // Act
+        timeline.InsertFrames(7);
 
-    //     // Assert
+        // Assert
+        Assert.True(timeline.GetFrameCount() == initialFrameCount + 7);
 
-    // }
+    }
 
-    // TODO: Make Test for Remove Frames
-    // [Fact]
-    // public void RemoveFrames_ShouldDoAThing()
-    // {
-    //     // Arrange
-    //     Document doc = new("TestAssets/DOMDocument.xml");
-    //     Timeline timeline = doc.GetTimeline(0);
+    [Fact]
+    public void RemoveFrames_ShouldDeleteFramesFromTimeline()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Timeline timeline = doc.GetTimeline(0);
+        int initialFrameCount = timeline.GetFrameCount();
 
-    //     // Act
+        // Act
+        timeline.RemoveFrames(7);
 
-    //     // Assert
 
-    // }
+        // Assert
+        Assert.True(timeline.Layers[timeline.CurrentLayer].GetFrameCount() == initialFrameCount - 7);
+
+    }
 
 
 }
