@@ -154,7 +154,7 @@ public sealed class SingletonConfig
         config.AddCharacter("Courtroom", "Sonata", "COURTROOM_Sonata.fla", "SonataDefenseBench►", "SonataDefenseBench►/SonataDefenseBench►ScaledPoses", 1280, 775);
         config.AddCharacter("Courtroom", "Trixie", "COURTROOM_Trixie.fla", "TrixieProsecution►", "TrixieProsecution►/TrixieProsecution►ScaledPoses");
         config.AddCharacter("Courtroom", "Judge", "COURTROOM_Judge.fla", "JUDGE", "JUDGE/JUDGE►ScaledPoses", -9, 0);
-        config.AddCharacter("Courtroom", "Phoenix", "CO-COUNCIL_Phoenix.fla", "WRIGHT►", "WRIGHT►/PhoenixScaledPoses");
+        config.AddCharacter("Courtroom", "Phoenix", "CO-COUNCIL_Phoenix.fla", "WRIGHT", "WRIGHT/WRIGHT►ScaledPoses");
 
         config.AddCharacter("Investigation", "Amber", "INVESTIGATION_AmberGleam.fla", "AmberGleam►", "AmberGleam►/AmberGleam►PoseScaled");
         config.AddCharacter("Investigation", "Applejack", "INVESTIGATION_Applejack.fla", "APPLEJACK►", "APPLEJACK►/APPLEJACK►PoseScaled");
@@ -172,7 +172,7 @@ public sealed class SingletonConfig
         config.AddCharacter("Investigation", "Philo Reed", "INVESTIGATION_PhiloReed.fla", "PhiloReed►", "PhiloReed►/PoseScaled");
         config.AddCharacter("Investigation", "Philo", "INVESTIGATION_PhiloReed.fla", "PhiloReed►", "PhiloReed►/PhiloReed►PoseScaled");
         config.AddCharacter("Investigation", "Phoenix", "INVESTIGATION_Phoenix.fla", "Wright►", "Wright►/Wright►ScaledPoses");
-        config.AddCharacter("Investigation", "Pinkie", "INVESTIGATION_Pinkie.fla", "PINKIE_PIE►", "PINKIE_PIE►PoseScaled");
+        config.AddCharacter("Investigation", "Pinkie", "INVESTIGATION_Pinkie.fla", "PinkiePie►", "PinkiePie►/PinkiePie►PoseScaled");
         config.AddCharacter("Investigation", "Private Eye", "INVESTIGATION_PrivateEye.fla", "PRIVATE_EYE►", "PRIVATE_EYE►/Private►PoseScaled", 365, -344);
 
         config.AddCharacter("Investigation", "Rainbow", "INVESTIGATION_Rainbow_Dash.fla", "RAINBOW►", "RAINBOW►/RAINBOW►PoseScaled");
@@ -194,6 +194,8 @@ public sealed class SingletonConfig
         config.AddCharacter("Investigation", "Guard #1", "INVESTIGATION_Trucy.fla", "Trucy►", "Trucy►/Trucy►ScaledPoses");
         config.AddCharacter("Investigation", "Bailiff #1", "INVESTIGATION_Trucy.fla", "Trucy►", "Trucy►/Trucy►ScaledPoses");
         config.AddCharacter("Investigation", "Conductor", "INVESTIGATION_Trucy.fla", "Trucy►", "Trucy►/Trucy►ScaledPoses");
+        config.AddCharacter("Investigation", "Stella", "INVESTIGATION_Trucy.fla", "Trucy►", "Trucy►/Trucy►ScaledPoses");
+        config.AddCharacter("Investigation", "Atticus", "INVESTIGATION_Trucy.fla", "Trucy►", "Trucy►/Trucy►ScaledPoses");
 
         // Nameswaps
         config.AddNameswap("Turning Page", "Turning");
