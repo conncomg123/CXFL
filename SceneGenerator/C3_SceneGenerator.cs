@@ -284,6 +284,7 @@ static class SceneGenerator
 
             // Skip gallery ponies
             if (CapitalizedCharacterName.Contains("Gallery")) { continue; }
+            if (CapitalizedCharacterName.Contains(config.Defense) && ViewMode == "Investigation") { continue; }
 
             charactersThatAppear.Add(CapitalizedCharacterName);
         }
