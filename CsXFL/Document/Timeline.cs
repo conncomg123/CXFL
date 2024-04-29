@@ -361,4 +361,63 @@ public class Timeline : IDisposable
         if (layer.LayerType == "folder") ReorderFolder(layerToMove, layerToPutItBy, addBefore);
         else ReorderLayerSingle(layerToMove, layerToPutItBy, addBefore);
     }
+    private List<Layer> GetLayersInFolder(int folderIndex)
+    {
+        List<Layer> layersInFolder = new();
+        for (int i = folderIndex + 1; i < layers.Count; i++)
+        {
+            if (layers[i].ParentLayerIndex == folderIndex)
+            {
+                layersInFolder.Add(layers[i]);
+            }
+        }
+        return layersInFolder;
+    }
+    public SymbolItem ConvertLayersToSymbol(List<Layer> layers, string symbolName, string symbolType = "movie clip")
+    {
+        // if any of the layers are folders, add them to the list of layers to convert while retaining order
+        List<Layer> newLayers = new List<Layer>(layers);
+        for (int i = 0; i < newLayers.Count; i++)
+        {
+            Layer currentLayer = newLayers[i];
+            if (currentLayer.LayerType == "folder")
+            {
+                var layersInFolder = GetLayersInFolder(this.layers.IndexOf(currentLayer));
+                foreach (var layerInFolder in layersInFolder)
+                {
+                    if (!newLayers.Contains(layerInFolder))
+                    {
+                        newLayers.Add(layerInFolder);
+                    }
+                }
+            }
+        }
+        newLayers = newLayers.OrderBy(this.layers.IndexOf).ToList();
+        int firstLayerIndex = this.layers.IndexOf(newLayers[0]);
+        SymbolItem symbol = (library!.AddNewItem(symbolType, symbolName) as SymbolItem)!;
+        symbol.Timeline.Layers.AddRange(newLayers);
+        var symbolTimelineRoot = symbol.Timeline.Root;
+        if (symbolTimelineRoot!.Element(ns + "layers") is null)
+            symbolTimelineRoot!.Add(new XElement(ns + "layers"));
+        // after adding the layers to the symbol, need to update the parentLayerIndices of the layers that were moved into the symbol
+        for (int i = 0; i < newLayers.Count; i++)
+        {
+            Layer curLayer = newLayers[i];
+            if (curLayer.ParentLayerIndex is not null)
+            {
+                curLayer.ParentLayerIndex -= this.layers.IndexOf(curLayer) - i;
+            }
+        }
+        foreach (Layer layer in newLayers)
+        {
+            symbol.Timeline.Root!.Element(ns + "layers")?.Add(layer.Root);
+            layer.Root!.Remove();
+        }
+        this.layers.RemoveAll(newLayers.Contains);
+        int newLayerIndex = AddNewLayer(symbolName);
+        Layer newLayer = this.layers[newLayerIndex];
+        ReorderLayer(newLayerIndex, firstLayerIndex);
+        library.AddItemToDocument(symbolName, newLayer.KeyFrames[0]);
+        return symbol;
+    }
 }
