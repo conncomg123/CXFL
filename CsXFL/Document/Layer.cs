@@ -4,6 +4,8 @@ namespace CsXFL;
 
 public class Layer : IDisposable
 {
+    internal const string LAYER_NODE_IDENTIFIER = "DOMLayer",
+    LAYERS_NODEGROUP_IDENTIFIER = "layers";
     private static readonly HashSet<string> AcceptableLayerTypes = new HashSet<string> { "normal", "guide", "guided", "mask", "masked", "folder", "camera" };
     internal static class DefaultValues
     {
@@ -44,7 +46,7 @@ public class Layer : IDisposable
     public ReadOnlyCollection<Frame> KeyFrames { get { return frames.AsReadOnly(); } }
     private void LoadFrames(XElement layerNode)
     {
-        List<XElement>? frameNodes = layerNode?.Element(ns + "frames")?.Elements().ToList();
+        List<XElement>? frameNodes = layerNode?.Element(ns + Frame.FRAMES_NODEGROUP_IDENTIFIER)?.Elements().ToList();
         if (frameNodes is null) return;
         foreach (XElement frameNode in frameNodes)
         {
@@ -95,7 +97,7 @@ public class Layer : IDisposable
     }
     private void RemoveKeyframe(int keyframeIndex)
     {
-        root?.Element(ns + "frames")?.Elements().ToList()[keyframeIndex].Remove();
+        root?.Element(ns + Frame.FRAMES_NODEGROUP_IDENTIFIER)?.Elements().ToList()[keyframeIndex].Remove();
         frames[keyframeIndex].Dispose();
         frames.RemoveAt(keyframeIndex);
     }

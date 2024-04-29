@@ -3,6 +3,8 @@ namespace CsXFL;
 
 public class Point
 {
+    internal const string POINT_NODE_IDENTIFIER = "Point",
+    TRANSFORMATION_POINT_NODE_IDENTIFIER = "transformationPoint";
     private const double Epsilon = 0.0001;
     internal static class DefaultValues
     {
@@ -18,14 +20,14 @@ public class Point
     public Point(XNamespace ns)
     {
         this.ns = ns;
-        root = new XElement(ns + "Point");
+        root = new XElement(ns + Point.POINT_NODE_IDENTIFIER);
         x = DefaultValues.X;
         y = DefaultValues.Y;
     }
     public Point(double x, double y, XNamespace ns)
     {
         this.ns = ns;
-        root = new XElement(ns + "Point");
+        root = new XElement(ns + Point.POINT_NODE_IDENTIFIER);
         this.x = x;
         this.y = y;
     }

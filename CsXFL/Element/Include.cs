@@ -4,6 +4,7 @@ namespace CsXFL;
 // class containing the Include node for SymbolItems
 internal class Include 
 {
+    internal const string INCLUDE_NODE_IDENTIFIER = "Include";
     private readonly XElement? root;
     internal XElement? Root { get { return root; } }
     private string href;
@@ -15,7 +16,7 @@ internal class Include
     }
     public Include(XNamespace ns, string href)
     {
-        root = new XElement(ns + "Include");
+        root = new XElement(ns + Include.INCLUDE_NODE_IDENTIFIER);
         this.href = href;
         root.SetAttributeValue("href", href);
     }

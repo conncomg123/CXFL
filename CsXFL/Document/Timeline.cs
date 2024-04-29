@@ -3,6 +3,8 @@ namespace CsXFL;
 
 public class Timeline : IDisposable
 {
+    internal const string TIMELINES_NODEGROUP_IDENTIFIER = "timelines",
+    TIMELINE_NODE_IDENTIFIER = "DOMTimeline";
     public static class DefaultValues
     {
         public const string Name = "timeline";
@@ -21,7 +23,7 @@ public class Timeline : IDisposable
     public List<Layer> Layers { get { return layers; } }
     private void LoadLayers(XElement? timelineNode)
     {
-        List<XElement>? layerNodes = timelineNode?.Element(ns + "layers")?.Elements().ToList();
+        List<XElement>? layerNodes = timelineNode?.Element(ns + Layer.LAYERS_NODEGROUP_IDENTIFIER)?.Elements().ToList();
         if (layerNodes is null) return;
         foreach (XElement layerNode in layerNodes)
         {
@@ -38,8 +40,8 @@ public class Timeline : IDisposable
         this.library = library;
         LoadLayers(root);
     }
-    internal Timeline() : this(new XElement("DOMTimeline"), null) { }
-    internal Timeline(XNamespace ns, Library library, string name) : this(new XElement(ns + "DOMTimeline"), library)
+    internal Timeline() : this(new XElement(Timeline.TIMELINE_NODE_IDENTIFIER), null) { }
+    internal Timeline(XNamespace ns, Library library, string name) : this(new XElement(ns + Timeline.TIMELINE_NODE_IDENTIFIER), library)
     {
         Name = name;
     }
@@ -90,22 +92,22 @@ public class Timeline : IDisposable
     }
     public int AddNewLayer(string name, string layerType = "normal")
     {
-        XElement newLayer = new(ns + "DOMLayer");
+        XElement newLayer = new(ns + Layer.LAYER_NODE_IDENTIFIER);
         newLayer.SetAttributeValue("name", name);
         newLayer.SetAttributeValue("layerType", layerType);
         if (layerType != "folder")
         {
-            XElement frames = new(ns + "frames");
+            XElement frames = new(ns + Frame.FRAMES_NODEGROUP_IDENTIFIER);
             newLayer.Add(frames);
-            XElement frame = new(ns + "DOMFrame");
+            XElement frame = new(ns + Frame.FRAME_NODE_IDENTIFIER);
             frame.SetAttributeValue("index", 0);
             frame.SetAttributeValue("duration", GetFrameCount());
             frames.Add(frame);
-            XElement elements = new(ns + "elements");
+            XElement elements = new(ns + Element.ELEMENTS_NODEGROUP_IDENTIFIER);
             frame.Add(elements);
         }
-        if (root?.Element(ns + "layers") is null) root?.Add(new XElement(ns + "layers"));
-        root?.Element(ns + "layers")?.Add(newLayer);
+        if (root?.Element(ns + Layer.LAYERS_NODEGROUP_IDENTIFIER) is null) root?.Add(new XElement(ns + Layer.LAYERS_NODEGROUP_IDENTIFIER));
+        root?.Element(ns + Layer.LAYERS_NODEGROUP_IDENTIFIER)?.Add(newLayer);
         layers.Add(new Layer(newLayer, library!));
         return layers.Count - 1;
     }
@@ -267,7 +269,7 @@ public class Timeline : IDisposable
             layer.ParentLayerIndex = layerToPutItBy - 1;
         else
             layer.ParentLayerIndex = layerToPutItByLayer.ParentLayerIndex;
-        XElement? layersElement = root?.Element(ns + "layers");
+        XElement? layersElement = root?.Element(ns + Layer.LAYERS_NODEGROUP_IDENTIFIER);
         if (layersElement != null)
         {
             XElement? layerElement = layer.Root;
@@ -337,7 +339,7 @@ public class Timeline : IDisposable
             Layer toInsert = layersToMove[i].Item2;
             layers.Insert(layerToPutItBy + i, toInsert);
             if (i > 0) toInsert.ParentLayerIndex = layersToMove[i].Item3 + distance;
-            XElement? layersElement = root?.Element(ns + "layers");
+            XElement? layersElement = root?.Element(ns + Layer.LAYERS_NODEGROUP_IDENTIFIER);
             if (layersElement != null)
             {
                 XElement? layerElement = toInsert.Root;
@@ -397,8 +399,8 @@ public class Timeline : IDisposable
         SymbolItem symbol = (library!.AddNewItem(symbolType, symbolName) as SymbolItem)!;
         symbol.Timeline.Layers.AddRange(newLayers);
         var symbolTimelineRoot = symbol.Timeline.Root;
-        if (symbolTimelineRoot!.Element(ns + "layers") is null)
-            symbolTimelineRoot!.Add(new XElement(ns + "layers"));
+        if (symbolTimelineRoot!.Element(ns + Layer.LAYERS_NODEGROUP_IDENTIFIER) is null)
+            symbolTimelineRoot!.Add(new XElement(ns + Layer.LAYERS_NODEGROUP_IDENTIFIER));
         // after adding the layers to the symbol, need to update the parentLayerIndices of the layers that were moved into the symbol
         for (int i = 0; i < newLayers.Count; i++)
         {
@@ -410,7 +412,7 @@ public class Timeline : IDisposable
         }
         foreach (Layer layer in newLayers)
         {
-            symbol.Timeline.Root!.Element(ns + "layers")?.Add(layer.Root);
+            symbol.Timeline.Root!.Element(ns + Layer.LAYERS_NODEGROUP_IDENTIFIER)?.Add(layer.Root);
             layer.Root!.Remove();
         }
         this.layers.RemoveAll(newLayers.Contains);

@@ -2,6 +2,8 @@ using System.Xml.Linq;
 namespace CsXFL;
 public class Matrix
 {
+    internal const string MATRIX_NODE_IDENTIFIER = "matrix",
+    MATRIX_NODEGROUP_IDENTIFIER = "Matrix";
     private const double Epsilon = 0.0001;
     internal static class DefaultValues
     {
@@ -23,9 +25,9 @@ public class Matrix
         {
             if (!IsDefaultValue)
             {
-                parent?.Add(new XElement(ns + "matrix"));
-                parent?.Element(ns + "matrix")?.Add(new XElement(ns + "Matrix"));
-                Root = parent?.Element(ns + "matrix")?.Element(ns + "Matrix");
+                parent?.Add(new XElement(ns + Matrix.MATRIX_NODE_IDENTIFIER));
+                parent?.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Add(new XElement(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER));
+                Root = parent?.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER);
             }
             else return;
         }
@@ -51,7 +53,7 @@ public class Matrix
     {
         if (IsDefaultMatrix(this))
         {
-            parent?.Element(ns + "matrix")?.Remove();
+            parent?.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Remove();
             Root = null;
         }
     }

@@ -3,6 +3,7 @@ using System.Xml.Linq;
 namespace CsXFL;
 public class SoundItem : Item // all the properties are propietary bullshit except for href
 {
+    internal const string SOUND_NODE_IDENTIFIER = "DOMSoundItem";
     private string href, soundDataHRef, format;
     private int sampleCount;
     internal string Href { get { return href; } set { href = value; Root?.SetAttributeValue("href", value); } }
@@ -37,7 +38,7 @@ public class SoundItem : Item // all the properties are propietary bullshit exce
     }
     static internal SoundItem FromFile(string path, XNamespace ns)
     {
-        XElement soundItemNode = new(ns + "DOMSoundItem");
+        XElement soundItemNode = new(ns + SoundItem.SOUND_NODE_IDENTIFIER);
         soundItemNode.SetAttributeValue("href", path);
         soundItemNode.SetAttributeValue("name", Path.GetFileName(path));
         soundItemNode.SetAttributeValue("format", SoundUtils.GetSoundFormatString(path));

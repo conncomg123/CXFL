@@ -177,8 +177,8 @@ public static class An
         duped.Name += " (imported)";
         if (duped.Root?.Parent is not null)
             duped.Root?.Remove();
-        if (doc.Root?.Element(ns + "timelines") is null) doc.Root?.Add(new XElement(ns + "timelines"));
-        doc.Root?.Element(ns + "timelines")!.Add(duped.Root);
+        if (doc.Root?.Element(ns + Timeline.TIMELINES_NODEGROUP_IDENTIFIER) is null) doc.Root?.Add(new XElement(ns + Timeline.TIMELINES_NODEGROUP_IDENTIFIER));
+        doc.Root?.Element(ns + Timeline.TIMELINES_NODEGROUP_IDENTIFIER)!.Add(duped.Root);
         doc.Timelines.Add(duped);
         // now import all the library items
         HashSet<string> filesToImport = new();

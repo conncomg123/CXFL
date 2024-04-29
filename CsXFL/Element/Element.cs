@@ -3,6 +3,7 @@ namespace CsXFL;
 public abstract class Element
 {
     private static readonly HashSet<string> AcceptableElementTypes = new HashSet<string> { "shape", "text", "tflText", "instance", "shapeObj" };
+    internal const string ELEMENTS_NODEGROUP_IDENTIFIER = "elements";
     internal static class DefaultValues
     {
         public const double Width = double.NaN;
@@ -52,8 +53,8 @@ public abstract class Element
         width = double.NaN;
         height = double.NaN;
         selected = (bool?)elementNode.Attribute("isSelected") ?? DefaultValues.Selected;
-        matrix = elementNode.Element(ns + "matrix")?.Element(ns + "Matrix") is not null ? new Matrix(elementNode.Element(ns + "matrix")!.Element(ns + "Matrix"), root) : new Matrix(ns, root);
-        transformationPoint = elementNode.Element(ns + "transformationPoint")?.Element(ns + "Point") is not null ? new Point(elementNode.Element(ns + "transformationPoint")!.Element(ns + "Point")!) : new Point(ns);
+        matrix = elementNode.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER) is not null ? new Matrix(elementNode.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)!.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER), root) : new Matrix(ns, root);
+        transformationPoint = elementNode.Element(ns + Point.TRANSFORMATION_POINT_NODE_IDENTIFIER)?.Element(ns + Point.POINT_NODE_IDENTIFIER) is not null ? new Point(elementNode.Element(ns + Point.TRANSFORMATION_POINT_NODE_IDENTIFIER)!.Element(ns + Point.POINT_NODE_IDENTIFIER)!) : new Point(ns);
     }
     internal Element(in Element other)
     {
@@ -63,8 +64,8 @@ public abstract class Element
         width = other.width;
         height = other.height;
         selected = other.selected;
-        matrix = new Matrix(root?.Element(ns + "matrix")?.Element(ns + "Matrix")!, root);
-        transformationPoint = new Point(root?.Element(ns + "transformationPoint")!.Element(ns + "Point")!);
+        matrix = new Matrix(root?.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER)!, root);
+        transformationPoint = new Point(root?.Element(ns + Point.TRANSFORMATION_POINT_NODE_IDENTIFIER)!.Element(ns + Point.POINT_NODE_IDENTIFIER)!);
     }
     internal Element(Item item, string elementType, string nodeName) : this(item.Namespace)
     {
@@ -74,8 +75,8 @@ public abstract class Element
         }
         ns = item.Namespace;
         root = new XElement(ns + nodeName);
-        root.Add(new XElement(ns + "transformationPoint"));
-        root.Element(ns + "transformationPoint")?.Add(transformationPoint.Root);
+        root.Add(new XElement(ns + Point.TRANSFORMATION_POINT_NODE_IDENTIFIER));
+        root.Element(ns + Point.TRANSFORMATION_POINT_NODE_IDENTIFIER)?.Add(transformationPoint.Root);
         this.elementType = elementType;
         matrix.SetParent(root);
     }

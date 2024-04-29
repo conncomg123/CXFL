@@ -5,6 +5,8 @@ using System.Xml.Linq;
 
 public class Frame : ILibraryEventReceiver, IDisposable
 {
+    internal const string FRAME_NODE_IDENTIFIER = "DOMFrame",
+    FRAMES_NODEGROUP_IDENTIFIER = "frames";
     private static readonly HashSet<string> AcceptableLabelTypes = new HashSet<string> { "none", "name", "comment", "anchor" };
     public enum KeyModes : int
     {
@@ -97,7 +99,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
     public ReadOnlyCollection<Element> Elements { get { return elements.AsReadOnly(); } }
     private void LoadElements(in XElement frameNode)
     {
-        List<XElement>? elementNodes = frameNode.Element(ns + "elements")?.Elements().ToList();
+        List<XElement>? elementNodes = frameNode.Element(ns + Element.ELEMENTS_NODEGROUP_IDENTIFIER)?.Elements().ToList();
         if (elementNodes is null) return;
         foreach (XElement elementNode in elementNodes)
         {
@@ -116,9 +118,9 @@ public class Frame : ILibraryEventReceiver, IDisposable
                     if (CorrespondingItem is not null)
                         LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingItem, this);
                     break;
-                case "DOMStaticText":
-                case "DOMDynamicText":
-                case "DOMInputText":
+                case Text.STATIC_TEXT_NODE_IDENTIFIER:
+                case Text.DYNAMIC_TEXT_NODE_IDENTIFIER:
+                case Text.INPUT_TEXT_NODE_IDENTIFIER:
                     elements.Add(new Text(elementNode));
                     break;
             }
@@ -126,17 +128,17 @@ public class Frame : ILibraryEventReceiver, IDisposable
     }
     private void LoadEases(in XElement frameNode)
     {
-        List<XElement>? easeNodes = frameNode.Element(ns + "tweens")?.Elements().ToList();
+        List<XElement>? easeNodes = frameNode.Element(ns + IEase.EASES_NODEGROUP_IDENTIFIER)?.Elements().ToList();
         if (easeNodes is null) return;
         foreach (XElement easeNode in easeNodes)
         {
             string easeName = easeNode.Name.LocalName.ToString();
             switch (easeName)
             {
-                case "Ease":
+                case Ease.EASE_NODE_IDENTIFIER:
                     eases.Add(new Ease(easeNode));
                     break;
-                case "CustomEase":
+                case CustomEase.CUSTOM_EASE_NODE_IDENTIFIER:
                     eases.Add(new CustomEase(easeNode));
                     break;
             }
@@ -205,6 +207,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
             CorrespondingSoundItem!.UseCount++;
         }
     }
+
     public void Dispose()
     {
         if (registeredForSoundItem)
@@ -239,13 +242,13 @@ public class Frame : ILibraryEventReceiver, IDisposable
         // unregister from library events
         CleanupElements();
         elements.Clear();
-        root?.Element(ns + "elements")?.RemoveAll();
+        root?.Element(ns + Element.ELEMENTS_NODEGROUP_IDENTIFIER)?.RemoveAll();
     }
     public Text AddNewText(Rectangle boundingRect, string characters = "")
     {
         Text text = new(boundingRect, characters, ns);
         elements.Add(text);
-        root?.Element(ns + "elements")?.Add(text.Root);
+        root?.Element(ns + Element.ELEMENTS_NODEGROUP_IDENTIFIER)?.Add(text.Root);
         return text;
     }
     internal Instance? AddItem(Item item)
@@ -260,7 +263,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         {
             SymbolInstance symbolInstance = new SymbolInstance(symbolItem, library);
             elements.Add(symbolInstance);
-            root?.Element(ns + "elements")?.Add(symbolInstance.Root);
+            root?.Element(ns + Element.ELEMENTS_NODEGROUP_IDENTIFIER)?.Add(symbolInstance.Root);
             LibraryEventMessenger.Instance.RegisterReceiver(symbolInstance.CorrespondingItem!, this);
             return symbolInstance;
         }
@@ -268,7 +271,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         {
             BitmapInstance bitmapInstance = new BitmapInstance(bitmapItem, library);
             elements.Add(bitmapInstance);
-            root?.Element(ns + "elements")?.Add(bitmapInstance.Root);
+            root?.Element(ns + Element.ELEMENTS_NODEGROUP_IDENTIFIER)?.Add(bitmapInstance.Root);
             LibraryEventMessenger.Instance.RegisterReceiver(bitmapInstance.CorrespondingItem!, this);
             return bitmapInstance;
         }
@@ -304,15 +307,15 @@ public class Frame : ILibraryEventReceiver, IDisposable
         KeyMode = (int)KeyModes.ClassicTween;
         TweenType = "motion";
         MotionTweenSnap = true;
-        if (root?.Element(ns + "tweens") is null)
+        if (root?.Element(ns + IEase.EASES_NODEGROUP_IDENTIFIER) is null)
         {
-            root?.Add(new XElement(ns + "tweens"));
+            root?.Add(new XElement(ns + IEase.EASES_NODEGROUP_IDENTIFIER));
         }
-        root?.Element(ns + "tweens")?.RemoveAll();
-        XElement easeNode = new(ns + "Ease");
+        root?.Element(ns + IEase.EASES_NODEGROUP_IDENTIFIER)?.RemoveAll();
+        XElement easeNode = new(ns + Ease.EASE_NODE_IDENTIFIER);
         easeNode.SetAttributeValue("target", target);
         easeNode.SetAttributeValue("method", method);
-        root?.Element(ns + "tweens")?.Add(easeNode);
+        root?.Element(ns + IEase.EASES_NODEGROUP_IDENTIFIER)?.Add(easeNode);
         eases.Add(new Ease(easeNode));
         EaseMethodName = method;
     }
@@ -321,7 +324,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         KeyMode = (int)KeyModes.Normal;
         TweenType = "none";
         MotionTweenSnap = false;
-        root?.Element(ns + "tweens")?.Remove();
+        root?.Element(ns + IEase.EASES_NODEGROUP_IDENTIFIER)?.Remove();
         eases.Clear();
         EaseMethodName = DefaultValues.EaseMethodName;
     }

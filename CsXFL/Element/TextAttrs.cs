@@ -3,6 +3,8 @@ using System.Xml.Linq;
 namespace CsXFL;
 public class TextAttrs
 {
+    internal const string TEXTATTRS_NODE_IDENTIFIER = "DOMTextAttrs",
+    TEXTATTRS_NODEGROUP_IDENTIFIER = "textAttrs";
     private static readonly HashSet<string> ACCEPTABLE_ALIGNMENTS = new HashSet<string> { "left", "center", "right", "justify" },
         ACCEPTABLE_CHARACTERPOSITIONS = new HashSet<string> { "normal", "subscript", "superscript" };
     private static class DefaultValues
@@ -52,7 +54,7 @@ public class TextAttrs
     #pragma warning disable CS8618
     internal TextAttrs(XNamespace ns)
     {
-        root = new XElement(ns + "DOMTextAttrs");
+        root = new XElement(ns + TextAttrs.TEXTATTRS_NODE_IDENTIFIER);
         AliasText = DefaultValues.AliasText;
         AutoKern = DefaultValues.AutoKern;
         Bold = DefaultValues.Bold;
