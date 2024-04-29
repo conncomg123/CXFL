@@ -25,9 +25,18 @@ public class SymbolItem : Item
     internal SymbolItem() : base()
     {
         ns = string.Empty;
-        symbolType = string.Empty;
+        symbolType = DefaultValues.SymbolType;
         timeline = new Lazy<Timeline>(() => new Timeline());
         include = new Include();
+    }
+    internal SymbolItem(XNamespace ns, string name, Library library) : base(DefaultValues.SymbolType, name, ns)
+    {
+        symbolType = DefaultValues.SymbolType;
+        timeline = new Lazy<Timeline>(() => new Timeline(ns, library, name));
+        include = new Include(ns, name + ".xml");
+        root = new XElement(ns + "DOMSymbolItem");
+        root.SetAttributeValue("name", name);
+        root.SetAttributeValue("symbolType", symbolType);
     }
     internal SymbolItem(XElement symbolItemNode, in XElement include, Library? library, string? timelineName = null) : base(symbolItemNode, (string?)symbolItemNode.Attribute("symbolType") ?? DefaultValues.SymbolType)
     {
@@ -37,11 +46,13 @@ public class SymbolItem : Item
         }
         symbolType = (string?)symbolItemNode.Attribute("symbolType") ?? DefaultValues.SymbolType;
         timeline = new Lazy<Timeline>(() =>
-{
-    var newTimeline = new Timeline(symbolItemNode.Element(ns + "timeline")!.Element(ns + "DOMTimeline")!, library);
-    newTimeline.Name = timelineName ?? Name.Substring(Name.LastIndexOf('/') + 1);
-    return newTimeline;
-});
+        {
+            var newTimeline = new Timeline(symbolItemNode.Element(ns + "timeline")!.Element(ns + "DOMTimeline")!, library)
+            {
+                Name = timelineName ?? Name.Substring(Name.LastIndexOf('/') + 1)
+            };
+            return newTimeline;
+        });
         this.include = new Include(include);
     }
     internal SymbolItem(SymbolItem other) : base(other)

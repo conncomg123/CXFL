@@ -38,7 +38,11 @@ public class Timeline : IDisposable
         this.library = library;
         LoadLayers(root);
     }
-    internal Timeline() : this(new XElement("timeline"), null) { }
+    internal Timeline() : this(new XElement("DOMTimeline"), null) { }
+    internal Timeline(XNamespace ns, Library library, string name) : this(new XElement(ns + "DOMTimeline"), library)
+    {
+        Name = name;
+    }
     internal Timeline(Timeline other)
     {
         root = other.root is null ? null : new XElement(other.root);

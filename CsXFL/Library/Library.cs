@@ -31,7 +31,8 @@ public class Library
     }
     public const string LIBRARY_PATH = "LIBRARY", BINARY_PATH = "bin";
     private const int WAV_HEADER_SIZE = 44;
-    private static readonly HashSet<string> SYMBOL_FILE_EXTENSIONS = new() { ".xml" }, AUDIO_FILE_EXTENSIONS = new() { ".mp3", ".wav", ".flac" }, IMAGE_FILE_EXTENSIONS = new() { ".png", ".jpg", ".jpeg", ".gif" };
+    private static readonly HashSet<string> SYMBOL_FILE_EXTENSIONS = new() { ".xml" }, AUDIO_FILE_EXTENSIONS = new() { ".mp3", ".wav", ".flac" }, IMAGE_FILE_EXTENSIONS = new() { ".png", ".jpg", ".jpeg", ".gif" },
+    ACCEPTABLE_NEW_ITEM_TYPES = new() { "video", "movie clip", "button", "graphic", "bitmap", "screen", "folder" };
     private readonly Dictionary<string, Item> items;
     private readonly Queue<ItemOperation> itemOperations;
     private readonly List<Item> unusedItems;
@@ -237,6 +238,28 @@ public class Library
             added.Matrix.Ty = posY;
         }
         return true;
+    }
+    public Item AddNewItem(string itemType, string name)
+    {
+        if(items.ContainsKey(name)) throw new ArgumentException("Item with name " + name + " already exists.");
+        if (!ACCEPTABLE_NEW_ITEM_TYPES.Contains(itemType)) throw new ArgumentException("Invalid item type: " + itemType);
+        Item newItem;
+        switch (itemType)
+        {
+            case "movie clip":
+            case "graphic":
+            case "button":
+                newItem = new SymbolItem(ns, name, this);
+                newItem.Root!.Add(new XElement(ns + "timeline", (newItem as SymbolItem)!.Timeline.Root));
+                if (containingDocument.Root!.Element(ns + "symbols") is null) containingDocument.Root!.AddFirst(new XElement(ns + "symbols"));
+                containingDocument.Root!.Element(ns + "symbols")!.Add((newItem as SymbolItem)!.Include.Root);
+                break;
+            default:
+                throw new NotImplementedException("Item type not implemented yet: " + itemType);
+        }
+        items.Add(name, newItem);
+        // itemOperations.Enqueue(new ItemOperation(newItem, ItemOperation.OperationType.Add, name));
+        return newItem;
     }
     internal Item? ImportItem(string path, bool isFromOtherDocument = false, string? otherDocumentLibraryRoot = null)
     {
