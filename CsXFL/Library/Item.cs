@@ -16,14 +16,24 @@ public abstract class Item
     public int UseCount { get { return useCount; } set { useCount = value; } }
     public XNamespace Namespace { get { return ns; } }
     public XElement? Root { get { return root; } }
-    public Item()
+    internal Item()
     {
         root = null;
         itemType = string.Empty;
         name = string.Empty;
         ns = string.Empty;
     }
-    public Item(in XElement itemNode, string itemType)
+    internal Item(string itemType, string name, XNamespace ns)
+    {
+        if (!AcceptableItemTypes.Contains(itemType))
+        {
+            throw new ArgumentException("Invalid item type: " + itemType);
+        }
+        this.itemType = itemType;
+        this.name = name;
+        this.ns = ns;
+    }
+    internal Item(in XElement itemNode, string itemType)
     {
         if (!AcceptableItemTypes.Contains(itemType))
         {
@@ -34,7 +44,7 @@ public abstract class Item
         name = (string)itemNode.Attribute("name")!; // all items have a name
         ns = root.Name.NamespaceName;
     }
-    public Item(in Item other)
+    internal Item(in Item other)
     {
         root = other.root is null ? null : new XElement(other.root);
         itemType = other.itemType;

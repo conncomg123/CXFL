@@ -13,6 +13,12 @@ internal class Include
         root = null;
         href = string.Empty;
     }
+    public Include(XNamespace ns, string href)
+    {
+        root = new XElement(ns + "Include");
+        this.href = href;
+        root.SetAttributeValue("href", href);
+    }
     public Include(in XElement includeNode)
     {
         root = includeNode;
