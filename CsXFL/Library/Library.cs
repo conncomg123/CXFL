@@ -4,6 +4,9 @@ using System.Xml.Linq;
 namespace CsXFL;
 public class Library
 {
+    private const string SYMBOLS_NODEGROUP_IDENTIFIER = "symbols",
+    FOLDERS_NODEGROUP_IDENTIFIER = "folders",
+    MEDIA_NODEGROUP_IDENTIFIER = "media";
     private static int uniqueBinaryDataItemIndex = 0;
     private class ItemOperation
     {
@@ -31,6 +34,7 @@ public class Library
     }
     public const string LIBRARY_PATH = "LIBRARY", BINARY_PATH = "bin";
     private const int WAV_HEADER_SIZE = 44;
+
     private static readonly HashSet<string> SYMBOL_FILE_EXTENSIONS = new() { ".xml" }, AUDIO_FILE_EXTENSIONS = new() { ".mp3", ".wav", ".flac" }, IMAGE_FILE_EXTENSIONS = new() { ".png", ".jpg", ".jpeg", ".gif" },
     ACCEPTABLE_NEW_ITEM_TYPES = new() { "video", "movie clip", "button", "graphic", "bitmap", "screen", "folder" };
     private readonly Dictionary<string, Item> items;
@@ -59,7 +63,7 @@ public class Library
             string mediaType = mediaNode_.Name.LocalName;
             switch (mediaType)
             {
-                case "DOMBitmapItem":
+                case BitmapItem.BITMAP_NODE_IDENTIFIER:
                     BitmapItem bitmap = new(mediaNode_);
                     items.Add(bitmap.Name, bitmap);
                     break;
@@ -113,7 +117,7 @@ public class Library
             string mediaType = mediaNode_.Name.LocalName;
             switch (mediaType)
             {
-                case "DOMBitmapItem":
+                case BitmapItem.BITMAP_NODE_IDENTIFIER:
                     BitmapItem bitmap = new(mediaNode_);
                     items.Add(bitmap.Name, bitmap);
                     break;
@@ -159,16 +163,16 @@ public class Library
         foreach (XElement libraryNode in libraryNodes)
         {
             string currentNode = libraryNode.Name.LocalName;
-            if (currentNode == "timelines") break;
+            if (currentNode == Timeline.TIMELINES_NODEGROUP_IDENTIFIER) break;
             switch (currentNode)
             {
-                case "folders":
+                case FOLDERS_NODEGROUP_IDENTIFIER:
                     LoadFolders(libraryNode);
                     break;
-                case "media":
+                case MEDIA_NODEGROUP_IDENTIFIER:
                     LoadMedia(libraryNode);
                     break;
-                case "symbols":
+                case SYMBOLS_NODEGROUP_IDENTIFIER:
                     LoadFLASymbols(libraryNode);
                     break;
 
@@ -183,16 +187,16 @@ public class Library
         foreach (XElement libraryNode in libraryNodes)
         {
             string currentNode = libraryNode.Name.LocalName;
-            if (currentNode == "timelines") break;
+            if (currentNode == Timeline.TIMELINES_NODEGROUP_IDENTIFIER) break;
             switch (currentNode)
             {
-                case "folders":
+                case FOLDERS_NODEGROUP_IDENTIFIER:
                     LoadFolders(libraryNode);
                     break;
-                case "media":
+                case MEDIA_NODEGROUP_IDENTIFIER:
                     LoadMedia(libraryNode);
                     break;
-                case "symbols":
+                case SYMBOLS_NODEGROUP_IDENTIFIER:
                     LoadXFLSymbols(libraryNode);
                     break;
 
@@ -241,7 +245,7 @@ public class Library
     }
     public Item AddNewItem(string itemType, string name)
     {
-        if(items.ContainsKey(name)) throw new ArgumentException("Item with name " + name + " already exists.");
+        if (items.ContainsKey(name)) throw new ArgumentException("Item with name " + name + " already exists.");
         if (!ACCEPTABLE_NEW_ITEM_TYPES.Contains(itemType)) throw new ArgumentException("Invalid item type: " + itemType);
         Item newItem;
         switch (itemType)
@@ -250,9 +254,9 @@ public class Library
             case "graphic":
             case "button":
                 newItem = new SymbolItem(ns, name, this);
-                newItem.Root!.Add(new XElement(ns + "timeline", (newItem as SymbolItem)!.Timeline.Root));
-                if (containingDocument.Root!.Element(ns + "symbols") is null) containingDocument.Root!.AddFirst(new XElement(ns + "symbols"));
-                containingDocument.Root!.Element(ns + "symbols")!.Add((newItem as SymbolItem)!.Include.Root);
+                newItem.Root!.Add(new XElement(ns + SymbolItem.SYMBOLITEM_TIMELINE_NODE_IDENTIFIER, (newItem as SymbolItem)!.Timeline.Root));
+                if (containingDocument.Root!.Element(ns + SYMBOLS_NODEGROUP_IDENTIFIER) is null) containingDocument.Root!.AddFirst(new XElement(ns + SYMBOLS_NODEGROUP_IDENTIFIER));
+                containingDocument.Root!.Element(ns + SYMBOLS_NODEGROUP_IDENTIFIER)!.Add((newItem as SymbolItem)!.Include.Root);
                 break;
             default:
                 throw new NotImplementedException("Item type not implemented yet: " + itemType);
@@ -287,20 +291,20 @@ public class Library
         if (SYMBOL_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
             imported = SymbolItem.FromFile(path, this, Path.GetFileNameWithoutExtension(itemName));
-            if (containingDocument.Root!.Element(ns + "symbols") is null) containingDocument.Root!.AddFirst(new XElement(ns + "symbols"));
-            containingDocument.Root!.Element(ns + "symbols")!.Add((imported as SymbolItem)!.Include.Root);
+            if (containingDocument.Root!.Element(ns + SYMBOLS_NODEGROUP_IDENTIFIER) is null) containingDocument.Root!.AddFirst(new XElement(ns + SYMBOLS_NODEGROUP_IDENTIFIER));
+            containingDocument.Root!.Element(ns + SYMBOLS_NODEGROUP_IDENTIFIER)!.Add((imported as SymbolItem)!.Include.Root);
         }
         else if (AUDIO_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
             imported = SoundItem.FromFile(path, ns);
-            if (containingDocument.Root!.Element(ns + "media") is null) containingDocument.Root!.AddFirst(new XElement(ns + "media"));
-            containingDocument.Root!.Element(ns + "media")!.Add(imported.Root);
+            if (containingDocument.Root!.Element(ns + MEDIA_NODEGROUP_IDENTIFIER) is null) containingDocument.Root!.AddFirst(new XElement(ns + MEDIA_NODEGROUP_IDENTIFIER));
+            containingDocument.Root!.Element(ns + MEDIA_NODEGROUP_IDENTIFIER)!.Add(imported.Root);
         }
         else if (IMAGE_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
         {
             imported = BitmapItem.FromFile(path, ns);
-            if (containingDocument.Root!.Element(ns + "media") is null) containingDocument.Root!.AddFirst(new XElement(ns + "media"));
-            containingDocument.Root!.Element(ns + "media")!.Add(imported.Root);
+            if (containingDocument.Root!.Element(ns + MEDIA_NODEGROUP_IDENTIFIER) is null) containingDocument.Root!.AddFirst(new XElement(ns + MEDIA_NODEGROUP_IDENTIFIER));
+            containingDocument.Root!.Element(ns + MEDIA_NODEGROUP_IDENTIFIER)!.Add(imported.Root);
         }
         if (imported is null) return null;
         imported.Name = itemName;
@@ -405,8 +409,8 @@ public class Library
             Name = folderName
         };
         items.Add(folderName, folder);
-        if (containingDocument.Root!.Element(ns + "folders") is null) containingDocument.Root!.AddFirst(new XElement(ns + "folders"));
-        containingDocument.Root!.Element(ns + "folders")!.Add(folder.Root);
+        if (containingDocument.Root!.Element(ns + FOLDERS_NODEGROUP_IDENTIFIER) is null) containingDocument.Root!.AddFirst(new XElement(ns + FOLDERS_NODEGROUP_IDENTIFIER));
+        containingDocument.Root!.Element(ns + FOLDERS_NODEGROUP_IDENTIFIER)!.Add(folder.Root);
         return true;
     }
     internal void Save(string filename)

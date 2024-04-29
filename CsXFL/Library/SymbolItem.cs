@@ -3,6 +3,8 @@ using System.Xml.Linq;
 namespace CsXFL;
 public class SymbolItem : Item
 {
+    internal const string SYMBOLITEM_NODE_IDENTIFIER = "DOMSymbolItem",
+    SYMBOLITEM_TIMELINE_NODE_IDENTIFIER = "timeline";
     public static class DefaultValues
     {
         public const string SymbolType = "movie clip";
@@ -34,7 +36,7 @@ public class SymbolItem : Item
         symbolType = DefaultValues.SymbolType;
         timeline = new Lazy<Timeline>(() => new Timeline(ns, library, name));
         include = new Include(ns, name + ".xml");
-        root = new XElement(ns + "DOMSymbolItem");
+        root = new XElement(ns + SymbolItem.SYMBOLITEM_NODE_IDENTIFIER);
         root.SetAttributeValue("name", name);
         root.SetAttributeValue("symbolType", symbolType);
     }
@@ -47,7 +49,7 @@ public class SymbolItem : Item
         symbolType = (string?)symbolItemNode.Attribute("symbolType") ?? DefaultValues.SymbolType;
         timeline = new Lazy<Timeline>(() =>
         {
-            var newTimeline = new Timeline(symbolItemNode.Element(ns + "timeline")!.Element(ns + "DOMTimeline")!, library)
+            var newTimeline = new Timeline(symbolItemNode.Element(ns + SymbolItem.SYMBOLITEM_TIMELINE_NODE_IDENTIFIER)!.Element(ns + Timeline.TIMELINE_NODE_IDENTIFIER)!, library)
             {
                 Name = timelineName ?? Name.Substring(Name.LastIndexOf('/') + 1)
             };
@@ -69,7 +71,7 @@ public class SymbolItem : Item
             throw new InvalidDataException("Invalid XFL file: " + path);
         }
         XNamespace ns = xflTree.Root.Name.Namespace;
-        XElement includeNode = new(ns + "Include");
+        XElement includeNode = new(ns + Include.INCLUDE_NODE_IDENTIFIER);
         includeNode.SetAttributeValue("href", path);
         return new SymbolItem(xflTree.Root, includeNode, library, timelineName);
     }

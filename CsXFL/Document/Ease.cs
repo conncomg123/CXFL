@@ -3,6 +3,7 @@ using System.Xml.Linq;
 namespace CsXFL;
 public interface IEase
 {
+    internal const string EASES_NODEGROUP_IDENTIFIER = "tweens";
     public static HashSet<string> ACCEPTABLE_TARGETS = new() { "all", "position", "scale", "rotation", "color", "filters" };
     public static HashSet<string> ACCEPTABLE_METHODS = GenerateAcceptableMethods();
 
@@ -33,6 +34,7 @@ public interface IEase
 }
 public class Ease : IEase
 {
+    internal const string EASE_NODE_IDENTIFIER = "Ease";
     private string target;
     private string method;
     private XElement? root;
@@ -80,7 +82,7 @@ public class Ease : IEase
 #pragma warning disable CS8618
     public Ease(string? target, string? method, XNamespace ns)
     {
-        root = new XElement(ns + "Ease");
+        root = new XElement(ns + Ease.EASE_NODE_IDENTIFIER);
         this.ns = ns;
         Target = target ?? IEase.DefaultValues.Target;
         Method = method ?? IEase.DefaultValues.Method;
@@ -96,6 +98,7 @@ public class Ease : IEase
 }
 public class CustomEase : IEase
 {
+    internal const string CUSTOM_EASE_NODE_IDENTIFIER = "CustomEase";
     private string target;
     private XElement? root;
     private XNamespace ns;
@@ -120,12 +123,12 @@ public class CustomEase : IEase
         {
             throw new ArgumentException($"Invalid target: {target}");
         }
-        Points = customEaseNode.Elements(ns + "Point").Select(pointNode => new Point(pointNode)).ToList();
+        Points = customEaseNode.Elements(ns + Point.POINT_NODE_IDENTIFIER).Select(pointNode => new Point(pointNode)).ToList();
     }
     #pragma warning disable CS8618
     public CustomEase(string target, IEnumerable<Point> points, XNamespace ns)
     {
-        root = new XElement(ns + "CustomEase");
+        root = new XElement(ns + CustomEase.CUSTOM_EASE_NODE_IDENTIFIER);
         this.ns = ns;
         Target = target;
         Points = new List<Point>(points);

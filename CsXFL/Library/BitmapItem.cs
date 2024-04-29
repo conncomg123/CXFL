@@ -4,6 +4,7 @@ using SixLabors.ImageSharp;
 namespace CsXFL;
 public class BitmapItem : Item
 {
+    internal const string BITMAP_NODE_IDENTIFIER = "DOMBitmapItem";
     public const int SUBPIXELS_PER_PIXEL = 20;
     internal static class DefaultValues
     {
@@ -77,7 +78,7 @@ public class BitmapItem : Item
     }
     internal static BitmapItem FromFile(string path, XNamespace ns)
     {
-        XElement bitmapItemNode = new(ns + "DOMBitmapItem");
+        XElement bitmapItemNode = new(ns + BitmapItem.BITMAP_NODE_IDENTIFIER);
         bitmapItemNode.SetAttributeValue("href", path);
         bitmapItemNode.SetAttributeValue("name", Path.GetFileName(path));
         using Image image = Image.Load(path);

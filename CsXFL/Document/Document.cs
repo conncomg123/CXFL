@@ -78,7 +78,7 @@ public class Document
     }
     private void LoadTimelines(XElement documentNode)
     {
-        List<XElement>? timelineNodes = documentNode.Element(ns + "timelines")?.Elements().ToList();
+        List<XElement>? timelineNodes = documentNode.Element(ns + Timeline.TIMELINES_NODEGROUP_IDENTIFIER)?.Elements().ToList();
         if (timelineNodes is null) return;
         foreach (XElement timelineNode in timelineNodes)
         {
@@ -161,10 +161,10 @@ public class Document
     }
     public Timeline AddNewScene(string? name = null)
     {
-        XElement newTimeline = new(ns + "DOMTimeline");
+        XElement newTimeline = new(ns + Timeline.TIMELINE_NODE_IDENTIFIER);
         newTimeline.SetAttributeValue("name", name ?? "Scene " + (timelines.Count + 1));
-        if (root?.Element(ns + "timelines") is null) root?.Add(new XElement(ns + "timelines"));
-        root?.Element(ns + "timelines")?.Add(newTimeline);
+        if (root?.Element(ns + Timeline.TIMELINES_NODEGROUP_IDENTIFIER) is null) root?.Add(new XElement(ns + Timeline.TIMELINES_NODEGROUP_IDENTIFIER));
+        root?.Element(ns + Timeline.TIMELINES_NODEGROUP_IDENTIFIER)?.Add(newTimeline);
         Timeline timeline = new(newTimeline, library);
         timelines.Add(timeline);
         timeline.AddNewLayer("Layer_1");
@@ -182,7 +182,7 @@ public class Document
         }
 
         timelines.Insert(addBefore ? sceneToPutItBy : sceneToPutItBy + 1, timeline);
-        XElement timelinesElement = root?.Element(ns + "timelines")!;
+        XElement timelinesElement = root?.Element(ns + Timeline.TIMELINES_NODEGROUP_IDENTIFIER)!;
         if (timelinesElement != null)
         {
             XElement? timelineElement = timeline.Root;

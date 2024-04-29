@@ -4,6 +4,9 @@ namespace CsXFL;
 // encompasses all types of text: static, dynamic, and input
 public class Text : Element
 {
+    internal const string STATIC_TEXT_NODE_IDENTIFIER = "DOMStaticText",
+    DYNAMIC_TEXT_NODE_IDENTIFIER = "DOMDynamicText",
+    INPUT_TEXT_NODE_IDENTIFIER = "DOMInputText";
     new private static class DefaultValues
     {
         public const double AntiAliasSharpness = 0.0, AntiAliasThickness = 0.0;
@@ -13,9 +16,9 @@ public class Text : Element
     }
     private static readonly Dictionary<string, string> DOMTEXTTYPE_TO_TEXTTYPE = new Dictionary<string, string>
     {
-        {"DOMStaticText", "static"},
-        {"DOMDynamicText", "dynamic"},
-        {"DOMInputText", "input"}
+        {STATIC_TEXT_NODE_IDENTIFIER, "static"},
+        {DYNAMIC_TEXT_NODE_IDENTIFIER, "dynamic"},
+        {INPUT_TEXT_NODE_IDENTIFIER, "input"}
     }, TEXTTYPE_TO_DOMTEXTTYPE = DOMTEXTTYPE_TO_TEXTTYPE.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
     private static readonly HashSet<string> ACCEPTABLE_LINETYPES = new HashSet<string> { "single line", "multiline", "multiline no wrap", "password" },
         ACCEPTABLE_TEXTTYPES = new HashSet<string> { "static", "dynamic", "input" },
@@ -81,7 +84,7 @@ public class Text : Element
         fontRenderingMode = (string?)root.Attribute("fontRenderingMode") ?? DefaultValues.FontRenderingMode;
         orientation = (string?)root.Attribute("orientation") ?? DefaultValues.Orientation;
         textRuns = new List<TextRun>();
-        foreach (XElement textRunNode in root.Elements(ns + "textRuns").Elements(ns + "DOMTextRun"))
+        foreach (XElement textRunNode in root.Elements(ns + TextRun.TEXTRUNS_NODEGROUP_IDENTIFIER).Elements(ns + TextRun.TEXT_RUN_NODE_IDENTIFIER))
         {
             textRuns.Add(new TextRun(textRunNode));
         }
@@ -89,9 +92,9 @@ public class Text : Element
 #pragma warning disable CS8618
     internal Text(Rectangle boundingRect, string characters, XNamespace ns) : base(ns)
     {
-        root = new XElement(ns + "DOMStaticText");
-        root.Add(new XElement(ns + "transformationPoint"));
-        root.Element(ns + "transformationPoint")!.Add(transformationPoint.Root);
+        root = new XElement(ns + STATIC_TEXT_NODE_IDENTIFIER);
+        root.Add(new XElement(ns + Point.TRANSFORMATION_POINT_NODE_IDENTIFIER));
+        root.Element(ns + Point.TRANSFORMATION_POINT_NODE_IDENTIFIER)!.Add(transformationPoint.Root);
         matrix.SetParent(root);
         elementType = "text";
         this.ns = ns;
@@ -102,12 +105,12 @@ public class Text : Element
         AntiAliasSharpness = DefaultValues.AntiAliasSharpness;
         AntiAliasThickness = DefaultValues.AntiAliasThickness;
         LineType = DefaultValues.LineType;
-        TextType = "static";
+        TextType = DOMTEXTTYPE_TO_TEXTTYPE[root.Name.LocalName];
         FontRenderingMode = DefaultValues.FontRenderingMode;
         Orientation = DefaultValues.Orientation;
         TextRun added = new TextRun(characters, ns);
         textRuns = new List<TextRun> { added };
-        root.Add(new XElement(ns + "textRuns", added.Root));
+        root.Add(new XElement(ns + TextRun.TEXTRUNS_NODEGROUP_IDENTIFIER, added.Root));
     }
 #pragma warning restore CS8618
     internal Text(in Text other) : base(other)
@@ -121,7 +124,7 @@ public class Text : Element
         fontRenderingMode = other.fontRenderingMode;
         orientation = other.orientation;
         textRuns = new List<TextRun>();
-        foreach (XElement textRunNode in root!.Elements(ns + "textRuns").Elements(ns + "DOMTextRun"))
+        foreach (XElement textRunNode in root!.Elements(ns + TextRun.TEXTRUNS_NODEGROUP_IDENTIFIER).Elements(ns + TextRun.TEXT_RUN_NODE_IDENTIFIER))
         {
             textRuns.Add(new TextRun(textRunNode));
         }
@@ -133,10 +136,10 @@ public class Text : Element
             textRuns[0].Characters = characters;
             return;
         }
-        root?.Element(ns + "textRuns")?.RemoveNodes();
+        root?.Element(ns + TextRun.TEXTRUNS_NODEGROUP_IDENTIFIER)?.RemoveNodes();
         TextRun added = new TextRun(characters, ns);
         textRuns = new List<TextRun> { added };
-        root?.Element(ns + "textRuns")?.Add(added.Root);
+        root?.Element(ns + TextRun.TEXTRUNS_NODEGROUP_IDENTIFIER)?.Add(added.Root);
     }
     public string GetTextString()
     {
