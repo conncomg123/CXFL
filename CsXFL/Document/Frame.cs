@@ -112,7 +112,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
                     if (CorrespondingItem is not null)
                         LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingItem, this);
                     break;
-                case "DOMSymbolInstance":
+                case SymbolInstance.SYMBOLINSTANCE_NODE_IDENTIFIER:
                     elements.Add(new SymbolInstance(elementNode, library));
                     CorrespondingItem = (elements.Last() as SymbolInstance)!.CorrespondingItem;
                     if (CorrespondingItem is not null)

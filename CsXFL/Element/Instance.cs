@@ -5,7 +5,7 @@ public class Instance : Element, ILibraryEventReceiver, IDisposable
 {
     private static readonly Dictionary<string, string> NodeNameToInstanceType = new Dictionary<string, string>
     {
-        {"DOMSymbolInstance", "symbol"},
+        {SymbolInstance.SYMBOLINSTANCE_NODE_IDENTIFIER, "symbol"},
         {"DOMBitmapInstance", "bitmap"},
         {"DOMVideoInstance", "video"},
         {"DOMCompiledClipInstance", "compiled clip"}
