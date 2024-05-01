@@ -135,18 +135,27 @@ public static class An
         {
             otherDocPath = GetTempFLAPath(otherDocPath);
         }
+        Document otherDoc = new(otherDocPath);
         string otherFolderPath = Path.Combine(Path.GetDirectoryName(otherDocPath)!, Library.LIBRARY_PATH, folderName);
         if (!Directory.Exists(otherFolderPath)) throw new DirectoryNotFoundException($"The folder does not exist in the other document: {folderName}");
         HashSet<string> filesToImport = new();
-        foreach (string file in Directory.EnumerateFiles(otherFolderPath, "*", SearchOption.AllDirectories))
+        foreach (string file in otherDoc.Library.Items.Keys.Where(f => f.StartsWith(folderName + "/")))
         {
-            string fileWithoutBackslashes = file.Replace('\\', '/');
-            bool isSymbol = Path.GetExtension(fileWithoutBackslashes) == ".xml";
+            string absoluteFilePath = Path.Combine(Path.GetDirectoryName(otherDocPath)!, Library.LIBRARY_PATH, file).Replace('\\', '/');
+            // see if that file exists and append the correct extension
+            string[] matchingFiles = Directory.GetFiles(Path.GetDirectoryName(absoluteFilePath)!, Path.GetFileNameWithoutExtension(absoluteFilePath) + ".*");
+            if (matchingFiles.Length == 0) continue;
+            foreach (string matchingFile in matchingFiles)
+            {
+                if(filesToImport.Contains(matchingFile)) continue;
+                absoluteFilePath = matchingFile.Replace('\\', '/');
+            }
+            bool isSymbol = Path.GetExtension(absoluteFilePath) == ".xml";
             if (isSymbol)
             {
-                AddSymbolAndDependencies(fileWithoutBackslashes, filesToImport, otherDocPath);
+                AddSymbolAndDependencies(absoluteFilePath, filesToImport, otherDocPath);
             }
-            filesToImport.Add(fileWithoutBackslashes);
+            filesToImport.Add(absoluteFilePath);
         }
         string otherDocumentLibraryRoot = Path.Combine(Path.GetDirectoryName(otherDocPath)!, Library.LIBRARY_PATH).Replace('\\', '/');
         List<Item?> importedItems = new();
