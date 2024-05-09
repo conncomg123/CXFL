@@ -1,4 +1,4 @@
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XFL2SESX", "XFLtoSESX\XFL2S
 	ProjectSection(ProjectDependencies) = postProject
 		{A3ACAE7E-1C44-44E1-9AE5-788565025371} = {A3ACAE7E-1C44-44E1-9AE5-788565025371}
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scripts", "Scripts\Scripts.csproj", "{CDE593FD-E7C6-4F1A-98CD-72A773E4D12C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -67,6 +69,14 @@ Global
 		{82EC18BE-08EB-4E38-87EE-4686DCD01985}.Release|Any CPU.Build.0 = Release|Any CPU
 		{82EC18BE-08EB-4E38-87EE-4686DCD01985}.Release|x64.ActiveCfg = Release|Any CPU
 		{82EC18BE-08EB-4E38-87EE-4686DCD01985}.Release|x64.Build.0 = Release|Any CPU
+		{CDE593FD-E7C6-4F1A-98CD-72A773E4D12C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CDE593FD-E7C6-4F1A-98CD-72A773E4D12C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CDE593FD-E7C6-4F1A-98CD-72A773E4D12C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CDE593FD-E7C6-4F1A-98CD-72A773E4D12C}.Debug|x64.Build.0 = Debug|Any CPU
+		{CDE593FD-E7C6-4F1A-98CD-72A773E4D12C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CDE593FD-E7C6-4F1A-98CD-72A773E4D12C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CDE593FD-E7C6-4F1A-98CD-72A773E4D12C}.Release|x64.ActiveCfg = Release|Any CPU
+		{CDE593FD-E7C6-4F1A-98CD-72A773E4D12C}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
