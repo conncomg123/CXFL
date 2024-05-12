@@ -4,7 +4,7 @@ class RCompCreate
     const string USAGE = "Usage: RCompCreate <input_file>";
     const string RCOMP_SYMBOL_NAME = "RCOMP►CHARACTERS";
     const string RCOMP_SHADING_NAME = "RCOMP►SHADING";
-    public static void Main(string[] args)
+    public static void Run(string[] args)
     {
         if (args.Length != 1)
         {
@@ -71,11 +71,21 @@ class RCompCreate
         {
             Console.WriteLine("Save document? (y/n)");
             inp = Console.ReadLine();
-            if(inp == null) continue;
+            if (inp == null) continue;
             if (inp.ToLower().StartsWith('y'))
             {
-                doc.Save();
-                break;
+                try
+                {
+                    doc.Save();
+                }
+                catch (System.Exception e)
+                {
+                    System.Console.WriteLine(e.Message);
+                    System.Console.WriteLine("Failed to save document. You likely have the document open in Adobe Animate, close it and try again.\n Press any key to continue.");
+                    // press any key to continue
+                    System.Console.ReadKey();
+                    continue;
+                }
             }
         } while (inp is null);
     }
