@@ -8,16 +8,15 @@ using CsXFL;
 using MauiIcons.Core;
 using MauiIcons.Material;
 using Microsoft.Maui.Controls.Shapes;
-using static MainViewModel;
 
-// <Y>   Refactor for clarity again
-// <1/2> Fix this goddamn centering issue
-// <1/2> Scroll View height fix
-// <1/2> Do something about separator suck
-// Get cursor hand to work
-// TabWidths propertychange to make CollectionView stacklayout update dynamically
 namespace CXFLGUI
 {
+    public class LibraryItem
+    {
+        public string Key { get; set; }
+        public CsXFL.Item Value { get; set; }
+    }
+
     public class WidthConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -25,9 +24,9 @@ namespace CXFLGUI
             if (value is double nameWidth)
             {
                 // You can adjust the multiplier as needed to fit your layout
-                return nameWidth * 2; // Example: doubling the NameWidth value
+                return nameWidth * 2;
             }
-            return 0; // Default value
+            return 0;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -82,12 +81,6 @@ namespace CXFLGUI
         }
     }
 
-    public class LibraryItem
-    {
-        public string Key { get; set; }
-        public CsXFL.Item Value { get; set; }
-    }
-
     public class DraggableSeparator : Grid
     {
         private readonly BoxView visualIndicator;
@@ -101,13 +94,13 @@ namespace CXFLGUI
 
         // <!> Clicking on the separator will not drag, this is a layering issue
         // <!> Pan event drops when cursor leaves parent container
+
         public DraggableSeparator(Label leftElement, Label rightElement, TabWidths tabWidths)
         {
             this.leftElement = leftElement;
             this.rightElement = rightElement;
             this.tabWidths = tabWidths;
 
-            // These are brushes...
             visualIndicator = new BoxView
             {
                 BackgroundColor = Colors.White,
@@ -122,7 +115,7 @@ namespace CXFLGUI
                 BackgroundColor = Colors.Transparent,
                 HorizontalOptions = LayoutOptions.FillAndExpand,
                 VerticalOptions = LayoutOptions.FillAndExpand,
-                WidthRequest = 30,  // Increase width for easier dragging
+                WidthRequest = 30,
             };
 
             var gestureRecognizer = new PanGestureRecognizer();
@@ -145,7 +138,7 @@ namespace CXFLGUI
             };
             visualIndicatorContainer.Content = visualIndicator;
 
-            Grid.SetColumn(visualIndicatorContainer, 0); // Use column 0 for the visual indicator container
+            Grid.SetColumn(visualIndicatorContainer, 0);
             Grid.SetRow(visualIndicatorContainer, 0);
             grid.Children.Add(visualIndicatorContainer);
 
@@ -189,7 +182,6 @@ namespace CXFLGUI
 
     public class LibraryPanel : VanillaFrame
     {
-        private MainViewModel viewModel;
         private Label LoadedLibraryItemCount;
 
         int LoadedItemsCount = 0;
@@ -221,23 +213,6 @@ namespace CXFLGUI
             return button;
         }
 
-        private void DocumentOpened(object sender, DocumentEventArgs e)
-        {
-            Document Doc = e.Document;
-            LoadedItemsCount = Doc.Library.Items.Count;
-            UpdateLibraryCount(LoadedItemsCount);
-            Tuple_LibraryItemDict = Doc.Library.Items;
-
-            // Clear existing items
-            LibraryItems.Clear();
-
-            // Initiating conversion sequence!
-            foreach (var kvp in Tuple_LibraryItemDict)
-            {
-                LibraryItems.Add(new LibraryItem { Key = kvp.Key, Value = kvp.Value });
-            }
-        }
-
         private void UpdateLibraryCount(int LoadedItemsCount)
         {
             LoadedLibraryItemCount.Text = LoadedItemsCount + " Items";
@@ -247,15 +222,6 @@ namespace CXFLGUI
         {
             // Naive alphabetical sort, doesn't accomodate file structure
             return items.OrderBy(item => item.Key).ToList();
-        }
-
-        private MenuItem CreateMenuItem(string text, Action action)
-        {
-            return new MenuItem
-            {
-                Text = text,
-                Command = new Command(action)
-            };
         }
 
         Label CreateLabel(string text, double width)
@@ -284,17 +250,8 @@ namespace CXFLGUI
             ((ListView)sender).SelectedItem = null;
         }
 
-        public LibraryPanel(MainViewModel viewModel)
+        public LibraryPanel(LibraryPanelViewModel viewModel)
         {
-            this.viewModel = viewModel;
-            viewModel.DocumentOpened += DocumentOpened;
-
-            // Top / Bottom of Library Pane
-            var MainPane = new StackLayout()
-            {
-                Padding = new Thickness(0, 25, 0, 0),
-            };
-
             // Library Count
             LoadedLibraryItemCount = new Label()
             {
@@ -304,7 +261,24 @@ namespace CXFLGUI
                 HorizontalOptions = LayoutOptions.Center,
             };
 
-            UpdateLibraryCount(0);
+            LoadedItemsCount = viewModel.Library.Items.Count;
+            UpdateLibraryCount(LoadedItemsCount);
+            Tuple_LibraryItemDict = viewModel.Library.Items;
+
+            // Clear existing items
+            LibraryItems.Clear();
+
+            // Initiating conversion sequence!
+            foreach (var kvp in Tuple_LibraryItemDict)
+            {
+                LibraryItems.Add(new LibraryItem { Key = kvp.Key, Value = kvp.Value });
+            }
+
+            // Top / Bottom of Library Pane
+            var MainPane = new StackLayout()
+            {
+                Padding = new Thickness(0, 25, 0, 0),
+            };
 
             // SearchBar
             SearchBar SearchLibraryItems = new SearchBar
@@ -407,7 +381,6 @@ namespace CXFLGUI
             var LibraryItemList = new CollectionView
             {
                 EmptyView = EmptyView,
-                //HorizontalOptions = LayoutOptions.Start,
                 ItemsSource = LibraryItems,
                 ItemSizingStrategy = ItemSizingStrategy.MeasureFirstItem,
                 ItemTemplate = new DataTemplate(() =>
@@ -428,26 +401,48 @@ namespace CXFLGUI
 
                     LibraryCell_Icon.Icon(MaterialIcons.QuestionMark);
 
+                    //itemType dependent icons and context options
+                    //switch (.Value.ItemType)
+                    //{
+                    //    case "bitmap":
+                    //        LibraryCell_Icon.Icon(MaterialIcons.Image);
+                    //        break;
+                    //    case "sound":
+                    //        LibraryCell_Icon.Icon(MaterialIcons.VolumeUp);
+                    //        break;
+                    //    case "graphic":
+                    //        LibraryCell_Icon.Icon(MaterialIcons.Category);
+                    //        break;
+                    //    case "movie clip":
+                    //        LibraryCell_Icon.Icon(MaterialIcons.Movie);
+                    //        break;
+                    //    case "font":
+                    //        LibraryCell_Icon.Icon(MaterialIcons.ABC);
+                    //        break;
+                    //    case "button":
+                    //        LibraryCell_Icon.Icon(MaterialIcons.SmartButton);
+                    //        break;
+                    //    case "folder":
+                    //        LibraryCell_Icon.Icon(MaterialIcons.Folder);
+                    //        break;
+                    //    default:
+                    //        LibraryCell_Icon.Icon(MaterialIcons.QuestionMark);
+                    //        break;
+                    //};
+
                     //Visually unfocus when enter button is pressed
                     LibraryCell_Entry.Completed += (sender, e) =>
                     {
                         LibraryCell_Entry.Unfocus();
                     };
 
-                    // Centering Problem here! Setting horizontal layout to start destroys shit, updating stackCell's width destroys shit
                     var Library_StackCell = new StackLayout
                     {
                         Orientation = StackOrientation.Horizontal,
-                        //VerticalOptions = LayoutOptions.Center,
-                        //HorizontalOptions = LayoutOptions.Start,
                         Padding = new Thickness(0, 0),
                         Spacing = 10,
                         Children = { LibraryCell_Icon, LibraryCell_Entry }
                     };
-
-                    //Library_StackCell.SetBinding(StackLayout.WidthRequestProperty, new Binding("NameWidth", BindingMode.Default, source: tabWidths));
-
-                    // MVVM Stuff Here
 
                     return Library_StackCell;
 
@@ -478,119 +473,6 @@ namespace CXFLGUI
             Grid.SetColumn(scrollViewBorder, 0);
             Grid.SetRow(scrollViewBorder, 1);
             LibraryTable.Children.Add(scrollViewBorder);
-
-            // Keep right now for reference
-
-            //ListView_LibraryDisplay.ItemTemplate = new DataTemplate(() =>
-            //{
-            //    var Library_ViewCell = new ViewCell();
-
-            //    var LibraryCell_Entry = new Entry()
-            //    {
-            //        Style = (Style)App.Fixed_ResourceDictionary["DefaultEntry"]["Style"],
-            //        TextColor = (Color)App.Fixed_ResourceDictionary["Colors"]["PrimaryText"],
-            //        IsSpellCheckEnabled = false
-            //    };
-
-            //    var LibraryCell_Icon = new ImageButton
-            //    {
-            //        Style = (Style)App.Fixed_ResourceDictionary["DefaultImageButton"]["Style"],
-            //    };
-
-            //    // Visually unfocus when enter button is pressed
-            //    LibraryCell_Entry.Completed += (sender, e) =>
-            //    {
-            //        LibraryCell_Entry.Unfocus();
-            //    };
-
-            //    Library_ViewCell.View = new StackLayout
-            //    {
-            //        Orientation = StackOrientation.Horizontal,
-            //        VerticalOptions = LayoutOptions.Center,
-            //        Padding = new Thickness(0, 0),
-            //        Spacing = 10,
-            //        Children = { LibraryCell_Icon, LibraryCell_Entry }
-            //    };
-
-            //    Library_ViewCell.BindingContextChanged += (sender, e) =>
-            //    {
-            //        if (Library_ViewCell.BindingContext is LibraryItem item)
-            //        {
-            //            // itemType agnostic context options
-            //            Library_ViewCell.ContextActions.Add(CreateMenuItem("Cut", () =>
-            //            {
-            //                Trace.WriteLine("Cutting " + Library_ViewCell.ToString());
-            //            }));
-
-            //            Library_ViewCell.ContextActions.Add(CreateMenuItem("Copy", () =>
-            //            {
-            //                Trace.WriteLine("Copying " + Library_ViewCell.ToString());
-            //            }));
-
-            //            Library_ViewCell.ContextActions.Add(CreateMenuItem("Paste", () =>
-            //            {
-            //                Trace.WriteLine("Pasting " + Library_ViewCell.ToString());
-            //            }));
-
-            //            // Offset folder children
-            //            int forwardslashCount = item.Key.Count(c => c == '/');
-            //            ((StackLayout)Library_ViewCell.View).Margin = new Thickness(forwardslashCount * 25, 0, 0, 0);
-
-            //            // Normalize the library name
-            //            int lastForwardsSlash = item.Key.LastIndexOf('/');
-            //            if (lastForwardsSlash >= 0 && lastForwardsSlash < item.Key.Length - 1)
-            //            {
-            //                LibraryCell_Entry.Text = item.Key.Substring(lastForwardsSlash + 1);
-            //            }
-            //            else
-            //            {
-            //                LibraryCell_Entry.Text = item.Key;
-            //            }
-
-            //            // itemType dependent icons and context options 
-            //            switch (item.Value.ItemType)
-            //            {
-            //                case "bitmap":
-            //                    LibraryCell_Icon.Icon(MaterialIcons.Image);
-            //                    break;
-            //                case "sound":
-            //                    LibraryCell_Icon.Icon(MaterialIcons.VolumeUp);
-            //                    Library_ViewCell.ContextActions.Add(CreateMenuItem("Play", () =>
-            //                    {
-            //                        Trace.WriteLine("Playing " + Library_ViewCell.ToString());
-            //                    }));
-
-            //                    break;
-            //                case "graphic":
-            //                    LibraryCell_Icon.Icon(MaterialIcons.Category);
-            //                    Library_ViewCell.ContextActions.Add(CreateMenuItem("Export to SWF", () =>
-            //                    {
-            //                        Trace.WriteLine("Exporting to SWF " + Library_ViewCell.ToString());
-            //                    }));
-            //                    break;
-            //                case "movie clip":
-            //                    LibraryCell_Icon.Icon(MaterialIcons.Movie);
-            //                    break;
-            //                case "font":
-            //                    LibraryCell_Icon.Icon(MaterialIcons.ABC);
-            //                    break;
-            //                case "button":
-            //                    LibraryCell_Icon.Icon(MaterialIcons.SmartButton);
-            //                    break;
-            //                case "folder":
-            //                    LibraryCell_Icon.Icon(MaterialIcons.Folder);
-            //                    break;
-            //                default:
-            //                    LibraryCell_Icon.Icon(MaterialIcons.QuestionMark);
-            //                    break;
-            //            }
-            //        }
-            //    };
-
-            //    return Library_ViewCell;
-            //});
-
-            //ListView_LibraryDisplay.ItemSelected += Library_CellSelected;
 
             // SearchBar logic
             SearchLibraryItems.TextChanged += (sender, e) =>
@@ -633,8 +515,6 @@ namespace CXFLGUI
 
             MainPane.Children.Add(OverheadLibraryDisplay);
             MainPane.Children.Add(LibraryTable);
-            //MainPane.Children.Add(LibraryTableTabs);
-            //MainPane.Children.Add(scrollViewBorder);
             MainPane.Children.Add(footerGrid);
 
             Content = MainPane;
