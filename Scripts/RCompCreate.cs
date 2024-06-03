@@ -45,9 +45,10 @@ class RCompCreate
                 continue;
             }
             List<Layer> VCFolderList = new List<Layer> { scene.Layers[VCFolders[0]] };
-            var VCFolderSymbol = scene.ConvertLayersToSymbol(VCFolderList, RCOMP_SYMBOL_NAME);
+            string rCompSymbolName = RCOMP_SYMBOL_NAME + sceneNum;
+            var VCFolderSymbol = scene.ConvertLayersToSymbol(VCFolderList, rCompSymbolName);
             // find the newly created layer and duplicate it
-            var RCompLayerIndex = scene.FindLayerIndex(RCOMP_SYMBOL_NAME);
+            var RCompLayerIndex = scene.FindLayerIndex(rCompSymbolName);
             if (RCompLayerIndex.Count != 1)
             {
                 System.Console.WriteLine("RCOMP►CHARACTERS layer not found in scene OR multiple layers found.");
@@ -56,7 +57,7 @@ class RCompCreate
             var RCompLayer = scene.Layers[RCompLayerIndex[0]];
             scene.DuplicateLayer(RCompLayerIndex[0]);
             // find the duplicated layer and rename it to RCOMP►SHADING
-            var RCompShadingLayerIndex = scene.FindLayerIndex(RCOMP_SYMBOL_NAME + "_copy");
+            var RCompShadingLayerIndex = scene.FindLayerIndex(rCompSymbolName + "_copy");
             if (RCompShadingLayerIndex.Count != 1)
             {
                 System.Console.WriteLine("RCOMP►SHADING layer not found in scene OR multiple layers found.");
