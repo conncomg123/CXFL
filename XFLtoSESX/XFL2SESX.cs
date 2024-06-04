@@ -166,11 +166,10 @@ namespace XFL2SESX
             XmlDocument SESX = new XmlDocument();
 
             // Extract Audio Data
-            int totalFrames = 2;
+            int totalFrames = 0;
             foreach (string file in FLAfileList)
             {
                 Document Doc = new(file);
-                totalFrames -= 2;
                 for (int SceneIndex = 0; SceneIndex < Doc.Timelines.Count; SceneIndex++)
                 {
                     foreach (var OperatingLayer in Doc.Timelines[SceneIndex].Layers)
