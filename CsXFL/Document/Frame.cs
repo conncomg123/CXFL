@@ -123,6 +123,9 @@ public class Frame : ILibraryEventReceiver, IDisposable
                 case Text.INPUT_TEXT_NODE_IDENTIFIER:
                     elements.Add(new Text(elementNode));
                     break;
+                case Shape.SHAPE_NODE_IDENTIFIER:
+                    elements.Add(new Shape(elementNode));
+                    break;
             }
         }
     }
