@@ -141,7 +141,15 @@ public class Library
             symbolPath = Path.Combine(LIBRARY_PATH, symbolPath).Replace('\\', '/');
             ZipArchiveEntry? symbolEntry = archive.GetEntry(symbolPath);
             if (symbolEntry is null) continue;
-            XDocument? symbolTree = XDocument.Load(symbolEntry!.Open());
+            XDocument? symbolTree;
+            try
+            {
+                symbolTree = XDocument.Load(symbolEntry!.Open());
+            } catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                continue;
+            }
             if (symbolTree is null) continue;
             SymbolItem symbol = new(symbolTree.Root!, includeNode, this);
             items.Add(symbol.Name, symbol);
