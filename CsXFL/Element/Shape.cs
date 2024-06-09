@@ -21,7 +21,7 @@ public class Shape : Element
         strokes = root.Element(ns + StrokeStyle.STROKE_STYLES_NODEGROUP_IDENTIFIER)?.Elements(ns + StrokeStyle.STROKE_STYLE_NODE_IDENTIFIER)?.Select(x => new StrokeStyle(x)).ToList() ?? new List<StrokeStyle>();
         edges = root.Element(ns + Edge.EDGES_NODEGROUP_IDENTIFIER)?.Elements(ns + Edge.EDGE_NODE_IDENTIFIER)?.Select(x => new Edge(x)).ToList() ?? new List<Edge>();
     }
-    
+
 }
 
 public class FillStyle
@@ -39,7 +39,11 @@ public class FillStyle
         this.root = root;
         ns = root.Name.Namespace;
         index = (int?)root.Attribute("index") ?? throw new ArgumentNullException(nameof(root));
-        solidColor = new SolidColor(root.Element(ns + SolidColor.SOLID_COLOR_NODE_IDENTIFIER)!);
+        if (root.Element(ns + SolidColor.SOLID_COLOR_NODE_IDENTIFIER) != null)
+        {
+            solidColor = new SolidColor(root.Element(ns + SolidColor.SOLID_COLOR_NODE_IDENTIFIER)!);
+        }
+        else solidColor = new SolidColor(ns);
     }
 }
 public class SolidColor
@@ -58,6 +62,11 @@ public class SolidColor
     {
         this.root = root;
         color = root.Attribute("color")?.Value ?? DefaultValues.Color;
+    }
+    internal SolidColor(XNamespace ns)
+    {
+        color = DefaultValues.Color;
+        root = new XElement(ns + SOLID_COLOR_NODE_IDENTIFIER);
     }
 }
 public class Edge
@@ -121,7 +130,7 @@ public class StrokeStyle
                 break;
             default:
                 throw new ArgumentException("Unknown stroke type: " + strokeType);
-            
+
         }
     }
 }
@@ -161,7 +170,9 @@ public abstract class Stroke
         joints = root.Attribute("joints")?.Value ?? DefaultValues.Joints;
         weight = (double?)root.Attribute("weight") ?? DefaultValues.Weight;
         miterLimit = (int?)root.Attribute("miterLimit") ?? DefaultValues.MiterLimit;
-        solidColor = new SolidColor(root.Element(ns + SolidColor.SOLID_COLOR_NODEGROUP_IDENTIFIER)!.Element(ns + SolidColor.SOLID_COLOR_NODE_IDENTIFIER)!);
+        if (root.Element(ns + SolidColor.SOLID_COLOR_NODEGROUP_IDENTIFIER)!.Element(ns + SolidColor.SOLID_COLOR_NODE_IDENTIFIER) != null)
+            solidColor = new SolidColor(root.Element(ns + SolidColor.SOLID_COLOR_NODEGROUP_IDENTIFIER)!.Element(ns + SolidColor.SOLID_COLOR_NODE_IDENTIFIER)!);
+        else solidColor = new SolidColor(ns);
     }
 }
 public class SolidStroke(XElement root) : Stroke(root)
@@ -179,13 +190,16 @@ public class DottedStroke : Stroke
     }
 
 }
-public class RaggedStroke(XElement root) : Stroke(root) {
+public class RaggedStroke(XElement root) : Stroke(root)
+{
     public const string RAGGED_STROKE_NODE_IDENTIFIER = "RaggedStroke";
 }
-public class StippleStroke(XElement root) : Stroke(root) {
+public class StippleStroke(XElement root) : Stroke(root)
+{
     public const string STIPPLE_STROKE_NODE_IDENTIFIER = "StippleStroke";
 }
-public class HatchedStroke(XElement root) : Stroke(root) {
+public class HatchedStroke(XElement root) : Stroke(root)
+{
     public const string HATCHED_STROKE_NODE_IDENTIFIER = "HatchedStroke";
 }
 public class WidthMarker
