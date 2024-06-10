@@ -413,9 +413,12 @@ public class Timeline : IDisposable
         foreach (Layer layer in newLayers)
         {
             symbol.Timeline.Root!.Element(ns + Layer.LAYERS_NODEGROUP_IDENTIFIER)?.Add(layer.Root);
-            layer.Root!.Remove();
         }
-        this.layers.RemoveAll(newLayers.Contains);
+        for (int i = 0; i < newLayers.Count; i++)
+        {
+            int layerIndex = this.layers.IndexOf(newLayers[i]);
+            DeleteLayer(layerIndex);
+        }
         int newLayerIndex = AddNewLayer(symbolName);
         Layer newLayer = this.layers[newLayerIndex];
         ReorderLayer(newLayerIndex, firstLayerIndex);
