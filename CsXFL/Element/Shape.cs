@@ -143,6 +143,7 @@ public abstract class Stroke
         public const string Joints = "round";
         public const int MiterLimit = 0;
         public const double Weight = 1.0;
+        public const string ScaleMode = "none";
 
     }
     protected readonly XElement root;
@@ -153,7 +154,7 @@ public abstract class Stroke
     private double weight;
     private SolidColor solidColor;
     public XElement Root { get { return root; } }
-    public string ScaleMode { get { return scaleMode; } set { scaleMode = value; root?.SetAttributeValue("scaleMode", value); } }
+    public string ScaleMode { get { return scaleMode; } set { scaleMode = value; root?.SetOrRemoveAttribute("scaleMode", value, DefaultValues.ScaleMode); } }
     public string Caps { get { return caps; } set { caps = value; root?.SetOrRemoveAttribute("caps", value, DefaultValues.Caps); } }
     public bool PixelHinting { get { return pixelHinting; } set { pixelHinting = value; root?.SetOrRemoveAttribute("pixelHinting", value, DefaultValues.PixelHinting); } }
     public string Joints { get { return joints; } set { joints = value; root?.SetOrRemoveAttribute("joints", value, DefaultValues.Joints); } }
@@ -164,7 +165,7 @@ public abstract class Stroke
     {
         this.root = root;
         ns = root.Name.Namespace;
-        scaleMode = root.Attribute("scaleMode")?.Value ?? throw new ArgumentNullException(nameof(root));
+        scaleMode = root.Attribute("scaleMode")?.Value ?? DefaultValues.ScaleMode;
         caps = root.Attribute("caps")?.Value ?? DefaultValues.Caps;
         pixelHinting = (bool?)root.Attribute("pixelHinting") ?? DefaultValues.PixelHinting;
         joints = root.Attribute("joints")?.Value ?? DefaultValues.Joints;
