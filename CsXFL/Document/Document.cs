@@ -11,8 +11,10 @@ public class Document
         public const int Height = 720;
         public const double FrameRate = 24;
         public const int CurrentTimeline = 0;
+        public const string BackgroundColor = "#000000";
     }
     private readonly string filename;
+    private string backgroundColor;
     private XDocument? xflTree;
     private readonly List<Timeline> timelines;
     private readonly Library library;
@@ -28,6 +30,7 @@ public class Document
     public int Width { get { return width; } set { width = value; root?.SetAttributeValue("width", value); } }
     public int Height { get { return height; } set { height = value; root?.SetAttributeValue("height", value); } }
     public string Filename { get { return filename; } }
+    public string BackgroundColor { get { return backgroundColor; } set { backgroundColor = value; root?.SetOrRemoveAttribute("backgroundColor", value, DefaultValues.BackgroundColor); } }
     public int CurrentTimeline { get { return currentTimeline - 1; } set { value++; currentTimeline = value; root?.SetAttributeValue("currentTimeline", value); } }
     public double FrameRate { get { return frameRate; } set { root?.SetAttributeValue("frameRate", value); } }
     public List<Timeline> Timelines { get { return timelines; } }
@@ -129,6 +132,7 @@ public class Document
         height = (int?)root?.Attribute("height") ?? DefaultValues.Height;
         frameRate = (double?)root?.Attribute("frameRate") ?? DefaultValues.FrameRate;
         currentTimeline = (int?)root?.Attribute("currentTimeline") ?? DefaultValues.CurrentTimeline;
+        backgroundColor = (string?)root?.Attribute("backgroundColor") ?? DefaultValues.BackgroundColor;
     }
     public void Save()
     {
