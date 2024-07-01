@@ -1,4 +1,5 @@
-﻿Microsoft Visual Studio Solution File, Format Version 12.00
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -10,12 +11,14 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SceneGenerator", "SceneGene
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CXFLGUI", "CXFLGUI\CXFLGUI.csproj", "{DC0F4ADD-D8C1-48B7-BB65-71C8D2688B4E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XFL2SESX", "XFLtoSESX\XFL2SESX.csproj", "{82EC18BE-08EB-4E38-87EE-4686DCD01985}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XFL2SESX", "XFLtoSESX\XFL2SESX.csproj", "{82EC18BE-08EB-4E38-87EE-4686DCD01985}"
 	ProjectSection(ProjectDependencies) = postProject
 		{A3ACAE7E-1C44-44E1-9AE5-788565025371} = {A3ACAE7E-1C44-44E1-9AE5-788565025371}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scripts", "Scripts\Scripts.csproj", "{CDE593FD-E7C6-4F1A-98CD-72A773E4D12C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Scripts", "Scripts\Scripts.csproj", "{CDE593FD-E7C6-4F1A-98CD-72A773E4D12C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkiaRendering", "SkiaRendering\SkiaRendering.csproj", "{63A8D0E9-CE34-4F60-9D15-1DAAACC7898C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -77,6 +80,14 @@ Global
 		{CDE593FD-E7C6-4F1A-98CD-72A773E4D12C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{CDE593FD-E7C6-4F1A-98CD-72A773E4D12C}.Release|x64.ActiveCfg = Release|Any CPU
 		{CDE593FD-E7C6-4F1A-98CD-72A773E4D12C}.Release|x64.Build.0 = Release|Any CPU
+		{63A8D0E9-CE34-4F60-9D15-1DAAACC7898C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63A8D0E9-CE34-4F60-9D15-1DAAACC7898C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63A8D0E9-CE34-4F60-9D15-1DAAACC7898C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{63A8D0E9-CE34-4F60-9D15-1DAAACC7898C}.Debug|x64.Build.0 = Debug|Any CPU
+		{63A8D0E9-CE34-4F60-9D15-1DAAACC7898C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63A8D0E9-CE34-4F60-9D15-1DAAACC7898C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{63A8D0E9-CE34-4F60-9D15-1DAAACC7898C}.Release|x64.ActiveCfg = Release|Any CPU
+		{63A8D0E9-CE34-4F60-9D15-1DAAACC7898C}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
