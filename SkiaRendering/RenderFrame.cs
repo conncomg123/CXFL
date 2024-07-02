@@ -16,7 +16,7 @@ namespace SkiaRendering
                 // Split the number into the integer and fractional parts
                 string[] parts = num.Substring(1).Split('.');
                 // Pad the integer part to 8 digits
-                string hex_num = string.Format("{0:X8}{1:X2}", int.Parse(parts[0]), int.Parse(parts[1]));
+                string hex_num = string.Format("{0:X8}{1:X2}", Convert.ToInt32(parts[0], 16), Convert.ToInt32(parts[1], 16));
                 // Convert the hex number to a signed 32-bit integer
                 int num_int = int.Parse(hex_num, System.Globalization.NumberStyles.HexNumber);
                 // Convert the number to its decimal equivalent and scale it down by 256 and 20
@@ -69,9 +69,7 @@ namespace SkiaRendering
                     // Move to
                     if (currPoint != prevPoint)
                     {
-                        // If a move command doesn't change the current point, we
-                        // ignore it. Otherwise, a new segment is starting, so we
-                        // must yield the current point list and begin a new one.
+                        // If a move command doesn't change the current point,ignore it. Otherwise, a new segment is starting, so we must yield the current point list and begin a new one.
                         yield return pointList;
                         pointList = new List<string> { currPoint };
                         prevPoint = currPoint;
@@ -130,109 +128,168 @@ namespace SkiaRendering
             return string.Join(" ", path); // Join the path elements into a single string with spaces in between
         }
 
-        static void Main(string[] args)
+        static void DrawShape(SKCanvas canvas, List<string> pointList, Shape shapeIter, double dx = 0, double dy = 0)
         {
-            int currentFrame = 0;
-            Document Doc = new("C:\\Users\\Administrator\\Desktop\\RenderingTest.fla");
-            SKBitmap Bitmap = new SKBitmap(Doc.Width, Doc.Height);
-            SKCanvas Canvas = new SKCanvas(Bitmap);
+            SKMatrix matrix = SKMatrix.CreateTranslation((float)dx, (float)dy);
+            bool hasStrokes = false;
+            bool hasFills = false;
 
-            // TODO: Should be Doc background color, or transparent if specified
-            Canvas.Clear(SKColors.White);
+            // SVG Path
+            string TestPath = PointListToPathFormat(pointList);
+            SKPath TestPath2 = SKPath.ParseSvgPathData(TestPath);
 
-            // TODO: Should iterate over all layers
-            foreach (Layer layerIter in Doc.Timelines[0].Layers)
-            {
-                if (layerIter.GetFrame(currentFrame).IsEmpty()) { continue; } // Skip blank frames
+            // Apply positional offset
+            TestPath2.Transform(matrix);
 
-                var ElementArray = layerIter.GetFrame(currentFrame).Elements;
+            // Strokes & Fills
+            if (shapeIter.Strokes.Count > 0) { hasStrokes = true; }
+            if (shapeIter.Fills.Count > 0) { hasFills = true; }
 
-                for (int elementIter = 0; elementIter < ElementArray.Count; elementIter++)
+            if (hasStrokes) { 
+            
+                Stroke CurrentStroke = shapeIter.Strokes[0].Stroke; 
+
+                SKStrokeCap StrokeCap = GetStrokeCap(CurrentStroke.Caps);
+
+                // <!> This logic is assumed, test it later
+                SKStrokeJoin StrokeJoin = GetStrokeJoin(CurrentStroke.Joints);
+
+                var StrokePaint = new SKPaint
                 {
-                    // Symbol Logic
-                    if (ElementArray[elementIter] is SymbolInstance) { continue; }
+                    Style = SKPaintStyle.Stroke,
+                    StrokeWidth = (float)CurrentStroke.Weight,
+                    StrokeMiter = CurrentStroke.MiterLimit,
+                    StrokeCap = StrokeCap,
+                    StrokeJoin = StrokeJoin,
+                    Color = SKColor.Parse(CurrentStroke.SolidColor.Color.ToString()),
+                    IsAntialias = true
+                    // <!> This doesn't do anything?
+                    //FilterQuality = SKFilterQuality.High
+                };
 
-                    // Shape Logic
-                    if (ElementArray[elementIter] is Shape)
+                canvas.DrawPath(TestPath2, StrokePaint);
+
+            }
+
+            if (hasFills)
+            {
+
+                FillStyle CurrentFill = shapeIter.Fills[0];
+
+                var FillPaint = new SKPaint
+                {
+                    Style = SKPaintStyle.Fill,
+                    Color = SKColor.Parse(CurrentFill.SolidColor.Color.ToString())
+                };
+
+                canvas.DrawPath(TestPath2, FillPaint);
+
+            }
+        }
+
+        static SKStrokeCap GetStrokeCap(string caps)
+        {
+            if (caps == "round")
+            {
+                return SKStrokeCap.Round;
+            }
+            else if (caps == "butt")
+            {
+                return SKStrokeCap.Square;
+            }
+            else
+            {
+                return SKStrokeCap.Round;
+            }
+        }
+
+        static SKStrokeJoin GetStrokeJoin(string joints)
+        {
+            if (joints == "round")
+            {
+                return SKStrokeJoin.Round;
+            }
+            else if (joints == "butt")
+            {
+                return SKStrokeJoin.Bevel;
+            }
+            else
+            {
+                return SKStrokeJoin.Miter;
+            }
+        }
+
+        static void TimelineCascadeRender(Document OperatingDoc, Timeline RenderingTimeline, int startFrame, int endFrame, double dx, double dy, int invokationLevel, SKCanvas? Canvas = null)
+        {
+            for (int currentFrame = startFrame; currentFrame <= endFrame; currentFrame++)
+            {
+                double internal_dx = dx;
+                double internal_dy = dy;
+                SKBitmap Bitmap = new SKBitmap(OperatingDoc.Width, OperatingDoc.Height);
+                SKCanvas localCanvas = Canvas ?? new SKCanvas(Bitmap);
+
+                // <!> TODO: Needs to match Document BG color, or transparent if specified
+                if (invokationLevel == 0) { localCanvas.Clear(SKColors.White); }
+
+                foreach (Layer layerIter in RenderingTimeline.Layers) 
+                {
+                    // If layer is guided, skip rendering
+                    if (layerIter.LayerType == "guide" || layerIter.LayerType == "folder") { continue; }
+
+                    // If current frame is empty, skip
+                    if (layerIter.GetFrame(currentFrame).IsEmpty()) { continue; }
+
+                    var ElementArray = layerIter.GetFrame(currentFrame).Elements;
+
+                    for (int elementIter = 0; elementIter < ElementArray.Count; elementIter++)
                     {
-                        Shape shapeIter = ElementArray[elementIter] as Shape;
-
-                        foreach (Edge edgeIter in shapeIter.Edges)
+                        // Drawing Shapes
+                        if (ElementArray[elementIter] is Shape)
                         {
-                            if (edgeIter.Edges == null) { continue; }
+                            Shape shapeIter = ElementArray[elementIter] as Shape;
 
-                            var pointLists = EdgeFormatToPointLists(edgeIter.Edges);
-
-                            // <!> Do things
-                            foreach (var pointList in pointLists)
+                            foreach (Edge edgeIter in shapeIter.Edges)
                             {
-                                // SVG Path
-                                string TestPath = PointListToPathFormat(pointList);
-                                SKPath TestPath2 = SKPath.ParseSvgPathData(TestPath);
+                                if (edgeIter.Edges == null) { continue; }
 
-                                // Strokes
-                                Stroke CurrentStroke = shapeIter.Strokes[0].Stroke;
-                                FillStyle CurrentFill = shapeIter.Fills[0];
+                                var pointLists = EdgeFormatToPointLists(edgeIter.Edges);
 
-                                SKStrokeCap StrokeCap;
-
-                                if (CurrentStroke.Caps == "round")
+                                foreach (var pointList in pointLists)
                                 {
-                                    StrokeCap = SKStrokeCap.Round;
-                                } else if (CurrentStroke.Caps == "butt")
-                                {
-                                    StrokeCap = SKStrokeCap.Square;
-                                } else
-                                {
-                                    StrokeCap = SKStrokeCap.Round;
+                                    DrawShape(localCanvas, pointList, shapeIter, internal_dx, internal_dy);
                                 }
-
-                                SKStrokeJoin StrokeJoin;
-
-                                // <!> This logic is assumed, test it later
-                                if (CurrentStroke.Joints == "round")
-                                {
-                                    StrokeJoin = SKStrokeJoin.Round;
-                                } else if (CurrentStroke.Joints == "butt")
-                                {
-                                    StrokeJoin = SKStrokeJoin.Bevel;
-                                } else
-                                {
-                                    StrokeJoin = SKStrokeJoin.Miter;
-                                }
-
-                                var StrokePaint = new SKPaint
-                                {
-                                    Style = SKPaintStyle.Stroke,
-                                    StrokeWidth = (float)CurrentStroke.Weight,
-                                    StrokeMiter = CurrentStroke.MiterLimit,
-                                    StrokeCap = StrokeCap,
-                                    StrokeJoin = StrokeJoin,
-                                    Color = SKColor.Parse(CurrentStroke.SolidColor.Color.ToString()),
-                                    IsAntialias = true
-                                };
-
-                                var FillPaint = new SKPaint
-                                {
-                                    Style = SKPaintStyle.Fill,
-                                    Color = SKColor.Parse(CurrentFill.SolidColor.Color.ToString())
-                                };
-
-                                Canvas.DrawPath(TestPath2, FillPaint);
-                                Canvas.DrawPath(TestPath2, StrokePaint);
                             }
+                        }
+
+                        // Drawing Symbols
+                        if (ElementArray[elementIter] is SymbolInstance)
+                        {
+                            SymbolInstance symbolIter = ElementArray[elementIter] as SymbolInstance;
+                            SymbolItem SymbolLibraryItem = symbolIter.CorrespondingItem as SymbolItem;
+                            Timeline ReferenceTimeline = SymbolLibraryItem.Timeline;
+
+                            // TODO: Last frame logic is incorrect
+                            TimelineCascadeRender(OperatingDoc, ReferenceTimeline, symbolIter.FirstFrame, symbolIter.FirstFrame, internal_dx + symbolIter.Matrix.Tx, internal_dy + symbolIter.Matrix.Ty, invokationLevel + 1, localCanvas);
                         }
                     }
                 }
 
-                var Image = SKImage.FromBitmap(Bitmap);
-                var Data = Image.Encode(SKEncodedImageFormat.Png, 100);
-                using (var Stream = System.IO.File.OpenWrite("output.png"))
-                {
-                    Data.SaveTo(Stream);
+                if (invokationLevel == 0) {
+                    var Image = SKImage.FromBitmap(Bitmap);
+                    var Data = Image.Encode(SKEncodedImageFormat.Png, 100);
+                    using (var Stream = System.IO.File.OpenWrite("output_" + currentFrame.ToString("D6") + ".png"))
+                    {
+                        Data.SaveTo(Stream);
+                    }
                 }
-
             }
+        }
+
+        static void Main(string[] args)
+        {
+            Document Doc = new("C:\\Users\\Administrator\\Desktop\\Test.fla");
+            // Safety check for out of bounds frames
+            TimelineCascadeRender(Doc, Doc.Timelines[0], 0, 0, 0, 0, 0);
         }
     }
 }
