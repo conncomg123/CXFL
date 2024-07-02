@@ -8,6 +8,26 @@ namespace SkiaRendering
 {
     class Renderer
     {
+        public class SymbolInstanceVisualRecord
+        {
+        public double MatrixA { get; set; }
+        public double MatrixB { get; set; }
+        public double MatrixC { get; set; }
+        public double MatrixD { get; set; }
+        public double MatrixTx { get; set; }
+        public double MatrixTy { get; set; }
+
+            public void AddTransformation(double a, double b, double c, double d, double tx, double ty)
+            {
+                // Add the transformation values to the current values in the record
+                MatrixA += a;
+                MatrixB += b;
+                MatrixC += c;
+                MatrixD += d;
+                MatrixTx += tx;
+                MatrixTy += ty;
+            }
+        }
         public static float ParseNumber(string num)
         {
             // Check if the number is signed and 32-bit fixed-point number in hex
@@ -128,9 +148,23 @@ namespace SkiaRendering
             return string.Join(" ", path); // Join the path elements into a single string with spaces in between
         }
 
-        static void DrawShape(SKCanvas canvas, List<string> pointList, Shape shapeIter, double dx = 0, double dy = 0)
+        static void DrawShape(SKCanvas canvas, List<string> pointList, Shape shapeIter, SymbolInstanceVisualRecord visRecord)
         {
-            SKMatrix matrix = SKMatrix.CreateTranslation((float)dx, (float)dy);
+            SymbolInstanceVisualRecord localVisRecord = visRecord ?? new SymbolInstanceVisualRecord() { };
+
+            SKMatrix matrix = new SKMatrix()
+            {
+                Persp0 = 0,
+                Persp1 = 0,
+                Persp2 = 1,
+                ScaleX = (float)localVisRecord.MatrixA,
+                SkewY = (float)localVisRecord.MatrixB,
+                SkewX = (float)localVisRecord.MatrixC,
+                ScaleY = (float)localVisRecord.MatrixD,
+                TransX = (float)localVisRecord.MatrixTx,
+                TransY = (float)localVisRecord.MatrixTy
+            };
+
             bool hasStrokes = false;
             bool hasFills = false;
 
@@ -219,22 +253,32 @@ namespace SkiaRendering
             }
         }
 
-        static void TimelineCascadeRender(Document OperatingDoc, Timeline RenderingTimeline, int startFrame, int endFrame, double dx, double dy, int invokationLevel, SKCanvas? Canvas = null)
+        static void TimelineCascadeRender(Document OperatingDoc, Timeline RenderingTimeline, int startFrame, int endFrame, int invokationLevel, SKCanvas? Canvas = null, SymbolInstanceVisualRecord? visRecord = null)
         {
             for (int currentFrame = startFrame; currentFrame <= endFrame; currentFrame++)
             {
-                double internal_dx = dx;
-                double internal_dy = dy;
                 SKBitmap Bitmap = new SKBitmap(OperatingDoc.Width, OperatingDoc.Height);
                 SKCanvas localCanvas = Canvas ?? new SKCanvas(Bitmap);
+                SymbolInstanceVisualRecord localVisRecord = visRecord ?? new SymbolInstanceVisualRecord() { };
 
-                // <!> TODO: Needs to match Document BG color, or transparent if specified
-                if (invokationLevel == 0) { localCanvas.Clear(SKColors.White); }
-
-                foreach (Layer layerIter in RenderingTimeline.Layers) 
+                // <!> TODO: Needs transparent option. How do we signal this?
+                if (invokationLevel == 0)
                 {
-                    // If layer is guided, skip rendering
-                    if (layerIter.LayerType == "guide" || layerIter.LayerType == "folder") { continue; }
+                    string bgColorStr = OperatingDoc.BackgroundColor;
+                    int bgColor = int.Parse(bgColorStr.Substring(1), System.Globalization.NumberStyles.AllowHexSpecifier);
+                    uint red = (uint)(bgColor >> 16) & 0xFF;
+                    uint green = (uint)(bgColor >> 8) & 0xFF;
+                    uint blue = (uint)bgColor & 0xFF;
+                    SKColor bgSKColor = new SKColor((byte)red, (byte)green, (byte)blue);
+                    localCanvas.Clear(bgSKColor);
+                }
+
+                for (int i = RenderingTimeline.Layers.Count - 1; i >= 0; i--)
+                {
+                    Layer layerIter = RenderingTimeline.Layers[i];
+
+                    // Skip these layer types
+                    if (layerIter.LayerType == "guide" || layerIter.LayerType == "guided" || layerIter.LayerType == "folder") { continue; }
 
                     // If current frame is empty, skip
                     if (layerIter.GetFrame(currentFrame).IsEmpty()) { continue; }
@@ -256,7 +300,21 @@ namespace SkiaRendering
 
                                 foreach (var pointList in pointLists)
                                 {
-                                    DrawShape(localCanvas, pointList, shapeIter, internal_dx, internal_dy);
+                                    // Why do we do this?
+                                    // We do this because of the very ugly way I have handled visRecords, which track transformation
+                                    // changes and accumulate them throughout recursive executions. visRecord is initialized with all
+                                    // zeros, which includes a ScaleX and ScaleY of zero, which causes your shape to collapse. However,
+                                    // this needs to be initialized with zero, or else symbols with scaling will double up. Doubly
+                                    // however, shapes with no corresponding symbol get the default visRecord, which will cause them
+                                    // to collapse. This is a temporary fix, and if you want to elegantly fix it, look at visRecord.
+
+                                    if (localVisRecord.MatrixA == 0 && localVisRecord.MatrixD == 0)
+                                    {
+                                        localVisRecord.MatrixA = 1;
+                                        localVisRecord.MatrixD = 1;
+                                    }
+
+                                    DrawShape(localCanvas, pointList, shapeIter, localVisRecord);
                                 }
                             }
                         }
@@ -268,12 +326,18 @@ namespace SkiaRendering
                             SymbolItem SymbolLibraryItem = symbolIter.CorrespondingItem as SymbolItem;
                             Timeline ReferenceTimeline = SymbolLibraryItem.Timeline;
 
+                            // Track visual record
+                            localVisRecord.AddTransformation(symbolIter.Matrix.A, symbolIter.Matrix.B, symbolIter.Matrix.C, symbolIter.Matrix.D, symbolIter.Matrix.Tx, symbolIter.Matrix.Ty);
+
                             // TODO: Last frame logic is incorrect
-                            TimelineCascadeRender(OperatingDoc, ReferenceTimeline, symbolIter.FirstFrame, symbolIter.FirstFrame, internal_dx + symbolIter.Matrix.Tx, internal_dy + symbolIter.Matrix.Ty, invokationLevel + 1, localCanvas);
+                            TimelineCascadeRender(OperatingDoc, ReferenceTimeline, symbolIter.FirstFrame, symbolIter.FirstFrame, invokationLevel + 1, localCanvas, localVisRecord);
+                            // I shall call it... De-initializing... [Dr. Evil sting]
+                            localVisRecord = new SymbolInstanceVisualRecord() { };
                         }
                     }
                 }
 
+                // Write image
                 if (invokationLevel == 0) {
                     var Image = SKImage.FromBitmap(Bitmap);
                     var Data = Image.Encode(SKEncodedImageFormat.Png, 100);
@@ -287,9 +351,9 @@ namespace SkiaRendering
 
         static void Main(string[] args)
         {
-            Document Doc = new("C:\\Users\\Administrator\\Desktop\\Test.fla");
+            Document Doc = new("C:\\Users\\Administrator\\Desktop\\INDEV_NULL_VECTOR_TRUCY.fla");
             // Safety check for out of bounds frames
-            TimelineCascadeRender(Doc, Doc.Timelines[0], 0, 0, 0, 0, 0);
+            TimelineCascadeRender(Doc, Doc.Timelines[0], 0, 0, 0);
         }
     }
 }
