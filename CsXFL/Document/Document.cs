@@ -11,7 +11,7 @@ public class Document
         public const int Height = 720;
         public const double FrameRate = 24;
         public const int CurrentTimeline = 0;
-        public const string BackgroundColor = "#000000";
+        public const string BackgroundColor = "#FFFFFF";
     }
     private readonly string filename;
     private string backgroundColor;
