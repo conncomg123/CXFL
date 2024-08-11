@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace SkiaRendering
 {
+    // Logic and Documentation largely taken from [https://github.com/PluieElectrique/xfl2svg]
     internal class EdgeUtils
     {
         //Main Idea:
