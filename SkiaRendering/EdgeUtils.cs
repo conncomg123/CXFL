@@ -50,7 +50,7 @@ namespace SkiaRendering
         public static float ParseNumber(string numberString)
         {
             // Check if the coordinate is signed and 32-bit fixed-point number in hex
-            if (numberString[0] == '#')
+            if(numberString[0] == '#')
             {
                 // Split the coordinate into the integer and fractional parts
                 string[] parts = numberString.Substring(1).Split('.');
@@ -90,7 +90,7 @@ namespace SkiaRendering
             IEnumerator<string> matchTokens = edgeTokenizer.Matches(edges).Cast<Match>().Select(currentMatch => currentMatch.Value).GetEnumerator();
             
             // Assert that the first token is a moveto command
-            if (!matchTokens.MoveNext() || matchTokens.Current != "!")
+            if(!matchTokens.MoveNext() || matchTokens.Current != "!")
             {
                 throw new ArgumentException("Edge format must start with moveto (!) command");
             }
@@ -114,10 +114,10 @@ namespace SkiaRendering
                 string currPoint = nextPoint();
 
                 // "moveto" command
-                if (command == "!")
+                if(command == "!")
                 {
                     // If a move command doesn't change the current point, ignore it.
-                    if (currPoint != prevPoint)
+                    if(currPoint != prevPoint)
                     {
                         // Otherwise, a new segment is starting, so we must yield the current point list and begin a new one.
                         yield return pointList;
@@ -126,13 +126,13 @@ namespace SkiaRendering
                     }
                 }
                 // "lineto" command
-                else if (command == "|" || command == "/")
+                else if(command == "|" || command == "/")
                 {
                     pointList.Add(currPoint);
                     prevPoint = currPoint;
                 }
                 // "quadto" command
-                else if (command == "[" || command == "]")
+                else if(command == "[" || command == "]")
                 {
                     // Control point is currPoint, dest is prevPoint.
                     pointList.Add($"[{currPoint}]");
@@ -153,6 +153,7 @@ namespace SkiaRendering
         {
             // Using iterator to match previous method as well as Python implementation
             IEnumerator<string> pointEnumerator = pointList.GetEnumerator();
+            // Start SVG path with M command and first point
             pointEnumerator.MoveNext();
 
             List<string> svgPath = new List<string> { "M", pointEnumerator.Current};
@@ -165,13 +166,40 @@ namespace SkiaRendering
                 
                 // SVG path element allows us to omit command letter if same command is used
                 // multiple times in a row
-                if (currentCommand != lastCommand)
+                if(currentCommand != lastCommand)
                 {
+                    svgPath.Add(currentPoint);
+                    lastCommand = currentCommand;
+                }
 
+                if(currentCommand == "Q")
+                {
+                    // As this is a "quadTo" command, control point is formatted as "[x y]"- need to remove []
+                    // add said point, and then add end point (next point)
+                    currentPoint = currentPoint.Replace("[", "").Replace("]", "");
+                    svgPath.Add(currentPoint);
+                    pointEnumerator.MoveNext();
+                    svgPath.Add(pointEnumerator.Current);
+                }
+                else
+                {
+                    svgPath.Add(currentPoint);
                 }
             }
 
-            return string.Empty;
+            // Animate adds a "closepath" (Z) command to every filled shape and
+            // closed stroke. For shapes, it makes no difference, but for closed
+            // strokes, it turns two overlapping line caps into a bevel, miter,
+            // or round join, which does make a difference.
+            if (pointList[0] == pointList[pointList.Count - 1])
+            {
+                //If starting point == ending point i.e completes a closed shape/stroke,
+                //Add Z command
+                svgPath.Add("Z");
+            }
+
+            //Combine list into space separated string to create SVG path string
+            return string.Join(" ", svgPath);
         }
     }
 }
