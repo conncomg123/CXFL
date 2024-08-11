@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace SkiaRendering
 {
-    internal class ShapeUtils
+    internal class EdgeUtils
     {
         //Main Idea:
         // In XFL format, anything that is drawn can either be generally represented
@@ -17,10 +17,13 @@ namespace SkiaRendering
         // fills element- indicate the color, stroke style, fill style that will fill the shape
         // edges element- contain Edge elements-
         // "edges" attribute- string of commands and coordinates that indicate shape outline
+        // outline is broken into pieces- here will be called "segments"
         // This outline will then be filled in using fills' elements
+        
         // Process: string -> list of points -> SVG path -> render SVG image
 
-        // "edges" attribute string format:
+
+        //"edges" attribute string format:
         // First gives command type, then follows it with n coordinates
         // Commands- !- moveto, /- lineto, |- lineto, [- quadto, ]- quadto
 
@@ -32,7 +35,7 @@ namespace SkiaRendering
         // When parsing Coords, they should be ignored (done with negative lookbehind)
         // Cubics are omitted as they only appear in "cubics" attribute and are only hints for Animate
 
-        // @ notes regex string
+        //@ notes regex string
         // Whitespace is automatically ignored through matches
         // Negative lookbehind is used to ignore "select" (?<!S)
         private const string EDGE_REGEX = @"[!|/[\]]|(?<!S)-?\d+(?:\.\d+)?|\#[A-Z0-9]+\.[A-Z0-9]+";
@@ -65,19 +68,20 @@ namespace SkiaRendering
             }
         }
 
-        // Point Format: "x y" string, "quadto" command start point- "[x y", "quadto" command end point- "x y]"
+        //Point Format: "x y" string, "quadto" command control (start) point- "[x y]"
 
-        // Point List Format:
-        // Point List Example [A, B, [C, D], E] where letters are points
+        //Point List Format:
+        // Point List Example [A, B, [C], D, E] where letters are points
         // First point is always destination of "moveto" command. Subsequent points are "lineto" command destinations
-        // "[x, y" point- control point of a quadratic Bézier curve and the following point is the destination of the curve
+        // "[x y]" point- control point of a quadratic Bézier curve and the following point is the destination of the curve
+        // in the standard point format
 
         /// <summary>
         /// Converts the XFL "edges" attribute string into a list of points.
         /// </summary>
         /// <param name="edges">The "edges" attribute of an Edge XFL element.</param>
         /// <returns>A list of string points in "x y" format for each segement of "edges" attribute.</returns>
-        public static IEnumerable<List<string>> EdgeFormatToPointLists(string edges)
+        public static IEnumerable<List<string>> ConvertEdgeFormatToPointLists(string edges)
         {
             // As MatchCollection was written before .NET 2, it uses IEnumerable for iteration rather
             // than IEnumerable<T>, meaning it defaults to an enumerable of objects.
@@ -131,13 +135,43 @@ namespace SkiaRendering
                 else if (command == "[" || command == "]")
                 {
                     // Control point is currPoint, dest is prevPoint.
-                    pointList.Add($"[{currPoint}");
+                    pointList.Add($"[{currPoint}]");
                     prevPoint = nextPoint();
                     pointList.Add($"{prevPoint}]");
                 }
             }
 
             yield return pointList;
+        }
+
+        /// <summary>
+        /// Converts a point list into the SVG path element format.
+        /// </summary>
+        /// <param name="pointList">The point list that is being converted.</param>
+        /// <returns>A SVG path element as a string.</returns>
+        public static string ConvertPointListToPathFormat(List<string> pointList)
+        {
+            // Using iterator to match previous method as well as Python implementation
+            IEnumerator<string> pointEnumerator = pointList.GetEnumerator();
+            pointEnumerator.MoveNext();
+
+            List<string> svgPath = new List<string> { "M", pointEnumerator.Current};
+            string lastCommand = "M";
+
+            while(pointEnumerator.MoveNext())
+            {
+                string currentPoint = pointEnumerator.Current;
+                string currentCommand = currentPoint.Contains('[') && currentPoint.Contains(']') ? "Q" : "L";
+                
+                // SVG path element allows us to omit command letter if same command is used
+                // multiple times in a row
+                if (currentCommand != lastCommand)
+                {
+
+                }
+            }
+
+            return string.Empty;
         }
     }
 }
