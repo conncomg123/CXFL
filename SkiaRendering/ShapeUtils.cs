@@ -21,15 +21,15 @@ namespace SkiaRendering
         // Process: string -> list of points -> SVG path -> render SVG image
 
         // "edges" attribute string format:
-        // First gives command type, then follows it with n numbers (make up points)
+        // First gives command type, then follows it with n coordinates
         // Commands- !- moveto, /- lineto, |- lineto, [- quadto, ]- quadto
 
-        // Numbers can either be decimal numbers or signed 32-number in Hex
-        // Hex numbers are denoted by a # before them
+        // Coordinates can either be decimal numbers or signed 32-number in Hex
+        // Hex Coords are denoted by a # before them
 
         // "selects" in the format S[1-7] might be present as well in "moveto" commands- these are hints used
         // by Animate for noting selections (n=bitmask, 1:fillStyle0, 2:fillStyle1, 4:stroke)
-        // When parsing numbers, they should be ignored (done with negative lookbehind)
+        // When parsing Coords, they should be ignored (done with negative lookbehind)
         // Cubics are omitted as they only appear in "cubics" attribute and are only hints for Animate
 
         // @ notes regex string
@@ -40,22 +40,22 @@ namespace SkiaRendering
         private static Regex edgeTokenizer = new Regex(EDGE_REGEX, RegexOptions.IgnorePatternWhitespace);
 
         /// <summary>
-        /// Parses and converts a number in the "edges" attribute string.
+        /// Parses and converts a coordinate in the "edges" attribute string.
         /// </summary>
-        /// <param name="numberString">The number in "edges" string being parsed.</param>
-        /// <returns>The converted and scaled number.</returns>
+        /// <param name="numberString">The coordinate in "edges" string being parsed.</param>
+        /// <returns>The converted and scaled coordinate.</returns>
         public static float ParseNumber(string numberString)
         {
-            // Check if the number is signed and 32-bit fixed-point number in hex
+            // Check if the coordinate is signed and 32-bit fixed-point number in hex
             if (numberString[0] == '#')
             {
-                // Split the number into the integer and fractional parts
+                // Split the coordinate into the integer and fractional parts
                 string[] parts = numberString.Substring(1).Split('.');
                 // Pad the integer part to 8 digits
                 string hexNumberString = string.Format("{0:X8}{1:X2}", Convert.ToInt32(parts[0], 16), Convert.ToInt32(parts[1], 16));
-                // Convert the hex number to a signed 32-bit integer
+                // Convert the hex coordinate to a signed 32-bit integer
                 int numberInt = int.Parse(hexNumberString, System.Globalization.NumberStyles.HexNumber);
-                // Convert the number to its decimal equivalent and scale it down by 256 and 20
+                // Convert the coordinate to its decimal equivalent and scale it down by 256 and 20
                 return (numberInt / 256f) / 20f;
             }
             else
