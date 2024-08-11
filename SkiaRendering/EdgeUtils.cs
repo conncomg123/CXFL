@@ -37,6 +37,7 @@ namespace SkiaRendering
         // Cubics are omitted as they only appear in "cubics" attribute and are only hints for Animate
 
         //@ notes regex string
+        // Captures command, decimal number, or hex number
         // Whitespace is automatically ignored through matches
         // Negative lookbehind is used to ignore "select" (?<!S)
         private const string EDGE_REGEX = @"[!|/[\]]|(?<!S)-?\d+(?:\.\d+)?|\#[A-Z0-9]+\.[A-Z0-9]+";
@@ -138,7 +139,7 @@ namespace SkiaRendering
                     // Control point is currPoint, dest is prevPoint.
                     pointList.Add($"[{currPoint}]");
                     prevPoint = nextPoint();
-                    pointList.Add($"{prevPoint}]");
+                    pointList.Add($"{prevPoint}");
                 }
             }
 
