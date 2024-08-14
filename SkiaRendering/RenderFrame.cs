@@ -349,11 +349,11 @@ namespace SkiaRendering
             }
         }
 
-        static void Main(string[] args)
+        /*static void Main(string[] args)
         {
             Document Doc = new("C:\\Users\\Administrator\\Desktop\\INDEV_NULL_VECTOR_TRUCY.fla");
             // Safety check for out of bounds frames
             TimelineCascadeRender(Doc, Doc.Timelines[0], 0, 0, 0);
-        }
+        }*/
     }
 }
