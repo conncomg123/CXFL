@@ -136,7 +136,9 @@ namespace SkiaRendering
                 // "quadto" command
                 else if(command == "[" || command == "]")
                 {
-                    // Control point is currPoint, dest is prevPoint.
+                    // currPoint is control point of quadratic Bézier curve- this
+                    // is denoted in the point list as a point string surrounded by []
+                    // nextPoint() is destination point of curve
                     pointList.Add($"[{currPoint}]");
                     prevPoint = nextPoint();
                     pointList.Add($"{prevPoint}");
