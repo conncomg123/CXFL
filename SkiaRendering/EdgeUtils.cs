@@ -136,8 +136,8 @@ namespace SkiaRendering
                 // "quadto" command
                 else if(command == "[" || command == "]")
                 {
-                    // currPoint is control point of quadratic Bézier curve- this
-                    // is denoted in the point list as a point string surrounded by []
+                    // Previous point (the point before this in list) is the start of the quadratic Bézier curve
+                    // currPoint is control point- this is denoted as a point string surrounded by []
                     // nextPoint() is destination point of curve
                     pointList.Add($"[{currPoint}]");
                     prevPoint = nextPoint();
@@ -169,10 +169,10 @@ namespace SkiaRendering
                 string currentCommand = currentPoint.Contains('[') && currentPoint.Contains(']') ? "Q" : "L";
                 
                 // SVG path element allows us to omit command letter if same command is used
-                // multiple times in a row
+                // multiple times in a row, so only add it to svgPath string if new command is found
                 if(currentCommand != lastCommand)
                 {
-                    svgPath.Add(currentPoint);
+                    svgPath.Add(currentCommand);
                     lastCommand = currentCommand;
                 }
 
@@ -181,6 +181,7 @@ namespace SkiaRendering
                     // As this is a "quadTo" command, control point is formatted as "[x y]"- need to remove []
                     // add said point, and then add end point (next point)
                     currentPoint = currentPoint.Replace("[", "").Replace("]", "");
+
                     svgPath.Add(currentPoint);
                     pointEnumerator.MoveNext();
                     svgPath.Add(pointEnumerator.Current);
