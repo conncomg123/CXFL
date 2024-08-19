@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CsXFL;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,8 +16,7 @@ namespace SkiaRendering
 
         public static void Main(string[] args)
         {
-            var testing = EdgeUtils.ConvertEdgeFormatToPointLists(TESTING_STRING_FOUR).ToList();
-            var testingResult = EdgeUtils.ConvertPointListToPathFormat(testing.First());
+            Document testingDoc = new Document("D:\\Documents\\Programming\\C# Projects\\CXFL\\SkiaRendering\\TestAssets\\RenderTest2\\RenderTest2.xfl");
 
         }
     }
