@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CsXFL;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -13,15 +14,15 @@ namespace SkiaRendering
     {
         //Main Idea:
         // In XFL format, anything that is drawn can either be generally represented
-        // as shapes (DOMShape elements) or symbols (DOMSymbolInstance elements) that in turn refers to shapes
-        // A DOMShape is made of two elements- fills and edges
-        // fills element- indicate the color, stroke style, fill style that will fill the shape
-        // edges element- contain Edge elements-
+        // as shapes (DOMShape elements) or symbols (<DOMSymbolInstance> elements) that in turn refers to shapes
+        // A <DOMShape> is made of two elements- fills and edges
+        // <fills> element- indicate the color, stroke style, fill style that will fill the shape
+        // <edges> element- contain <Edge> elements-
         // "edges" attribute- string of commands and coordinates that indicate shape outline
         // outline is broken into pieces- here will be called "segments"
         // This outline will then be filled in using fills' elements
         
-        // Process: string -> list of points -> SVG path -> render SVG image
+        // Process: string -> list of points -> SVG path -> render SVG as bitmap
 
 
         //"edges" attribute string format:
@@ -79,7 +80,7 @@ namespace SkiaRendering
         // in the standard point format
 
         /// <summary>
-        /// Converts the XFL "edges" attribute string into a list of points.
+        /// Converts an XML Edge element's "edges" attribute string into a list of points.
         /// </summary>
         /// <param name="edges">The "edges" attribute of an Edge XFL element.</param>
         /// <returns>A list of string points in "x y" format for each segement of "edges" attribute.</returns>
@@ -151,6 +152,10 @@ namespace SkiaRendering
         /// <summary>
         /// Converts a point list into the SVG path element format.
         /// </summary>
+        /// <remarks>
+        /// SVG path format refers to a list of SVG readable commands
+        /// that represent the image being represented by the segments of the point list.
+        /// </remarks>
         /// <param name="pointList">The point list that is being converted.</param>
         /// <returns>A SVG path element as a string.</returns>
         public static string ConvertPointListToPathFormat(List<string> pointList)
@@ -198,13 +203,78 @@ namespace SkiaRendering
             // or round join, which does make a difference.
             if (pointList[0] == pointList[pointList.Count - 1])
             {
-                //If starting point == ending point i.e completes a closed shape/stroke,
-                //Add Z command
+                // If starting point == ending point i.e completes a closed shape/stroke,
+                // Add Z command
                 svgPath.Add("Z");
             }
 
-            //Combine list into space separated string to create SVG path string
+            // Combine list into space separated string to create SVG path string
             return string.Join(" ", svgPath);
+        }
+
+        // edges element = refers to group of Edge elements associated with DOMShape
+        // "edges" attribute = refers to "edges" string of coordinates associated with Edge element 
+
+        public static void ConvertEdgesToSvgPath(List<Edge> edgesElement, List<FillStyle> fillStyles, List<StrokeStyle> strokeStyles)
+        {
+            // List of point lists with their associated fillStyle stored as pairs
+            // Used syntax sugar version of new as variable type is very verbose
+            List<Tuple<List<string>, int?>> fillEdges = new();
+
+            // Should StrokeStyle object be used as key or just its index?
+            // StrokePaths = refers to all converted SVG path strings associated with a strokeStyle
+            Dictionary<int, List<string>> strokePaths = new Dictionary<int, List<string>>();
+
+            foreach(Edge edgeElement in edgesElement)
+            {
+                // Get edges attribute string, fill styles, and stroke styles of a specific Edge
+                string edgesString = edgeElement.Edges!;
+                int? fillStyleLeftIndex = edgeElement.FillStyle0;
+                int? fillStyleRightIndex = edgeElement.FillStyle1;
+                int? strokeStyleIndex = edgeElement.StrokeStyle;
+
+                IEnumerable<List<string>> edgesPointLists = ConvertEdgeFormatToPointLists(edgesString);
+                foreach(List<string> pointList in edgesPointLists)
+                {
+                    if(fillStyleLeftIndex != null)
+                    {
+                        Tuple<List<string>, int?> tupleToAdd = new(pointList,  fillStyleLeftIndex);
+                        fillEdges.Add(tupleToAdd);
+                    }
+
+                    if(fillStyleRightIndex != null)
+                    {
+                        // First reverse point list in order to fill it from the left, then add it
+                        pointList.Reverse();
+                        Tuple<List<string>, int?> tupleToAdd = new(pointList, fillStyleRightIndex);
+                        fillEdges.Add(tupleToAdd);
+                    }
+
+                    // If strokeStyle exists for Edge, convert immediately as no shape needs to be joined
+                    // StrokeStyle Index in XFL is one off from where it is stored in strokes list in DOMShape
+
+                    // Do I need to check if strokeStyle exists? (Outside of checking for null)
+                    // Is there a scenario where an Edge element references a strokeStyle that is not in the
+                    // strokes element of the DOMShape that the said Edge is a part of?
+
+                    if (strokeStyleIndex != null)
+                    {
+                        // Should list be replaced with dictionary- figured it would make more sense
+                        StrokeStyle? foundStroke = strokeStyles.FirstOrDefault((strokeObject) =>
+                        {
+                            return strokeObject.Index == strokeStyleIndex;
+                        });
+
+                        if(foundStroke != null)
+                        {
+                            // First get converted path format for this Edge, then add it to
+                            // associated strokeStyle
+                            string svgFormat = ConvertPointListToPathFormat(pointList);
+                            strokePaths[foundStroke.Index].Add(svgFormat);
+                        }
+                    }
+                }
+            }
         }
     }
 }
