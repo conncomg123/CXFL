@@ -215,6 +215,12 @@ namespace SkiaRendering
         // edges element = refers to group of Edge elements associated with DOMShape
         // "edges" attribute = refers to "edges" string of coordinates associated with Edge element 
 
+        /// <summary>
+        /// Converts XFL edges element into SVG path elements.
+        /// </summary>
+        /// <param name="edgesElement">The edges element of a DOMShape element.</param>
+        /// <param name="fillStyles">The FillStyles associated with the DOMShape element.</param>
+        /// <param name="strokeStyles">The StrokeStyles associated with the DOMShape element.</param>
         public static void ConvertEdgesToSvgPath(List<Edge> edgesElement, List<FillStyle> fillStyles, List<StrokeStyle> strokeStyles)
         {
             // List of point lists with their associated fillStyle stored as pairs
@@ -250,13 +256,13 @@ namespace SkiaRendering
                         fillEdges.Add(tupleToAdd);
                     }
 
-                    // If strokeStyle exists for Edge, convert immediately as no shape needs to be joined
-                    // StrokeStyle Index in XFL is one off from where it is stored in strokes list in DOMShape
-
+                    // strokeStyle index in CSXFL Shape Stroke list (DOMShape): XFL "index" - 1
                     // Do I need to check if strokeStyle exists? (Outside of checking for null)
                     // Is there a scenario where an Edge element references a strokeStyle that is not in the
                     // strokes element of the DOMShape that the said Edge is a part of?
+                    // As a result, couldn't I just get the StrokeStyle using "index" - 1?
 
+                    // If strokeStyle exists for Edge, convert immediately as no shape needs to be joined
                     if (strokeStyleIndex != null)
                     {
                         // Should list be replaced with dictionary- figured it would make more sense
