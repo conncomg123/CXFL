@@ -159,7 +159,7 @@ namespace SkiaRendering
         /// d=, style= etc).
         /// </remarks>
         /// <param name="pointList">The point list that is being converted.</param>
-        /// <returns>The equivalent "d" attribute of the given point list.</returns>
+        /// <returns>The equivalent "d" string for the given point list.</returns>
         public static string ConvertPointListToPathFormat(List<string> pointList)
         {
             // Using iterator to match previous method as well as Python implementation
@@ -284,7 +284,15 @@ namespace SkiaRendering
                             // associated strokeStyle
                             string svgPathString = ConvertPointListToPathFormat(pointList);
 
-                            
+                            if(strokePaths.TryGetValue(foundStroke.Index, out var svgPathsList))
+                            {
+                                svgPathsList.Add(svgPathString);
+                            }
+                            else
+                            {
+                                List<string> newSvgPathList = new List<string>() { svgPathString };
+                                strokePaths.Add(foundStroke.Index, newSvgPathList);
+                            }
                         }
                     }
                 }
