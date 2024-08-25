@@ -14,15 +14,16 @@ namespace SkiaRendering
     {
         //Main Idea:
         // In XFL format, anything that is drawn can either be generally represented
-        // as shapes (DOMShape elements) or symbols (<DOMSymbolInstance> elements) that in turn refers to shapes
-        // A <DOMShape> is made of two elements- fills and edges
+        // as shapes (<DOMShape> elements) or symbols (<DOMSymbolInstance> elements) that in turn refers to shapes
+        // A <DOMShape> is made of two elements- <fills> and <edges>
         // <fills> element- indicate the color, stroke style, fill style that will fill the shape
         // <edges> element- contain <Edge> elements-
         // "edges" attribute- string of commands and coordinates that indicate shape outline
-        // outline is broken into pieces- here will be called "segments"
+        
+        // outline is broken into pieces called segments- represented here as "point lists"
         // This outline will then be filled in using fills' elements
         
-        // Process: string -> list of points -> SVG path -> render SVG as bitmap
+        // Process: string -> list of points -> SVG path elements -> render SVG as bitmap
 
 
         //"edges" attribute string format:
@@ -80,10 +81,10 @@ namespace SkiaRendering
         // in the standard point format
 
         /// <summary>
-        /// Converts an XML Edge element's "edges" attribute string into a list of points.
+        /// Converts an XML Edge element's "edges" attribute string into a list of points (segments).
         /// </summary>
         /// <param name="edges">The "edges" attribute of an Edge XFL element.</param>
-        /// <returns>A list of string points in "x y" format for each segement of "edges" attribute.</returns>
+        /// <returns>A list of string points in "x y" format for each segment of "edges" attribute.</returns>
         public static IEnumerable<List<string>> ConvertEdgeFormatToPointLists(string edges)
         {
             // As MatchCollection was written before .NET 2, it uses IEnumerable for iteration rather
@@ -150,14 +151,15 @@ namespace SkiaRendering
         }
 
         /// <summary>
-        /// Converts a point list into the SVG path element format.
+        /// Converts a point list into the SVG path format.
         /// </summary>
         /// <remarks>
-        /// SVG path format refers to a list of SVG readable commands
-        /// that represent the image being represented by the segments of the point list.
+        /// This method converts a point list into the "d" attribute of a path element,
+        /// NOT into an entire path element itself (with proper opening and closing path tags,
+        /// d=, style= etc).
         /// </remarks>
         /// <param name="pointList">The point list that is being converted.</param>
-        /// <returns>A SVG path element as a string.</returns>
+        /// <returns>The equivalent "d" attribute of the given point list.</returns>
         public static string ConvertPointListToPathFormat(List<string> pointList)
         {
             // Using iterator to match previous method as well as Python implementation
@@ -210,6 +212,11 @@ namespace SkiaRendering
 
             // Combine list into space separated string to create SVG path string
             return string.Join(" ", svgPath);
+        }
+
+        public static void PointListToShape(List<Tuple<List<string>, int?>> pointLists)
+        {
+
         }
 
         // edges element = refers to group of Edge elements associated with DOMShape
@@ -275,8 +282,9 @@ namespace SkiaRendering
                         {
                             // First get converted path format for this Edge, then add it to
                             // associated strokeStyle
-                            string svgFormat = ConvertPointListToPathFormat(pointList);
-                            strokePaths[foundStroke.Index].Add(svgFormat);
+                            string svgPathString = ConvertPointListToPathFormat(pointList);
+
+                            
                         }
                     }
                 }
