@@ -1,6 +1,6 @@
 ﻿using CsXFL;
+using SkiaSharp;
 using System.Text.RegularExpressions;
-using TagLib;
 
 namespace SkiaRendering
 {
@@ -156,7 +156,7 @@ namespace SkiaRendering
         /// </remarks>
         /// <param name="pointList">The point list that is being converted.</param>
         /// <returns>The equivalent "d" string for the given point list.</returns>
-        public static string ConvertPointListToPathStringFormat(List<string> pointList)
+        public static string ConvertPointListToPathFormat(List<string> pointList)
         {
             // Using iterator to match previous method as well as Python implementation
             IEnumerator<string> pointEnumerator = pointList.GetEnumerator();
@@ -248,7 +248,7 @@ namespace SkiaRendering
             return null;
         }
 
-        public static Dictionary<int, List<List<string>>> PointListToShape(List<(List<string>, int?)> pointLists)
+        public static Dictionary<int, List<List<string>>> ConvertPointListsToShapes(List<(List<string>, int?)> pointLists)
         {
             // {fillStyleIndex: {origin point: [point list, ...], ...}, ...}
             // graph = defaultdict(lambda: defaultdict(list))
@@ -344,7 +344,8 @@ namespace SkiaRendering
         /// <param name="edgesElement">The edges element of a DOMShape element.</param>
         /// <param name="fillStyles">The fills element of the DOMShape element.</param>
         /// <param name="strokeStyles">The strokes element of the DOMShape element.</param>
-        public static void ConvertEdgesToSvgPath(List<Edge> edgesElement, List<FillStyle> fillStyles, List<StrokeStyle> strokeStyles)
+        public static (List<SKPath>, List<SKPath>) ConvertEdgesToSvgPath(List<Edge> edgesElement,
+            List<FillStyle> fillStyles, List<StrokeStyle> strokeStyles)
         {
             // List of point lists with their associated fillStyle stored as pairs
             // Used syntax sugar version of new as variable type is very verbose
@@ -383,7 +384,7 @@ namespace SkiaRendering
                     // Do I need to check if strokeStyle exists? (Outside of checking for null)
                     // Is there a scenario where an Edge element references a strokeStyle that is not in the
                     // strokes element of the DOMShape that the said Edge is a part of?
-                    // As a result, couldn't I just get the StrokeStyle using "index" - 1?
+                    // As a result, couldn't I just get the StrokeStyle from strokeStyles using "index" - 1?
 
                     // If strokeStyle exists for Edge, convert immediately as no shape needs to be joined
                     if (strokeStyleIndex != null)
@@ -398,7 +399,7 @@ namespace SkiaRendering
                         {
                             // First get converted path format for this Edge, then add it to
                             // associated strokeStyle
-                            string svgPathString = ConvertPointListToPathStringFormat(pointList);
+                            string svgPathString = ConvertPointListToPathFormat(pointList);
 
                             // defaultdict(list)- For any key, default value is empty list
                             // Is used to create a list of size 1 when first creating stroke path list
@@ -416,6 +417,26 @@ namespace SkiaRendering
                     }
                 }
             }
+
+            List<SKPath> filledPaths = new List<SKPath>();
+            List<SKPath> strokedPaths = new List<SKPath>();
+
+            Dictionary<int, List<List<string>>> shapes = ConvertPointListsToShapes(fillEdges);
+            foreach(var (fillIndex, pointLists) in shapes)
+            {
+                string svgPathString = string.Join(" ", pointLists.ConvertAll(ConvertPointListToPathFormat));
+                SKPath newSKPath = SKPath.ParseSvgPathData(svgPathString);
+                filledPaths.Add(newSKPath);
+            }
+
+            foreach(var (strokeIndex, pathData) in strokePaths)
+            {
+                string svgPathString = string.Join(" ", pathData);
+                SKPath newSKPath = SKPath.ParseSvgPathData(svgPathString);
+                strokedPaths.Add(newSKPath);
+            }
+
+            return (filledPaths, strokedPaths);
         }
     }
 }
