@@ -1,5 +1,6 @@
 ﻿using CsXFL;
 using System.Text.RegularExpressions;
+using TagLib;
 
 namespace SkiaRendering
 {
@@ -209,7 +210,45 @@ namespace SkiaRendering
             return string.Join(" ", svgPath);
         }
 
-        public static void PointListToShape(List<(List<string>, int?)> pointLists)
+        private static List<string> Walk(string currentPoint, HashSet<string> usedPoints, string originPoint,
+                Dictionary<string, List<List<string>>> fillGraph)
+        {
+            // Recursively join point lists into shapes
+            for (int i = 0; i < fillGraph[currentPoint].Count; i++)
+            {
+                List<string> nextPointList = fillGraph[currentPoint][i];
+                string nextPoint = nextPointList[nextPointList.Count - 1];
+
+                if (nextPoint.Equals(originPoint))
+                {
+                    // Found a cycle. This shape is now closed
+                    fillGraph[currentPoint].RemoveAt(i);
+                    return nextPointList;
+                }
+                else if (!usedPoints.Contains(nextPoint))
+                {
+                    // Try this point list
+                    usedPoints.Add(nextPoint);
+                    List<string> shape = Walk(nextPoint, usedPoints, originPoint, fillGraph);
+                    if (shape == null)
+                    {
+                        // Backtrack
+                        usedPoints.Remove(nextPoint);
+                    }
+                    else
+                    {
+                        fillGraph[currentPoint].RemoveAt(i);
+                        // Concat this point list, removing the redundant start move
+                        List<string> result = new List<string>(nextPointList);
+                        result.AddRange(shape.GetRange(1, shape.Count - 1));
+                        return result;
+                    }
+                }
+            }
+            return null;
+        }
+
+        public static Dictionary<int, List<List<string>>> PointListToShape(List<(List<string>, int?)> pointLists)
         {
             // {fillStyleIndex: {origin point: [point list, ...], ...}, ...}
             // graph = defaultdict(lambda: defaultdict(list))
@@ -262,47 +301,37 @@ namespace SkiaRendering
             // shapes with Walk() until we're done.
             foreach(var (fillIndex, fillGraph) in  graph)
             {
-
-            }
-        }
-
-        private static List<string> Walk(string currentPoint,
-                HashSet<string> usedPoints, string originPoint,
-                Dictionary<string, List<List<string>>> fillGraph)
-        {
-            // Recursively join point lists into shapes
-            for (int i = 0; i < fillGraph[currentPoint].Count; i++)
-            {
-                List<string> nextPointList = fillGraph[currentPoint][i];
-                string nextPoint = nextPointList[nextPointList.Count - 1];
-
-                if (nextPoint.Equals(originPoint))
+                foreach(string originPoint in fillGraph.Keys)
                 {
-                    // Found a cycle. This shape is now closed
-                    fillGraph[currentPoint].RemoveAt(i);
-                    return nextPointList;
-                }
-                else if(!usedPoints.Contains(nextPoint))
-                {
-                    // Try this point list
-                    usedPoints.Add(nextPoint);
-                    List<string> shape = Walk(nextPoint, usedPoints, originPoint, fillGraph);
-                    if(shape == null)
+                    while(fillGraph[originPoint] != null)
                     {
-                        // Backtrack
-                        usedPoints.Remove(nextPoint);
-                    }
-                    else
-                    {
-                        fillGraph[currentPoint].RemoveAt(i);
-                        // Concat this point list, removing the redundant start move
-                        List<string> result = new List<string>(nextPointList);
-                        result.AddRange(shape.GetRange(1, shape.Count - 1));
-                        return result;
+                        // Pop off pointList from originPointLists
+                        List<string> pointList = fillGraph[originPoint][0];
+                        fillGraph[originPoint].RemoveAt(0);
+                        string currentPoint = pointList[pointList.Count - 1];
+
+                        HashSet<string> visited = new HashSet<string>() { originPoint, currentPoint};
+
+                        List<string> shape = Walk(currentPoint, visited, originPoint, fillGraph);
+                        if(shape == null)
+                        {
+                            throw new Exception("Failed to build shape");
+                        }
+
+                        // Either add to existing list of shape point lists, or create new one
+                        if (!shapes.TryGetValue(fillIndex, out var shapePointLists))
+                        {
+                            shapePointLists = new List<List<string>>();
+                            shapes[fillIndex] = shapePointLists;
+                        }
+
+                        pointList.AddRange(shape.GetRange(1, shape.Count - 1));
+                        shapePointLists.Add(pointList);
                     }
                 }
             }
-            return null;
+
+            return shapes;
         }
 
 
