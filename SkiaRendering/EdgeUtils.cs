@@ -1,15 +1,10 @@
 ﻿using CsXFL;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace SkiaRendering
 {
     // Logic and Documentation largely taken from [https://github.com/PluieElectrique/xfl2svg]
+    // One aspect that is used within this code is defaultdict- which is used to provide a default
     internal class EdgeUtils
     {
         //Main Idea:
@@ -21,12 +16,11 @@ namespace SkiaRendering
         // "edges" attribute- string of commands and coordinates that indicate shape outline
         
         // outline is broken into pieces called segments- represented here as "point lists"
-        // This outline will then be filled in using fills' elements
-        
+        // This outline will then be filled in using fills' elements 
         // Process: string -> list of points -> SVG path elements -> render SVG as bitmap
 
 
-        //"edges" attribute string format:
+        //"edges" string format:
         // First gives command type, then follows it with n coordinates
         // Commands- !- moveto, /- lineto, |- lineto, [- quadto, ]- quadto
 
@@ -47,7 +41,7 @@ namespace SkiaRendering
         private static Regex edgeTokenizer = new Regex(EDGE_REGEX, RegexOptions.IgnorePatternWhitespace);
 
         /// <summary>
-        /// Parses and converts a coordinate in the "edges" attribute string.
+        /// Parses and converts a coordinate in the "edges" string.
         /// </summary>
         /// <param name="numberString">The coordinate in "edges" string being parsed.</param>
         /// <returns>The converted and scaled coordinate.</returns>
@@ -81,10 +75,10 @@ namespace SkiaRendering
         // in the standard point format
 
         /// <summary>
-        /// Converts an XML Edge element's "edges" attribute string into a list of points (segments).
+        /// Converts an XML Edge element's "edges" string into a list of points (segments).
         /// </summary>
         /// <param name="edges">The "edges" attribute of an Edge XFL element.</param>
-        /// <returns>A list of string points in "x y" format for each segment of "edges" attribute.</returns>
+        /// <returns>An enumerable of lists of string points in "x y" format- each list of points is a segment of the "edges" attribute.</returns>
         public static IEnumerable<List<string>> ConvertEdgeFormatToPointLists(string edges)
         {
             // As MatchCollection was written before .NET 2, it uses IEnumerable for iteration rather
@@ -160,7 +154,7 @@ namespace SkiaRendering
         /// </remarks>
         /// <param name="pointList">The point list that is being converted.</param>
         /// <returns>The equivalent "d" string for the given point list.</returns>
-        public static string ConvertPointListToPathFormat(List<string> pointList)
+        public static string ConvertPointListToPathStringFormat(List<string> pointList)
         {
             // Using iterator to match previous method as well as Python implementation
             IEnumerator<string> pointEnumerator = pointList.GetEnumerator();
@@ -216,7 +210,52 @@ namespace SkiaRendering
 
         public static void PointListToShape(List<Tuple<List<string>, int?>> pointLists)
         {
+            // {fillStyleIndex: {origin point: [point list, ...], ...}, ...}
+            // graph = defaultdict(lambda: defaultdict(list))
+            // For any key, default value is dictionary whose default value is an empty list
+            Dictionary<int, Dictionary<string, List<List<string>>>> graph = new Dictionary<int, Dictionary<string, List<List<string>>>>(); ;
 
+            // {fillStyleIndex: [shape point list, ...], ...}
+            // shapes = defaultdict(list)
+            // For any key, default value is empty list
+            Dictionary<int, List<List<string>>> shapes = new Dictionary<int, List<List<string>>>();
+
+            // Add open point lists into graph
+            foreach (Tuple<List<string>, int?> tuple in pointLists)
+            {
+                List<string> pointList = tuple.Item1;
+                int fillIndex = (int)tuple.Item2!;
+
+                // Point list is already a closed shape, so just associate it with its
+                // fillStyle index
+                if (pointList[0] == pointList[pointList.Count - 1])
+                {
+                    // Either add to existing list of lists, or create new one
+                    if(!shapes.TryGetValue(fillIndex, out var shapePointLists))
+                    {
+                        shapePointLists = new List<List<string>>();
+                        shapes[fillIndex] = shapePointLists;
+                    }
+                    shapePointLists.Add(pointList);
+                }
+                else
+                {
+                    if(!graph.TryGetValue(fillIndex, out var originPointDictionary))
+                    {
+                        originPointDictionary = new Dictionary<string, List<List<string>>>();
+                        graph[fillIndex] = originPointDictionary;
+                    }
+
+                    // At this point- key has empty Dictionary or existing Dictionary
+                    string originPoint = pointList[0];
+                    if(!originPointDictionary.TryGetValue(originPoint, out var originPointLists))
+                    {
+                        originPointLists = new List<List<string>>();
+                        originPointDictionary[originPoint] = originPointLists;
+                    }
+                    originPointLists.Add(pointList);
+                }
+            }
         }
 
         // edges element = refers to group of Edge elements associated with DOMShape
@@ -226,8 +265,8 @@ namespace SkiaRendering
         /// Converts XFL edges element into SVG path elements.
         /// </summary>
         /// <param name="edgesElement">The edges element of a DOMShape element.</param>
-        /// <param name="fillStyles">The FillStyles associated with the DOMShape element.</param>
-        /// <param name="strokeStyles">The StrokeStyles associated with the DOMShape element.</param>
+        /// <param name="fillStyles">The fills element of the DOMShape element.</param>
+        /// <param name="strokeStyles">The strokes element of the DOMShape element.</param>
         public static void ConvertEdgesToSvgPath(List<Edge> edgesElement, List<FillStyle> fillStyles, List<StrokeStyle> strokeStyles)
         {
             // List of point lists with their associated fillStyle stored as pairs
@@ -240,7 +279,7 @@ namespace SkiaRendering
 
             foreach(Edge edgeElement in edgesElement)
             {
-                // Get edges attribute string, fill styles, and stroke styles of a specific Edge
+                // Get "edges" string, fill styles, and stroke styles of a specific Edge
                 string edgesString = edgeElement.Edges!;
                 int? fillStyleLeftIndex = edgeElement.FillStyle0;
                 int? fillStyleRightIndex = edgeElement.FillStyle1;
@@ -282,17 +321,20 @@ namespace SkiaRendering
                         {
                             // First get converted path format for this Edge, then add it to
                             // associated strokeStyle
-                            string svgPathString = ConvertPointListToPathFormat(pointList);
+                            string svgPathString = ConvertPointListToPathStringFormat(pointList);
 
-                            if(strokePaths.TryGetValue(foundStroke.Index, out var svgPathsList))
+                            // defaultdict(list)- For any key, default value is empty list
+                            // Is used to create a list of size 1 when first creating stroke path list
+
+                            // Idea- ensuring that list exists for key (either existing one or an empty one)
+                            if (!strokePaths.TryGetValue(foundStroke.Index, out var strokePathList))
                             {
-                                svgPathsList.Add(svgPathString);
+                                // Setting this reference so item can be added to it afterwards
+                                strokePathList = new List<string>();
+                                strokePaths[foundStroke.Index] = strokePathList;
                             }
-                            else
-                            {
-                                List<string> newSvgPathList = new List<string>() { svgPathString };
-                                strokePaths.Add(foundStroke.Index, newSvgPathList);
-                            }
+
+                            strokePathList.Add(svgPathString);
                         }
                     }
                 }
