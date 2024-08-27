@@ -209,7 +209,7 @@ namespace SkiaRendering
             return string.Join(" ", svgPath);
         }
 
-        public static void PointListToShape(List<Tuple<List<string>, int?>> pointLists)
+        public static void PointListToShape(List<(List<string>, int?)> pointLists)
         {
             // {fillStyleIndex: {origin point: [point list, ...], ...}, ...}
             // graph = defaultdict(lambda: defaultdict(list))
@@ -222,7 +222,7 @@ namespace SkiaRendering
             Dictionary<int, List<List<string>>> shapes = new Dictionary<int, List<List<string>>>();
 
             // Add open point lists into graph
-            foreach (Tuple<List<string>, int?> tuple in pointLists)
+            foreach ((List<string>, int?) tuple in pointLists)
             {
                 List<string> pointList = tuple.Item1;
                 int fillIndex = (int)tuple.Item2!;
@@ -319,7 +319,7 @@ namespace SkiaRendering
         {
             // List of point lists with their associated fillStyle stored as pairs
             // Used syntax sugar version of new as variable type is very verbose
-            List<Tuple<List<string>, int?>> fillEdges = new();
+            List<(List<string>, int?)> fillEdges = new();
 
             // Should StrokeStyle object be used as key or just its index?
             // StrokePaths = refers to all converted SVG path strings associated with a strokeStyle
@@ -338,7 +338,7 @@ namespace SkiaRendering
                 {
                     if(fillStyleLeftIndex != null)
                     {
-                        Tuple<List<string>, int?> tupleToAdd = new(pointList,  fillStyleLeftIndex);
+                        (List<string>, int?) tupleToAdd = new(pointList,  fillStyleLeftIndex);
                         fillEdges.Add(tupleToAdd);
                     }
 
@@ -346,7 +346,7 @@ namespace SkiaRendering
                     {
                         // First reverse point list in order to fill it from the left, then add it
                         pointList.Reverse();
-                        Tuple<List<string>, int?> tupleToAdd = new(pointList, fillStyleRightIndex);
+                        (List<string>, int?) tupleToAdd = new(pointList, fillStyleRightIndex);
                         fillEdges.Add(tupleToAdd);
                     }
 
