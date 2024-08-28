@@ -1,6 +1,7 @@
 ﻿using CsXFL;
 using SkiaSharp;
 using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace SkiaRendering
 {
@@ -253,7 +254,7 @@ namespace SkiaRendering
             // {fillStyleIndex: {origin point: [point list, ...], ...}, ...}
             // graph = defaultdict(lambda: defaultdict(list))
             // For any key, default value is dictionary whose default value is an empty list
-            Dictionary<int, Dictionary<string, List<List<string>>>> graph = new Dictionary<int, Dictionary<string, List<List<string>>>>(); ;
+            Dictionary<int, Dictionary<string, List<List<string>>>> graph = new Dictionary<int, Dictionary<string, List<List<string>>>>();
 
             // {fillStyleIndex: [shape point list, ...], ...}
             // shapes = defaultdict(list)
@@ -303,7 +304,9 @@ namespace SkiaRendering
             {
                 foreach(string originPoint in fillGraph.Keys)
                 {
-                    while(fillGraph[originPoint] != null)
+                    // As we are popping off the top element, we have to check if list of lists
+                    // is empty rather than null
+                    while(fillGraph[originPoint].Count != 0)
                     {
                         // Pop off pointList from originPointLists
                         List<string> pointList = fillGraph[originPoint][0];
@@ -375,8 +378,10 @@ namespace SkiaRendering
                     if(fillStyleRightIndex != null)
                     {
                         // First reverse point list in order to fill it from the left, then add it
-                        pointList.Reverse();
-                        (List<string>, int?) tupleToAdd = new(pointList, fillStyleRightIndex);
+                        // Python code does not change original pointList, so get reverse of Enumerable
+                        // and covert that to a list
+                        List<string> reversedList = pointList.AsEnumerable().Reverse().ToList();
+                        (List<string>, int?) tupleToAdd = new(reversedList, fillStyleRightIndex);
                         fillEdges.Add(tupleToAdd);
                     }
 
