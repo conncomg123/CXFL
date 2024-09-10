@@ -276,7 +276,7 @@ public abstract class Stroke
 
     }
     protected readonly XElement root;
-    private readonly XNamespace ns;
+    protected readonly XNamespace ns;
     private bool pixelHinting;
     private string scaleMode, caps, joints;
     private int miterLimit;
@@ -316,9 +316,15 @@ public abstract class Stroke
             bitmapFill = new BitmapFill(root.Element(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER)!.Element(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER)!);
     }
 }
-public class SolidStroke(XElement root) : Stroke(root)
+public class SolidStroke : Stroke
 {
     public const string SOLID_STROKE_NODE_IDENTIFIER = "SolidStroke";
+    private List<WidthMarker>? widthMarkers;
+    public List<WidthMarker>? WidthMarkers { get { return widthMarkers; } }
+    public SolidStroke(XElement root) : base(root)
+    {
+        widthMarkers = root.Element(ns + WidthMarker.WIDTH_MARKERS_NODEGROUP_IDENTIFIER) is null ? null : root.Element(ns + WidthMarker.WIDTH_MARKERS_NODEGROUP_IDENTIFIER)!.Elements(ns + WidthMarker.WIDTH_MARKER_NODE_IDENTIFIER).Select(x => new WidthMarker(x)).ToList();
+    }
 }
 public class DottedStroke : Stroke
 {
@@ -346,7 +352,7 @@ public class HatchedStroke(XElement root) : Stroke(root)
 public class WidthMarker
 {
     public const string WIDTH_MARKER_NODE_IDENTIFIER = "WidthMarker",
-    WIDTH_MARKERS_NODEGROUP_IDENTIFIER = "VariblePointWidth";
+    WIDTH_MARKERS_NODEGROUP_IDENTIFIER = "VariablePointWidth";
     private XElement root;
     public XElement Root { get { return root; } }
     private double position, left, right;
