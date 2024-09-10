@@ -1,7 +1,6 @@
 ﻿using CsXFL;
-using SkiaSharp;
 using System.Text.RegularExpressions;
-using System.Linq;
+using System.Xml.Linq;
 
 namespace SkiaRendering
 {
@@ -386,8 +385,10 @@ namespace SkiaRendering
         /// <param name="edgesElement">The edges element of a DOMShape element.</param>
         /// <param name="fillStyles">The fills element of the DOMShape element.</param>
         /// <param name="strokeStyles">The strokes element of the DOMShape element.</param>
+        /// <returns>A tuple consisting of a list of SVG path elements for fill shapes and a list of
+        /// SVG path elements for stroke shapes.</returns>
         /// <seealso cref="https://github.com/PluieElectrique/xfl2svg/blob/master/xfl2svg/shape/edge.py#L244"/>
-        public static (List<SKPath>, List<SKPath>) ConvertEdgesToSvgPath(List<Edge> edgesElement,
+        public static (List<XElement>, List<XElement>) ConvertEdgesToSvgPath(List<Edge> edgesElement,
             List<FillStyle> fillStyles, List<StrokeStyle> strokeStyles)
         {
             // When associating point lists to their fillstyle/strokestyle, using their
@@ -469,29 +470,28 @@ namespace SkiaRendering
                 }
             }
 
-            List<SKPath> filledPaths = new List<SKPath>();
-            List<SKPath> strokedPaths = new List<SKPath>();
+            List<XElement> filledPaths = new List<XElement>();
+            List<XElement> strokedPaths = new List<XElement>();
             Dictionary<int, List<List<string>>> shapes = ConvertPointListsToShapes(fillEdges);
 
             // At this point, we have fillStyle indexes associated with various shapes
-            // (a list of merged fill point lists) and strokeStyle indexes associated with a
+            // (a list of point lists) and strokeStyle indexes associated with a
             // list of SVG path strings.
-            // Now we have to convert them into (SKPaint, SKPath) lists so that they can be
-            // drawn by SkiaSharp.
-
-            List<(SKPath, SKPaint)> testingList = new List<(SKPath, SKPaint)>();
+            // Now we have to create the SVG path elements from each 
 
             foreach (var (fillIndex, pointLists) in shapes)
             {
+                // Convert each point list associated with this fillStyleIndex and merge it into one large
+                // SVG path string
                 string svgPathString = string.Join(" ", pointLists.ConvertAll(ConvertPointListToPathString));
-                SKPath newSKPath = SKPath.ParseSvgPathData(svgPathString);
+                XElement newSKPath = new("Testing");
                 filledPaths.Add(newSKPath);
             }
 
             foreach(var (strokeIndex, pathData) in strokePaths)
             {
                 string svgPathString = string.Join(" ", pathData);
-                SKPath newSKPath = SKPath.ParseSvgPathData(svgPathString);
+                XElement newSKPath = new("Testing");
                 strokedPaths.Add(newSKPath);
             }
 
