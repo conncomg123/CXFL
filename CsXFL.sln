@@ -9,16 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CsXFL.Tests", "CsXFL.Tests\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SceneGenerator", "SceneGenerator\SceneGenerator.csproj", "{20CC5EAF-375A-46AA-AAE4-4CFC17519E9F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CXFLGUI", "CXFLGUI\CXFLGUI.csproj", "{DC0F4ADD-D8C1-48B7-BB65-71C8D2688B4E}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XFL2SESX", "XFLtoSESX\XFL2SESX.csproj", "{82EC18BE-08EB-4E38-87EE-4686DCD01985}"
-	ProjectSection(ProjectDependencies) = postProject
-		{A3ACAE7E-1C44-44E1-9AE5-788565025371} = {A3ACAE7E-1C44-44E1-9AE5-788565025371}
-	EndProjectSection
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Scripts", "Scripts\Scripts.csproj", "{CDE593FD-E7C6-4F1A-98CD-72A773E4D12C}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkiaRendering", "SkiaRendering\SkiaRendering.csproj", "{63A8D0E9-CE34-4F60-9D15-1DAAACC7898C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

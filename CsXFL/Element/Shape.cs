@@ -4,8 +4,6 @@ namespace CsXFL;
 public class Shape : Element
 {
     public const string SHAPE_NODE_IDENTIFIER = "DOMShape";
-    private readonly XElement root;
-    private readonly XNamespace ns;
     private List<FillStyle> fills;
     private List<StrokeStyle> strokes;
     private List<Edge> edges;
@@ -31,9 +29,16 @@ public class FillStyle
     private readonly XElement root;
     private readonly XNamespace ns;
     private readonly int index;
-    private readonly SolidColor solidColor;
+    private readonly SolidColor? solidColor;
+    private readonly LinearGradient? linearGradient;
+    private readonly RadialGradient? radialGradient;
+    private readonly BitmapFill? bitmapFill;
     public int Index { get { return index; } }
-    public SolidColor SolidColor { get { return solidColor; } }
+    public SolidColor? SolidColor { get { return solidColor; } }
+    public LinearGradient? LinearGradient { get { return linearGradient; } }
+    public RadialGradient? RadialGradient { get { return radialGradient; } }
+    public BitmapFill? BitmapFill { get { return bitmapFill; } }
+
     internal FillStyle(XElement root)
     {
         this.root = root;
@@ -43,7 +48,18 @@ public class FillStyle
         {
             solidColor = new SolidColor(root.Element(ns + SolidColor.SOLID_COLOR_NODE_IDENTIFIER)!);
         }
-        else solidColor = new SolidColor(ns);
+        else if (root.Element(ns + LinearGradient.LINEAR_GRADIENT_NODE_IDENTIFIER) != null)
+        {
+            linearGradient = new LinearGradient(root.Element(ns + LinearGradient.LINEAR_GRADIENT_NODE_IDENTIFIER)!);
+        }
+        else if (root.Element(ns + RadialGradient.RADIAL_GRADIENT_NODE_IDENTIFIER) != null)
+        {
+            radialGradient = new RadialGradient(root.Element(ns + RadialGradient.RADIAL_GRADIENT_NODE_IDENTIFIER)!);
+        }
+        else if (root.Element(ns + BitmapFill.BITMAPFILL_NODE_IDENTIFIER) != null)
+        {
+            bitmapFill = new BitmapFill(root.Element(ns + BitmapFill.BITMAPFILL_NODE_IDENTIFIER)!);
+        }
     }
 }
 public class SolidColor
@@ -67,6 +83,119 @@ public class SolidColor
     {
         color = DefaultValues.Color;
         root = new XElement(ns + SOLID_COLOR_NODE_IDENTIFIER);
+    }
+}
+public abstract class Gradient
+{
+    protected class DefaultValues
+    {
+        public const string SpreadMethod = "extend";
+        public const string InterpolationMethod = "";
+    }
+    protected XElement? root;
+    protected XNamespace ns;
+    protected string spreadMethod, interpolationMethod;
+    protected Matrix matrix;
+    protected List<GradientEntry> gradientEntries;
+    internal XElement? Root { get { return root; } }
+    public string SpreadMethod { get { return spreadMethod; } set { spreadMethod = value; root?.SetOrRemoveAttribute("spreadMethod", value, DefaultValues.SpreadMethod); } }
+    public string InterpolationMethod { get { return interpolationMethod; } set { interpolationMethod = value; root?.SetOrRemoveAttribute("interpolationMethod", value, DefaultValues.InterpolationMethod); } }
+    public Matrix Matrix { get { return matrix; } set { SetMatrix(value); } }
+    public List<GradientEntry> GradientEntries { get { return gradientEntries; } }
+    private void SetMatrix(Matrix matrix)
+    {
+        // set values, not the matrix itself
+        this.matrix.A = matrix.A;
+        this.matrix.B = matrix.B;
+        this.matrix.C = matrix.C;
+        this.matrix.D = matrix.D;
+        this.matrix.Tx = matrix.Tx;
+        this.matrix.Ty = matrix.Ty;
+    }
+    internal Gradient(XNamespace ns)
+    {
+        root = null;
+        this.ns = ns;
+        spreadMethod = DefaultValues.SpreadMethod;
+        interpolationMethod = DefaultValues.InterpolationMethod;
+        matrix = new Matrix(ns, root);
+        gradientEntries = new List<GradientEntry>();
+    }
+    internal Gradient(in XElement gradientNode)
+    {
+        root = gradientNode;
+        ns = gradientNode.Name.Namespace;
+        spreadMethod = gradientNode.Attribute("spreadMethod")?.Value ?? DefaultValues.SpreadMethod;
+        interpolationMethod = gradientNode.Attribute("interpolationMethod")?.Value ?? DefaultValues.InterpolationMethod;
+        matrix = gradientNode.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER) is not null ? new Matrix(gradientNode.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)!.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER), gradientNode) : new Matrix(ns, gradientNode);
+        gradientEntries = gradientNode?.Elements(ns + GradientEntry.GRADIENTENTRY_NODE_IDENTIFIER).Select(e => new GradientEntry(e)).ToList() ?? new List<GradientEntry>();
+
+    }
+    internal Gradient(in Gradient other)
+    {
+        root = other.Root is null ? null : new XElement(other.Root);
+        ns = other.ns;
+        spreadMethod = other.spreadMethod;
+        interpolationMethod = other.interpolationMethod;
+        matrix = new Matrix(root?.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER)!, root);
+        gradientEntries = other.gradientEntries;
+    }
+}
+public class RadialGradient : Gradient
+{
+    public const string RADIAL_GRADIENT_NODE_IDENTIFIER = "RadialGradient", RADIAL_GRADIENT_NODEGROUP_IDENTIFIER = "fill";
+    internal RadialGradient(XNamespace ns) : base(ns) {}
+    internal RadialGradient(in XElement radialGradientNode) : base(radialGradientNode) {}
+    internal RadialGradient(in RadialGradient other) : base(other) {}
+}
+public class LinearGradient : Gradient
+{
+    public const string LINEAR_GRADIENT_NODE_IDENTIFIER = "LinearGradient", LINEAR_GRADIENT_NODEGROUP_IDENTIFIER = "fill";
+    internal LinearGradient(XNamespace ns) : base(ns) { }
+    internal LinearGradient(in XElement linearGradientNode) : base(linearGradientNode) { }
+    internal LinearGradient(in LinearGradient other) : base(other) { }
+}
+public class BitmapFill
+{
+    public const string BITMAPFILL_NODE_IDENTIFIER = "BitmapFill",
+    BITMAPFILL_NODEGROUP_IDENTIFIER = "fill";
+    private readonly XElement? root;
+    private readonly XNamespace ns;
+    private string? bitmapPath;
+    private Matrix matrix;
+    public XElement? Root { get { return root; } }
+    public string? BitmapPath { get { return bitmapPath; } set { bitmapPath = value; } }
+    public Matrix Matrix { get { return matrix; } set { SetMatrix(value); } }
+    private void SetMatrix(Matrix matrix)
+    {
+        // set values, not the matrix itself
+        this.matrix.A = matrix.A;
+        this.matrix.B = matrix.B;
+        this.matrix.C = matrix.C;
+        this.matrix.D = matrix.D;
+        this.matrix.Tx = matrix.Tx;
+        this.matrix.Ty = matrix.Ty;
+    }
+    internal BitmapFill(XNamespace ns)
+    {
+        root = null;
+        this.ns = ns;
+        bitmapPath = null;
+        matrix = new Matrix(ns, root);
+    }
+    internal BitmapFill(XElement bitmapFillNode)
+    {
+        root = bitmapFillNode;
+        ns = bitmapFillNode.Name.Namespace;
+        bitmapPath = bitmapFillNode.Attribute("bitmapPath")?.Value;
+        matrix = bitmapFillNode.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER) is not null ? new Matrix(bitmapFillNode.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)!.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER), bitmapFillNode) : new Matrix(ns, bitmapFillNode);
+    }
+    internal BitmapFill(BitmapFill other)
+    {
+        root = other.Root is null ? null : new XElement(other.Root);
+        ns = other.ns;
+        bitmapPath = other.bitmapPath;
+        matrix = new Matrix(root?.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER)!, root);
     }
 }
 public class Edge
@@ -152,7 +281,10 @@ public abstract class Stroke
     private string scaleMode, caps, joints;
     private int miterLimit;
     private double weight;
-    private SolidColor solidColor;
+    private SolidColor? solidColor;
+    private LinearGradient? linearGradient;
+    private RadialGradient? radialGradient;
+    private BitmapFill? bitmapFill;
     public XElement Root { get { return root; } }
     public string ScaleMode { get { return scaleMode; } set { scaleMode = value; root?.SetOrRemoveAttribute("scaleMode", value, DefaultValues.ScaleMode); } }
     public string Caps { get { return caps; } set { caps = value; root?.SetOrRemoveAttribute("caps", value, DefaultValues.Caps); } }
@@ -160,7 +292,10 @@ public abstract class Stroke
     public string Joints { get { return joints; } set { joints = value; root?.SetOrRemoveAttribute("joints", value, DefaultValues.Joints); } }
     public double Weight { get { return weight; } set { weight = value; root?.SetOrRemoveAttribute("weight", value, DefaultValues.Weight); } }
     public int MiterLimit { get { return miterLimit; } set { miterLimit = value; root?.SetOrRemoveAttribute("miterLimit", value, DefaultValues.MiterLimit); } }
-    public SolidColor SolidColor { get { return solidColor; } }
+    public SolidColor? SolidColor { get { return solidColor; } }
+    public LinearGradient? LinearGradient { get { return linearGradient; } }
+    public RadialGradient? RadialGradient { get { return radialGradient; } }
+    public BitmapFill? BitmapFill { get { return bitmapFill; } }
     internal Stroke(XElement root)
     {
         this.root = root;
@@ -173,7 +308,12 @@ public abstract class Stroke
         miterLimit = (int?)root.Attribute("miterLimit") ?? DefaultValues.MiterLimit;
         if (root.Element(ns + SolidColor.SOLID_COLOR_NODEGROUP_IDENTIFIER)!.Element(ns + SolidColor.SOLID_COLOR_NODE_IDENTIFIER) != null)
             solidColor = new SolidColor(root.Element(ns + SolidColor.SOLID_COLOR_NODEGROUP_IDENTIFIER)!.Element(ns + SolidColor.SOLID_COLOR_NODE_IDENTIFIER)!);
-        else solidColor = new SolidColor(ns);
+        else if (root.Element(ns + LinearGradient.LINEAR_GRADIENT_NODEGROUP_IDENTIFIER)!.Element(ns + LinearGradient.LINEAR_GRADIENT_NODE_IDENTIFIER) != null)
+            linearGradient = new LinearGradient(root.Element(ns + LinearGradient.LINEAR_GRADIENT_NODEGROUP_IDENTIFIER)!.Element(ns + LinearGradient.LINEAR_GRADIENT_NODE_IDENTIFIER)!);
+        else if (root.Element(ns + RadialGradient.RADIAL_GRADIENT_NODEGROUP_IDENTIFIER)!.Element(ns + RadialGradient.RADIAL_GRADIENT_NODE_IDENTIFIER) != null)
+            radialGradient = new RadialGradient(root.Element(ns + RadialGradient.RADIAL_GRADIENT_NODEGROUP_IDENTIFIER)!.Element(ns + RadialGradient.RADIAL_GRADIENT_NODE_IDENTIFIER)!);
+        else if (root.Element(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER)!.Element(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER) != null)
+            bitmapFill = new BitmapFill(root.Element(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER)!.Element(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER)!);
     }
 }
 public class SolidStroke(XElement root) : Stroke(root)

@@ -148,9 +148,23 @@ namespace SkiaRendering
             return string.Join(" ", path); // Join the path elements into a single string with spaces in between
         }
 
-        static void DrawShape(SKCanvas canvas, List<string> pointList, Shape shapeIter, SymbolInstanceVisualRecord visRecord)
+        static void DrawShape(SKCanvas canvas, Shape shapeIter, SymbolInstanceVisualRecord visRecord)
         {
             SymbolInstanceVisualRecord localVisRecord = visRecord ?? new SymbolInstanceVisualRecord() { };
+
+            // Why do we do this?
+            // We do this because of the very ugly way I have handled visRecords, which track transformation
+            // changes and accumulate them throughout recursive executions. visRecord is initialized with all
+            // zeros, which includes a ScaleX and ScaleY of zero, which causes your shape to collapse. However,
+            // this needs to be initialized with zero, or else symbols with scaling will double up. Doubly
+            // however, shapes with no corresponding symbol get the default visRecord, which will cause them
+            // to collapse. This is a temporary fix, and if you want to elegantly fix it, look at visRecord.
+
+            if (localVisRecord.MatrixA == 0 && localVisRecord.MatrixD == 0)
+            {
+                localVisRecord.MatrixA = 1;
+                localVisRecord.MatrixD = 1;
+            }
 
             SKMatrix matrix = new SKMatrix()
             {
@@ -168,56 +182,89 @@ namespace SkiaRendering
             bool hasStrokes = false;
             bool hasFills = false;
 
-            // SVG Path
-            string TestPath = PointListToPathFormat(pointList);
-            SKPath TestPath2 = SKPath.ParseSvgPathData(TestPath);
-
-            // Apply positional offset
-            TestPath2.Transform(matrix);
-
-            // Strokes & Fills
-            if (shapeIter.Strokes.Count > 0) { hasStrokes = true; }
-            if (shapeIter.Fills.Count > 0) { hasFills = true; }
-
-            if (hasStrokes) { 
-            
-                Stroke CurrentStroke = shapeIter.Strokes[0].Stroke; 
-
-                SKStrokeCap StrokeCap = GetStrokeCap(CurrentStroke.Caps);
-
-                // <!> This logic is assumed, test it later
-                SKStrokeJoin StrokeJoin = GetStrokeJoin(CurrentStroke.Joints);
-
-                var StrokePaint = new SKPaint
-                {
-                    Style = SKPaintStyle.Stroke,
-                    StrokeWidth = (float)CurrentStroke.Weight,
-                    StrokeMiter = CurrentStroke.MiterLimit,
-                    StrokeCap = StrokeCap,
-                    StrokeJoin = StrokeJoin,
-                    Color = SKColor.Parse(CurrentStroke.SolidColor.Color.ToString()),
-                    IsAntialias = true
-                    // <!> This doesn't do anything?
-                    //FilterQuality = SKFilterQuality.High
-                };
-
-                canvas.DrawPath(TestPath2, StrokePaint);
-
-            }
-
-            if (hasFills)
+            // Edge compilation
+            foreach (Edge edgeIter in shapeIter.Edges)
             {
+                if (edgeIter.Edges == null) { continue; }
+                Dictionary<Edge, int> edgeToStrokeStyleID = new Dictionary<Edge, int>();
+                var pointLists = EdgeFormatToPointLists(edgeIter.Edges);
 
-                FillStyle CurrentFill = shapeIter.Fills[0];
+                foreach (var pointList in pointLists) {
+                    // SVG Path
+                    string TestPath = PointListToPathFormat(pointList);
+                    SKPath TestPath2 = SKPath.ParseSvgPathData(TestPath);
 
-                var FillPaint = new SKPaint
-                {
-                    Style = SKPaintStyle.Fill,
-                    Color = SKColor.Parse(CurrentFill.SolidColor.Color.ToString())
-                };
+                    // Apply positional offset
+                    TestPath2.Transform(matrix);
 
-                canvas.DrawPath(TestPath2, FillPaint);
+                    // Strokes & Fills
+                    if (shapeIter.Strokes.Count > 0) { hasStrokes = true; }
+                    if (shapeIter.Fills.Count > 0) { hasFills = true; }
 
+                    if (hasStrokes) 
+                    {
+                        // Iterate over the strokes and associate each stroke with its corresponding edge
+                        for (int i = 0; i < shapeIter.Strokes.Count; i++)
+                        {
+                            Stroke CurrentStroke = shapeIter.Strokes[i].Stroke;
+                            edgeToStrokeStyleID[shapeIter.Edges[i]] = i;
+                        }
+
+                            if (edgeToStrokeStyleID.ContainsKey(edgeIter))
+                            {
+                                int strokeStyleID = edgeToStrokeStyleID[edgeIter];
+                                
+                                Stroke CurrentStroke = shapeIter.Strokes[strokeStyleID].Stroke;
+                                SKStrokeCap StrokeCap = GetStrokeCap(CurrentStroke.Caps);
+
+                                // <!> This logic is assumed, test it later
+                                SKStrokeJoin StrokeJoin = GetStrokeJoin(CurrentStroke.Joints);
+
+                                var StrokePaint = new SKPaint
+                                {
+                                    Style = SKPaintStyle.Stroke,
+                                    StrokeWidth = (float)CurrentStroke.Weight,
+                                    StrokeMiter = CurrentStroke.MiterLimit,
+                                    StrokeCap = StrokeCap,
+                                    StrokeJoin = StrokeJoin,
+                                    Color = SKColor.Parse(CurrentStroke.SolidColor.Color.ToString()),
+                                    IsAntialias = true,
+                                    FilterQuality = SKFilterQuality.High
+                                };
+
+                                canvas.DrawPath(TestPath2, StrokePaint);
+                            }
+                    }
+
+                    if (hasFills)
+                    {
+                        Dictionary<Edge, int> edgeToFillStyleID = new Dictionary<Edge, int>();
+
+                        for (int i = 0; i < shapeIter.Edges.Count; i++)
+                        {
+                            Edge edge = shapeIter.Edges[i];
+
+                            if (edge.FillStyle0 != null || edge.FillStyle1 != null)
+                            {
+                                int fillStyleID = edge.FillStyle0 != null ? edge.FillStyle0.Value : edge.FillStyle1.Value;
+
+                                FillStyle CurrentFill = shapeIter.Fills[fillStyleID - 1];
+
+                                var FillPaint = new SKPaint
+                                {
+                                    Style = SKPaintStyle.Fill,
+                                    Color = SKColor.Parse(CurrentFill.SolidColor.Color.ToString())
+                                };
+
+                                canvas.DrawPath(TestPath2, FillPaint);
+                            }
+                            else
+                            {
+                                continue;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -291,32 +338,7 @@ namespace SkiaRendering
                         if (ElementArray[elementIter] is Shape)
                         {
                             Shape shapeIter = ElementArray[elementIter] as Shape;
-
-                            foreach (Edge edgeIter in shapeIter.Edges)
-                            {
-                                if (edgeIter.Edges == null) { continue; }
-
-                                var pointLists = EdgeFormatToPointLists(edgeIter.Edges);
-
-                                foreach (var pointList in pointLists)
-                                {
-                                    // Why do we do this?
-                                    // We do this because of the very ugly way I have handled visRecords, which track transformation
-                                    // changes and accumulate them throughout recursive executions. visRecord is initialized with all
-                                    // zeros, which includes a ScaleX and ScaleY of zero, which causes your shape to collapse. However,
-                                    // this needs to be initialized with zero, or else symbols with scaling will double up. Doubly
-                                    // however, shapes with no corresponding symbol get the default visRecord, which will cause them
-                                    // to collapse. This is a temporary fix, and if you want to elegantly fix it, look at visRecord.
-
-                                    if (localVisRecord.MatrixA == 0 && localVisRecord.MatrixD == 0)
-                                    {
-                                        localVisRecord.MatrixA = 1;
-                                        localVisRecord.MatrixD = 1;
-                                    }
-
-                                    DrawShape(localCanvas, pointList, shapeIter, localVisRecord);
-                                }
-                            }
+                            DrawShape(localCanvas, shapeIter, localVisRecord);
                         }
 
                         // Drawing Symbols
@@ -351,9 +373,14 @@ namespace SkiaRendering
 
         /*static void Main(string[] args)
         {
-            Document Doc = new("C:\\Users\\Administrator\\Desktop\\INDEV_NULL_VECTOR_TRUCY.fla");
+            Document Doc = new("C:\\Users\\Administrator\\Desktop\\RenderTest2.fla");
             // Safety check for out of bounds frames
+<<<<<<< HEAD:SkiaRendering/RenderFrame.cs
             TimelineCascadeRender(Doc, Doc.Timelines[0], 0, 0, 0);
         }*/
+=======
+            TimelineCascadeRender(Doc, Doc.Timelines[0], 0, 9, 0);
+        }
+>>>>>>> CSConversion:Scripts/RenderFrame.cs
     }
 }
