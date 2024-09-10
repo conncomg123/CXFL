@@ -211,7 +211,7 @@ namespace SkiaRendering
             return string.Join(" ", svgPath);
         }
 
-        private static List<string> Walk(string currentPoint, HashSet<string> usedPoints, string originPoint,
+        private static List<string>? Walk(string currentPoint, HashSet<string> usedPoints, string originPoint,
                 Dictionary<string, List<List<string>>> fillGraph)
         {
             // Recursively join point lists into shapes
@@ -230,7 +230,7 @@ namespace SkiaRendering
                 {
                     // Try this point list
                     usedPoints.Add(nextPoint);
-                    List<string> shape = Walk(nextPoint, usedPoints, originPoint, fillGraph);
+                    List<string>? shape = Walk(nextPoint, usedPoints, originPoint, fillGraph);
                     if (shape == null)
                     {
                         // Backtrack
@@ -335,7 +335,7 @@ namespace SkiaRendering
 
                         HashSet<string> visited = new HashSet<string>() { originPoint, currentPoint};
 
-                        List<string> shape = Walk(currentPoint, visited, originPoint, fillGraph);
+                        List<string>? shape = Walk(currentPoint, visited, originPoint, fillGraph);
                         if(shape == null)
                         {
                             throw new Exception("Failed to build shape");
