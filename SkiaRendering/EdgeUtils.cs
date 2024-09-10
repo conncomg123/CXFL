@@ -6,21 +6,21 @@ using System.Linq;
 namespace SkiaRendering
 {
     // Logic and Documentation largely taken from [https://github.com/PluieElectrique/xfl2svg]
-    // One aspect that had to be accounted for is the use of defaultdict, which gives default
-    // values to keys. To account for that, I used TryGetValue() and explicity set values
+    // One aspect that had to be accounted for is the use of defaultdict, which assigns default
+    // values to dictionary keys. To account for that, I used TryGetValue() and explicity set values
     internal class EdgeUtils
     {
         //Main Idea:
         // In XFL format, anything that is drawn can either be generally represented
         // as shapes (<DOMShape> elements) or symbols (<DOMSymbolInstance> elements) that in turn refers to shapes
         // A <DOMShape> is made of two elements- <fills> and <edges>
-        // <fills> element- indicate the color, stroke style, fill style that will fill the shape
+        // <fills> element- indicate the stroke style or fill style that will fill the shape
         // <edges> element- contain <Edge> elements-
         // "edges" attribute- string of commands and coordinates that indicate shape outline
         
         // outline is broken into pieces called segments- represented here as "point lists"
-        // This outline will then be filled in using fills' elements 
-        // Process: string -> list of points -> SVG path elements -> render SVG as bitmap
+        // This outline will then be filled in using <fills> elements
+        // Process: "edges" strings -> list of points -> SVG path elements -> render SVG as bitmap
 
 
         //"edges" string format:
@@ -148,7 +148,7 @@ namespace SkiaRendering
         }
 
         /// <summary>
-        /// Converts a point list into the SVG path format.
+        /// Converts a point list into a SVG path string.
         /// </summary>
         /// <remarks>
         /// This method converts a point list into the "d" attribute of a path element,
@@ -157,7 +157,7 @@ namespace SkiaRendering
         /// </remarks>
         /// <param name="pointList">The point list that is being converted.</param>
         /// <returns>The equivalent "d" string for the given point list.</returns>
-        public static string ConvertPointListToPathFormat(List<string> pointList)
+        public static string ConvertPointListToPathString(List<string> pointList)
         {
             // Using iterator to match previous method as well as Python implementation
             IEnumerator<string> pointEnumerator = pointList.GetEnumerator();
@@ -249,6 +249,26 @@ namespace SkiaRendering
             return null;
         }
 
+        /// <summary>
+        /// Joins point lists into shapes and map various fillStyleIndexes to these shapes.
+        /// </summary>
+        /// <remarks>
+        /// Algorithm for merging point lists into shapes:
+        /// <br></br>
+        /// Pick an unused segment. If it's already closed (start point equals
+        /// end point), convert it to the SVG path format.<br></br>
+        /// Otherwise, if it's open, randomly append segments (making sure to
+        /// match start and end points) until:<br></br>
+        /// 1. The segment is closed. Convert and start over with a new,
+        /// unused segment.<br></br>
+        /// 2. The segment intersects with itself (i.e. the current end point
+        /// equals the end point of a previous segment). Backtrack.<br></br>
+        /// 3. There are no more valid segments. Backtrack.
+        /// </remarks>
+        /// <param name="pointLists">A list of tuples consisting of point list associated with a
+        /// respective fillStyleIndex.</param>
+        /// <returns>A dictionary that maps fillStyleIndexes with shapes (list of point lists)</returns>
+        /// <exception cref="Exception">Thrown when a shape could not be created.</exception>
         public static Dictionary<int, List<List<string>>> ConvertPointListsToShapes(List<(List<string>, int?)> pointLists)
         {
             // {fillStyleIndex: {origin point: [point list, ...], ...}, ...}
@@ -344,12 +364,36 @@ namespace SkiaRendering
         /// <summary>
         /// Converts XFL edges element into SVG path elements.
         /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Idea of this method is that it converts point lists into a SVG path string and associates it
+        /// with a specific fill/strokeStyle index. After this is done, for each fill/strokeIndex,
+        /// create the proper SVG path element.
+        /// </para>
+        /// <para>
+        /// For point lists representing Edges with fills, they are merged into shapes first (list of point lists)
+        /// and then converted to SVG path string (converting each point list into a SVG path string and merging it
+        /// together into one large string).
+        /// This string is associated with a fillStyle index (index = key, path = value).
+        /// For point lists representing Edges with strokes, it is just converted into a SVG path string and
+        /// associated with a strokeStyle index (index = key, path = value).
+        /// </para>
+        /// <para>
+        /// For each fill/strokeStyle index, create the proper SVG path element (setting "d" attribute to
+        /// SVG path string, setting "fill" attributes to the properly converted FillStyle/StrokeStyles
+        /// </para>
+        /// </remarks>
         /// <param name="edgesElement">The edges element of a DOMShape element.</param>
         /// <param name="fillStyles">The fills element of the DOMShape element.</param>
         /// <param name="strokeStyles">The strokes element of the DOMShape element.</param>
+        /// <seealso cref="https://github.com/PluieElectrique/xfl2svg/blob/master/xfl2svg/shape/edge.py#L244"/>
         public static (List<SKPath>, List<SKPath>) ConvertEdgesToSvgPath(List<Edge> edgesElement,
             List<FillStyle> fillStyles, List<StrokeStyle> strokeStyles)
         {
+            // When associating point lists to their fillstyle/strokestyle, using their
+            // index" attribute- NOT their index in lists
+            // fillStyle/strokeStyle index in CSXFL Shape list: XFL "index" attribute - 1
+
             // List of point lists with their associated fillStyle stored as pairs
             // Used syntax sugar version of new as variable type is very verbose
             List<(List<string>, int?)> fillEdges = new();
@@ -367,6 +411,9 @@ namespace SkiaRendering
                 int? strokeStyleIndex = edgeElement.StrokeStyle;
 
                 IEnumerable<List<string>> edgesPointLists = ConvertEdgeFormatToPointLists(edgesString);
+
+                // Associate point lists to appropriate fillStyle index and strokeStyle
+
                 foreach(List<string> pointList in edgesPointLists)
                 {
                     if(fillStyleLeftIndex != null)
@@ -385,7 +432,6 @@ namespace SkiaRendering
                         fillEdges.Add(tupleToAdd);
                     }
 
-                    // strokeStyle index in CSXFL Shape Stroke list (DOMShape): XFL "index" - 1
                     // Do I need to check if strokeStyle exists? (Outside of checking for null)
                     // Is there a scenario where an Edge element references a strokeStyle that is not in the
                     // strokes element of the DOMShape that the said Edge is a part of?
@@ -404,7 +450,7 @@ namespace SkiaRendering
                         {
                             // First get converted path format for this Edge, then add it to
                             // associated strokeStyle
-                            string svgPathString = ConvertPointListToPathFormat(pointList);
+                            string svgPathString = ConvertPointListToPathString(pointList);
 
                             // defaultdict(list)- For any key, default value is empty list
                             // Is used to create a list of size 1 when first creating stroke path list
@@ -425,11 +471,19 @@ namespace SkiaRendering
 
             List<SKPath> filledPaths = new List<SKPath>();
             List<SKPath> strokedPaths = new List<SKPath>();
-
             Dictionary<int, List<List<string>>> shapes = ConvertPointListsToShapes(fillEdges);
-            foreach(var (fillIndex, pointLists) in shapes)
+
+            // At this point, we have fillStyle indexes associated with various shapes
+            // (a list of merged fill point lists) and strokeStyle indexes associated with a
+            // list of SVG path strings.
+            // Now we have to convert them into (SKPaint, SKPath) lists so that they can be
+            // drawn by SkiaSharp.
+
+            List<(SKPath, SKPaint)> testingList = new List<(SKPath, SKPaint)>();
+
+            foreach (var (fillIndex, pointLists) in shapes)
             {
-                string svgPathString = string.Join(" ", pointLists.ConvertAll(ConvertPointListToPathFormat));
+                string svgPathString = string.Join(" ", pointLists.ConvertAll(ConvertPointListToPathString));
                 SKPath newSKPath = SKPath.ParseSvgPathData(svgPathString);
                 filledPaths.Add(newSKPath);
             }
