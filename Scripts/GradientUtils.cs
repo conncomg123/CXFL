@@ -49,6 +49,7 @@ namespace Scripts
             linearGradientElement.SetAttributeValue("x2", endPosition.ToString());
             linearGradientElement.SetAttributeValue("spreadMethod", gradient.SpreadMethod);
 
+            // Create stop child elements of gradient and add them to linearGradient SVG element.
             foreach(GradientEntry stopEntry in gradient.GradientEntries)
             {
                 XElement stopSVGElement = new XElement("stop");
