@@ -6,7 +6,7 @@ public class Point
     internal const string POINT_NODE_IDENTIFIER = "Point",
     TRANSFORMATION_POINT_NODE_IDENTIFIER = "transformationPoint";
     private const double Epsilon = 0.0001;
-    internal static class DefaultValues
+    public static class DefaultValues
     {
         public const double X = 0.0;
         public const double Y = 0.0;

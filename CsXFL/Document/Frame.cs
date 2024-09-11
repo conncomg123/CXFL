@@ -16,7 +16,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         MotionTween = 8195,
         ShapeLayers = 8192
     }
-    internal static class DefaultValues
+    public static class DefaultValues
     {
         public const int StartFrame = 0;
         public const int Duration = 1;
