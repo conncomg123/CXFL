@@ -7,7 +7,7 @@ public class Text : Element
     internal const string STATIC_TEXT_NODE_IDENTIFIER = "DOMStaticText",
     DYNAMIC_TEXT_NODE_IDENTIFIER = "DOMDynamicText",
     INPUT_TEXT_NODE_IDENTIFIER = "DOMInputText";
-    new private static class DefaultValues
+    new public static class DefaultValues
     {
         public const double AntiAliasSharpness = 0.0, AntiAliasThickness = 0.0;
         public const string LineType = "single line";

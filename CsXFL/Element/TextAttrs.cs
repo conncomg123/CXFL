@@ -7,7 +7,7 @@ public class TextAttrs
     TEXTATTRS_NODEGROUP_IDENTIFIER = "textAttrs";
     private static readonly HashSet<string> ACCEPTABLE_ALIGNMENTS = new HashSet<string> { "left", "center", "right", "justify" },
         ACCEPTABLE_CHARACTERPOSITIONS = new HashSet<string> { "normal", "subscript", "superscript" };
-    private static class DefaultValues
+    public static class DefaultValues
     {
         public const bool AutoKern = true, AliasText = true, Bold = false, Italic = false, Rotation = false;
         public const string Alignment = "left", CharacterPosition = "normal", FillColor = "#000000", Target = "", Url = "", Face = "Suburga2-SemicondensedRegular";

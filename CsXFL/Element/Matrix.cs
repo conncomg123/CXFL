@@ -5,7 +5,7 @@ public class Matrix
     internal const string MATRIX_NODE_IDENTIFIER = "matrix",
     MATRIX_NODEGROUP_IDENTIFIER = "Matrix";
     private const double Epsilon = 0.0001;
-    internal static class DefaultValues
+    public static class DefaultValues
     {
         public const double A = 1.0;
         public const double B = 0.0;
