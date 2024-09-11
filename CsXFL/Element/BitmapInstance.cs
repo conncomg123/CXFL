@@ -3,7 +3,7 @@ using System.Xml.Linq;
 namespace CsXFL;
 public class BitmapInstance : Instance
 {
-    new internal static class DefaultValues
+    new public static class DefaultValues
     {
         public const int HPixels = 0;
         public const int VPixels = 0;

@@ -7,7 +7,7 @@ public class Layer : IDisposable
     internal const string LAYER_NODE_IDENTIFIER = "DOMLayer",
     LAYERS_NODEGROUP_IDENTIFIER = "layers";
     private static readonly HashSet<string> AcceptableLayerTypes = new HashSet<string> { "normal", "guide", "guided", "mask", "masked", "folder", "camera" };
-    internal static class DefaultValues
+    public static class DefaultValues
     {
         public const string Color = "#000000";
         public const string LayerType = "normal";

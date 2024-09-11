@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 namespace CsXFL;
 public class Document
 {
-    private static class DefaultValues
+    public static class DefaultValues
     {
         public const int Width = 1280;
         public const int Height = 720;
