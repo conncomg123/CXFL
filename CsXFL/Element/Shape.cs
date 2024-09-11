@@ -69,19 +69,24 @@ public class SolidColor
     public static class DefaultValues
     {
         public const string Color = "#000000";
+        public const double Alpha = 1.0;
     }
     private readonly XElement root;
     private string color;
+    private double alpha;
     public XElement Root { get { return root; } }
     public string Color { get { return color; } set { color = value; root?.SetOrRemoveAttribute("color", value, DefaultValues.Color); } }
+    public double Alpha { get { return alpha; } set { alpha = value; root?.SetOrRemoveAttribute("alpha", value, DefaultValues.Alpha); } }
     internal SolidColor(XElement root)
     {
         this.root = root;
         color = root.Attribute("color")?.Value ?? DefaultValues.Color;
+        alpha = (double?)root.Attribute("alpha") ?? DefaultValues.Alpha;
     }
     internal SolidColor(XNamespace ns)
     {
         color = DefaultValues.Color;
+        alpha = DefaultValues.Alpha;
         root = new XElement(ns + SOLID_COLOR_NODE_IDENTIFIER);
     }
 }
