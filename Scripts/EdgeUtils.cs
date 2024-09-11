@@ -488,9 +488,9 @@ namespace SkiaRendering
                 filledPaths.Add(newSKPath);
             }
 
-            foreach(var (strokeIndex, pathData) in strokePaths)
+            foreach(var (strokeIndex, pathString) in strokePaths)
             {
-                string svgPathString = string.Join(" ", pathData);
+                string svgPathString = string.Join(" ", pathString);
                 XElement newSKPath = new("Testing");
                 strokedPaths.Add(newSKPath);
             }
