@@ -4,7 +4,7 @@ public abstract class Element
 {
     private static readonly HashSet<string> AcceptableElementTypes = new HashSet<string> { "shape", "text", "tflText", "instance", "shapeObj" };
     internal const string ELEMENTS_NODEGROUP_IDENTIFIER = "elements";
-    internal static class DefaultValues
+    public static class DefaultValues
     {
         public const double Width = double.NaN;
         public const double Height = double.NaN;

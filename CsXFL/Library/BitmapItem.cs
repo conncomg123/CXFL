@@ -6,7 +6,7 @@ public class BitmapItem : Item
 {
     internal const string BITMAP_NODE_IDENTIFIER = "DOMBitmapItem";
     public const int SUBPIXELS_PER_PIXEL = 20;
-    internal static class DefaultValues
+    public static class DefaultValues
     {
         public const string Href = "";
         public const string BitmapDataHRef = "";
