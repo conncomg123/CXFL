@@ -1,5 +1,5 @@
 ﻿using CsXFL;
-using Scripts;
+using SkiaRendering;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,15 +9,18 @@ using System.Xml.Linq;
 
 namespace SkiaRendering
 {
+    /// <summary>
+    /// Utils for converting XFL Fill/StrokeStyle elements into their equivalent SVG elements.
+    /// </summary>
     class StyleUtils
     {
         /// <summary>
-        /// Parse CSXFL FillStyle element of its SVG style attributes and any extra-defs.
+        /// Parses CSXFL FillStyle element into SVG style attributes and any extra-defs.
         /// </summary>
         /// <param name="fillStyle">CSXFL FillStyle element whose SVG elements will be parsed from.</param>
-        /// <returns>A tuple: attributes which is a Dictionary of SVG style attributes</returns>
+        /// <returns>A tuple: Dictionary of SVG style attributes, Dictionary of any elements to go into defs.</returns>
         /// <exception cref="Exception">When there is a fillStyle that a RadialGradient or one
-        /// is not recognized</exception>
+        /// is not recognized.</exception>
         public static (Dictionary<string, string>, Dictionary<string, XElement>) ParseFillStyle(FillStyle fillStyle)
         {
             Dictionary<string, string> attributes = new Dictionary<string, string>();
