@@ -323,12 +323,18 @@ public abstract class Stroke
 }
 public class SolidStroke : Stroke
 {
+    new public static class DefaultValues {
+        public const string SolidStyle = "";
+    }
     public const string SOLID_STROKE_NODE_IDENTIFIER = "SolidStroke";
     private List<WidthMarker>? widthMarkers;
+    private string solidStyle;
+    public string SolidStyle { get { return solidStyle; } set { solidStyle = value; root?.SetOrRemoveAttribute("solidStyle", value, DefaultValues.SolidStyle); } }
     public List<WidthMarker>? WidthMarkers { get { return widthMarkers; } }
     public SolidStroke(XElement root) : base(root)
     {
         widthMarkers = root.Element(ns + WidthMarker.WIDTH_MARKERS_NODEGROUP_IDENTIFIER) is null ? null : root.Element(ns + WidthMarker.WIDTH_MARKERS_NODEGROUP_IDENTIFIER)!.Elements(ns + WidthMarker.WIDTH_MARKER_NODE_IDENTIFIER).Select(x => new WidthMarker(x)).ToList();
+        solidStyle = root.Attribute("solidStyle")?.Value ?? DefaultValues.SolidStyle;
     }
 }
 public class DottedStroke : Stroke
