@@ -4,7 +4,7 @@ using System.Xml.Linq;
 
 namespace SkiaRendering
 {
-    // Logic and Documentation largely taken from [https://github.com/PluieElectrique/xfl2svg]
+    // Logic and Documentation largely taken from [https://github.com/PluieElectrique/xfl2svg/blob/master/xfl2svg/shape/edge.py]
     // One aspect that had to be accounted for is the use of defaultdict, which assigns default
     // values to dictionary keys. To account for that, I used TryGetValue() and explicity set values
     internal class EdgeUtils
