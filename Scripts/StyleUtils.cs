@@ -88,7 +88,19 @@ namespace SkiaRendering
                 {"fill", "none" }
             };
 
-            // TODO: add support for parsing "solidStyle" attribute
+            // Are we always going to try to get solidStyle even if Stroke isn't
+            // SolidStroke?
+            SolidStroke solidStroke = (SolidStroke) strokeStyle.Stroke;
+
+            if(solidStroke.SolidStyle == "hairline")
+            {
+                // A hairline solidStyle overrides the "weight" XFL attribute.
+                attributes["stroke-width"] = "0.05";
+            }
+            else if(solidStroke.SolidStyle != null)
+            {
+                throw new Exception($"Unknown 'solidStyle' value: {solidStroke.ToString()}");
+            }
 
             if(strokeStyle.Stroke.RadialGradient != null)
             {
