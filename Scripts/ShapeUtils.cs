@@ -9,12 +9,12 @@ using System.Xml.Linq;
 namespace SkiaRendering
 {
     /// <summary>
-    /// Parses a XFL DOMShape element into its equivalent SVG path elements.
+    /// Utils for converting a XFL DOMShape element into its equivalent SVG path elements.
     /// </summary>
     internal class ShapeUtils
     {
         /// <summary>
-        /// Convert XFL DOMShape element into its equivalent SVG path elements.
+        /// Converts XFL DOMShape element into its equivalent SVG path elements.
         /// </summary>
         /// <param name="shapeElement">The XFL DOMShape being converted.</param>
         /// <param name="mask">If true, all fill colors will be set to #FFFFFF. This ensures
@@ -25,21 +25,54 @@ namespace SkiaRendering
         public static (XElement?, XElement?, Dictionary<int, XElement>?) 
             ConvertShapeToSVG(Shape shapeElement, bool mask = false)
         {
-            Dictionary<int, Dictionary<string, string>> fillStyleElements = new Dictionary<int, Dictionary<string, string>>();
+            // Dictionary that keeps track of style attributes associated with SVG equivalent of fillStyle with specific
+            // fillStyle index
+            Dictionary<int, Dictionary<string, string>> fillStylesAttributes = new Dictionary<int, Dictionary<string, string>>();
+            
+            // Dictionary that keeps track of style attributes associated with SVG equivalent of StrokeStyle with specific
+            // strokeStyle index
+            Dictionary<int, Dictionary<string, string>> strokeStylesAttributes = new Dictionary<int, Dictionary<string, string>>();
+            
             Dictionary<string, XElement> extraDefElements = new Dictionary<string, XElement>();
 
-            foreach(FillStyle fillStyle in shapeElement.Fills)
+            // For each FillStyle of DOMShape, create SVG attributes of its SVG equivalent
+            foreach (FillStyle fillStyle in shapeElement.Fills)
             {
                 int index = fillStyle.Index;
                 if(mask)
                 {
+                    // Set the fill to white so that the mask is fully transparent
                     Dictionary<string, string> attributes = new Dictionary<string, string>()
                     {
                         {"fill", "#FFFFFF" },
                         {"stroke", "none" }
                     };
-
+                    fillStylesAttributes[index] = attributes;
                 }
+                else
+                {
+                    (Dictionary<string, string>, Dictionary<string, XElement>)
+                        svgAttributeElements = StyleUtils.ParseFillStyle(fillStyle);
+                    fillStylesAttributes[index] = svgAttributeElements.Item1;
+                    
+                    // Add any elements that need to be added to SVG <defs>
+                    foreach(KeyValuePair<string, XElement> defElementPair in svgAttributeElements.Item2)
+                    {
+                        extraDefElements[defElementPair.Key] = defElementPair.Value;
+                    }
+                }
+            }
+
+            // For each StrokeStyle of DOMShape, create SVG attributes of its SVG equivalent
+            foreach (StrokeStyle strokeStyle in shapeElement.Strokes)
+            {
+                // TODO: Figure out how strokes are supposed to behave in masks
+                if (mask)
+                {
+                    throw new Exception("Strokes in masks not supported yet!");
+                }
+                int index = strokeStyle.Index;
+                //strokeStylesAttributes[index] = 
             }
 
             return (null, null, null);

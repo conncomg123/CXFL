@@ -9,7 +9,7 @@ using System.Xml.Linq;
 namespace SkiaRendering
 {
     /// <summary>
-    /// Utils for converting XFL gradient elements into their equivalent SVG elements.
+    /// Utils for converting CSXFL gradient elements into their equivalent SVG elements.
     /// </summary>
     internal class GradientUtils
     {
@@ -27,7 +27,7 @@ namespace SkiaRendering
         }
 
         /// <summary>
-        /// Creates an SVG linearGradient element from a LinearGradient CSXFL object.
+        /// Creates a SVG linearGradient element from a LinearGradient CSXFL object.
         /// </summary>
         /// <param name="gradient">The CSXFL LinearGradient object that is being converted to SVG.</param>
         /// <seealso cref="https://github.com/PluieElectrique/xfl2svg/blob/master/xfl2svg/shape/gradient.py#L22"/>
