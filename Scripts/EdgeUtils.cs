@@ -356,9 +356,8 @@ namespace SkiaRendering
             return shapes;
         }
 
-
         // edges element = refers to group of Edge elements associated with DOMShape
-        // "edges" attribute = refers to "edges" string of coordinates associated with Edge element 
+        // "edges" attribute = refers to "edges" string of coordinates associated with Edge element
 
         /// <summary>
         /// Converts XFL edges element into SVG path elements.
@@ -383,13 +382,14 @@ namespace SkiaRendering
         /// </para>
         /// </remarks>
         /// <param name="edgesElement">The edges element of a DOMShape element.</param>
-        /// <param name="fillStyles">The fills element of the DOMShape element.</param>
-        /// <param name="strokeStyles">The strokes element of the DOMShape element.</param>
-        /// <returns>A tuple consisting of a list of SVG path elements for fill shapes and a list of
-        /// SVG path elements for stroke shapes.</returns>
+        /// <param name="fillStyleAttributes">The SVG attributes of each fillStyle element of a DOMShape.</param>
+        /// <param name="strokeStyleAttributes">The SVG attributes of each strokeStyle element of a DOMShape.</param>
+        /// <returns>A tuple consisting of a list of SVG path elements for fillStyle shapes and a list of
+        /// SVG path elements for strokeStyle shapes.</returns>
         /// <seealso cref="https://github.com/PluieElectrique/xfl2svg/blob/master/xfl2svg/shape/edge.py#L244"/>
-        public static (List<XElement>, List<XElement>) ConvertEdgesToSvgPath(List<Edge> edgesElement,
-            List<FillStyle> fillStyles, List<StrokeStyle> strokeStyles)
+        public static (List<XElement>?, List<XElement>?) ConvertEdgesToSvgPath(List<Edge> edgesElement,
+            Dictionary<string, Dictionary<string, string>> fillStylesAttributes,
+            Dictionary<string, Dictionary<string, string>> strokeStylesAttributes)
         {
             // When associating point lists to their fillstyle/strokestyle, using their
             // index" attribute- NOT their index in lists
@@ -401,9 +401,9 @@ namespace SkiaRendering
 
             // Should StrokeStyle object be used as key or just its index?
             // StrokePaths = refers to all converted SVG path strings associated with a strokeStyle
-            Dictionary<int, List<string>> strokePaths = new Dictionary<int, List<string>>();
+            Dictionary<int, List<string>> strokePathStrings = new Dictionary<int, List<string>>();
 
-            foreach(Edge edgeElement in edgesElement)
+            foreach (Edge edgeElement in edgesElement)
             {
                 // Get "edges" string, fill styles, and stroke styles of a specific Edge
                 string edgesString = edgeElement.Edges!;
@@ -415,15 +415,15 @@ namespace SkiaRendering
 
                 // Associate point lists to appropriate fillStyle index and strokeStyle
 
-                foreach(List<string> pointList in edgesPointLists)
+                foreach (List<string> pointList in edgesPointLists)
                 {
-                    if(fillStyleLeftIndex != null)
+                    if (fillStyleLeftIndex != null)
                     {
-                        (List<string>, int?) tupleToAdd = new(pointList,  fillStyleLeftIndex);
+                        (List<string>, int?) tupleToAdd = new(pointList, fillStyleLeftIndex);
                         fillEdges.Add(tupleToAdd);
                     }
 
-                    if(fillStyleRightIndex != null)
+                    if (fillStyleRightIndex != null)
                     {
                         // First reverse point list in order to fill it from the left, then add it
                         // Python code does not change original pointList, so get reverse of Enumerable
@@ -436,18 +436,14 @@ namespace SkiaRendering
                     // Do I need to check if strokeStyle exists? (Outside of checking for null)
                     // Is there a scenario where an Edge element references a strokeStyle that is not in the
                     // strokes element of the DOMShape that the said Edge is a part of?
-                    // As a result, couldn't I just get the StrokeStyle from strokeStyles using "index" - 1?
 
                     // If strokeStyle exists for Edge, convert immediately as no shape needs to be joined
                     if (strokeStyleIndex != null)
                     {
-                        // Should list be replaced with dictionary- figured it would make more sense
-                        StrokeStyle? foundStroke = strokeStyles.FirstOrDefault((strokeObject) =>
-                        {
-                            return strokeObject.Index == strokeStyleIndex;
-                        });
+                        // Check if strokeStyle has associated SVG attributes created for it
+                        string? index = strokeStyleIndex.ToString();
 
-                        if(foundStroke != null)
+                        if (index != null && strokeStylesAttributes.ContainsKey(index))
                         {
                             // First get converted path format for this Edge, then add it to
                             // associated strokeStyle
@@ -457,11 +453,11 @@ namespace SkiaRendering
                             // Is used to create a list of size 1 when first creating stroke path list
 
                             // Idea- ensuring that list exists for key (either existing one or an empty one)
-                            if (!strokePaths.TryGetValue(foundStroke.Index, out var strokePathList))
+                            if (!strokePathStrings.TryGetValue((int)strokeStyleIndex, out var strokePathList))
                             {
                                 // Setting this reference so item can be added to it afterwards
                                 strokePathList = new List<string>();
-                                strokePaths[foundStroke.Index] = strokePathList;
+                                strokePathStrings[(int)strokeStyleIndex] = strokePathList;
                             }
 
                             strokePathList.Add(svgPathString);
@@ -470,32 +466,50 @@ namespace SkiaRendering
                 }
             }
 
-            List<XElement> filledPaths = new List<XElement>();
-            List<XElement> strokedPaths = new List<XElement>();
+            List<XElement> fillsPathElements = new List<XElement>();
+            List<XElement> strokePathElements = new List<XElement>();
             Dictionary<int, List<List<string>>> shapes = ConvertPointListsToShapes(fillEdges);
 
             // At this point, we have fillStyle indexes associated with various shapes
             // (a list of point lists) and strokeStyle indexes associated with a
             // list of SVG path strings.
-            // Now we have to create the SVG path elements from each 
+            // Now we have to create the SVG path elements from each using the SVG attributes
+            // that were passed in
 
             foreach (var (fillIndex, pointLists) in shapes)
             {
                 // Convert each point list associated with this fillStyleIndex and merge it into one large
                 // SVG path string
                 string svgPathString = string.Join(" ", pointLists.ConvertAll(ConvertPointListToPathString));
-                XElement newSKPath = new("Testing");
-                filledPaths.Add(newSKPath);
+                Dictionary<string, string> attributeDict = fillStylesAttributes[fillIndex.ToString()];
+                attributeDict["d"] = svgPathString;
+
+                XElement newSKPath = CreatePathElement(attributeDict);
+                fillsPathElements.Add(newSKPath);
             }
 
-            foreach(var (strokeIndex, pathString) in strokePaths)
+            foreach (var (strokeIndex, pathString) in strokePathStrings)
             {
                 string svgPathString = string.Join(" ", pathString);
-                XElement newSKPath = new("Testing");
-                strokedPaths.Add(newSKPath);
+                Dictionary<string, string> attributeDict = fillStylesAttributes[strokeIndex.ToString()];
+                attributeDict["d"] = svgPathString;
+
+                XElement newSKPath = CreatePathElement(attributeDict);
+                strokePathElements.Add(newSKPath);
             }
 
-            return (filledPaths, strokedPaths);
+            return (fillsPathElements, strokePathElements);
+        }
+
+        public static XElement CreatePathElement(Dictionary<string, string> attributes)
+        {
+            XElement newPathElement = new XElement("path");
+            foreach(var attribute in attributes)
+            {
+                newPathElement.SetAttributeValue(attribute.Key, attribute.Value);
+            }
+
+            return newPathElement;
         }
     }
 }

@@ -16,7 +16,8 @@ namespace SkiaRendering
             SymbolItem testSymbol = (SymbolItem)testDoc.Library.Items["Horn"];
             Element testElement = testSymbol.Timeline.Layers[0].KeyFrames[0].Elements[0];
             Shape testShape = (Shape)testElement;
-            EdgeUtils.ConvertEdgesToSvgPath(testShape.Edges, testShape.Fills, testShape.Strokes);
+            //EdgeUtils.ConvertEdgesToSvgPath(testShape.Edges, testShape.Fills, testShape.Strokes);
+            var testing = ShapeUtils.ConvertShapeToSVG(testShape);
         }
     }
 }
