@@ -1,6 +1,7 @@
 ﻿using CsXFL;
 using SkiaSharp;
 using System;
+using System.IO;
 using System.Text.RegularExpressions;
 
 // Logic largely taken from [https://github.com/PluieElectrique/xfl2svg]
@@ -10,12 +11,12 @@ namespace SkiaRendering
     {
         public class SymbolInstanceVisualRecord
         {
-        public double MatrixA { get; set; }
-        public double MatrixB { get; set; }
-        public double MatrixC { get; set; }
-        public double MatrixD { get; set; }
-        public double MatrixTx { get; set; }
-        public double MatrixTy { get; set; }
+            public double MatrixA { get; set; }
+            public double MatrixB { get; set; }
+            public double MatrixC { get; set; }
+            public double MatrixD { get; set; }
+            public double MatrixTx { get; set; }
+            public double MatrixTy { get; set; }
 
             public void AddTransformation(double a, double b, double c, double d, double tx, double ty)
             {
@@ -189,7 +190,8 @@ namespace SkiaRendering
                 Dictionary<Edge, int> edgeToStrokeStyleID = new Dictionary<Edge, int>();
                 var pointLists = EdgeFormatToPointLists(edgeIter.Edges);
 
-                foreach (var pointList in pointLists) {
+                foreach (var pointList in pointLists)
+                {
                     // SVG Path
                     string TestPath = PointListToPathFormat(pointList);
                     SKPath TestPath2 = SKPath.ParseSvgPathData(TestPath);
@@ -201,7 +203,7 @@ namespace SkiaRendering
                     if (shapeIter.Strokes.Count > 0) { hasStrokes = true; }
                     if (shapeIter.Fills.Count > 0) { hasFills = true; }
 
-                    if (hasStrokes) 
+                    if (hasStrokes)
                     {
                         // Iterate over the strokes and associate each stroke with its corresponding edge
                         for (int i = 0; i < shapeIter.Strokes.Count; i++)
@@ -210,30 +212,30 @@ namespace SkiaRendering
                             edgeToStrokeStyleID[shapeIter.Edges[i]] = i;
                         }
 
-                            if (edgeToStrokeStyleID.ContainsKey(edgeIter))
+                        if (edgeToStrokeStyleID.ContainsKey(edgeIter))
+                        {
+                            int strokeStyleID = edgeToStrokeStyleID[edgeIter];
+
+                            Stroke CurrentStroke = shapeIter.Strokes[strokeStyleID].Stroke;
+                            SKStrokeCap StrokeCap = GetStrokeCap(CurrentStroke.Caps);
+
+                            // <!> This logic is assumed, test it later
+                            SKStrokeJoin StrokeJoin = GetStrokeJoin(CurrentStroke.Joints);
+
+                            var StrokePaint = new SKPaint
                             {
-                                int strokeStyleID = edgeToStrokeStyleID[edgeIter];
-                                
-                                Stroke CurrentStroke = shapeIter.Strokes[strokeStyleID].Stroke;
-                                SKStrokeCap StrokeCap = GetStrokeCap(CurrentStroke.Caps);
+                                Style = SKPaintStyle.Stroke,
+                                StrokeWidth = (float)CurrentStroke.Weight,
+                                StrokeMiter = CurrentStroke.MiterLimit,
+                                StrokeCap = StrokeCap,
+                                StrokeJoin = StrokeJoin,
+                                Color = SKColor.Parse(CurrentStroke.SolidColor.Color.ToString()),
+                                IsAntialias = true,
+                                FilterQuality = SKFilterQuality.High
+                            };
 
-                                // <!> This logic is assumed, test it later
-                                SKStrokeJoin StrokeJoin = GetStrokeJoin(CurrentStroke.Joints);
-
-                                var StrokePaint = new SKPaint
-                                {
-                                    Style = SKPaintStyle.Stroke,
-                                    StrokeWidth = (float)CurrentStroke.Weight,
-                                    StrokeMiter = CurrentStroke.MiterLimit,
-                                    StrokeCap = StrokeCap,
-                                    StrokeJoin = StrokeJoin,
-                                    Color = SKColor.Parse(CurrentStroke.SolidColor.Color.ToString()),
-                                    IsAntialias = true,
-                                    FilterQuality = SKFilterQuality.High
-                                };
-
-                                canvas.DrawPath(TestPath2, StrokePaint);
-                            }
+                            canvas.DrawPath(TestPath2, StrokePaint);
+                        }
                     }
 
                     if (hasFills)
@@ -360,7 +362,8 @@ namespace SkiaRendering
                 }
 
                 // Write image
-                if (invokationLevel == 0) {
+                if (invokationLevel == 0)
+                {
                     var Image = SKImage.FromBitmap(Bitmap);
                     var Data = Image.Encode(SKEncodedImageFormat.Png, 100);
                     using (var Stream = System.IO.File.OpenWrite("output_" + currentFrame.ToString("D6") + ".png"))
@@ -371,16 +374,11 @@ namespace SkiaRendering
             }
         }
 
-        /*static void Main(string[] args)
+        static void Main(string[] args)
         {
             Document Doc = new("C:\\Users\\Administrator\\Desktop\\RenderTest2.fla");
             // Safety check for out of bounds frames
-<<<<<<< HEAD:SkiaRendering/RenderFrame.cs
-            TimelineCascadeRender(Doc, Doc.Timelines[0], 0, 0, 0);
-        }*/
-=======
             TimelineCascadeRender(Doc, Doc.Timelines[0], 0, 9, 0);
         }
->>>>>>> CSConversion:Scripts/RenderFrame.cs
     }
 }
