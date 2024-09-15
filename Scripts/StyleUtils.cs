@@ -54,9 +54,9 @@ namespace SkiaRendering
         }
 
         /// <summary>
-        /// Parses CSXFL FillStyle element into SVG style attributes and any extra-defs.
+        /// Parses CSXFL FillStyle element into SVG style attributes.
         /// </summary>
-        /// <param name="strokeStyle">CSXFL StrokeStyle element whose SVG attributes/defs elements
+        /// <param name="strokeStyle">CSXFL StrokeStyle element whose SVG attributes
         /// will be parsed from.</param>
         /// <returns>A Dictionary of SVG style attributes.</returns>
         public static Dictionary<string, string> ParseStrokeStyle(StrokeStyle strokeStyle)
