@@ -101,25 +101,25 @@ public class SvgRenderer
                     string maskId = $"Mask_{id}_{layerIdx}";
                     (d, b) = RenderLayer(layer, frameIndex, maskId + "_MASK", colorEffect, maskIsActive);
 
-                    foreach(var def in d)
+                    foreach (var def in d)
                     {
                         defs[def.Key] = def.Value;
                     }
-                    XElement mask = new XElement("mask", new XAttribute("id", maskId));
+                    XElement mask = new XElement(svgNs + "mask", new XAttribute("id", maskId));
                     foreach (XElement e in b)
                     {
                         mask.Add(e);
                     }
                     defs[maskId] = mask;
 
-                    XElement g = new XElement("g", new XAttribute("mask", $"url(#{maskId})"));
+                    XElement g = new XElement(svgNs + "g", new XAttribute("mask", $"url(#{maskId})"));
                     body.Append(g);
                 }
             }
 
 
             (d, b) = RenderLayer(layer, frameIndex, $"{id}_Layer{layerIdx}", colorEffect, maskIsActive);
-            foreach(var def in d)
+            foreach (var def in d)
             {
                 defs[def.Key] = def.Value;
             }
@@ -153,7 +153,7 @@ public class SvgRenderer
             Dictionary<string, XElement> d = new Dictionary<string, XElement>();
             List<XElement> b = new List<XElement>();
             (d, b) = RenderElement(frame.Elements[i], $"{id}_{i}", frameOffset, colorEffect, insideMask);
-            foreach(var def in d)
+            foreach (var def in d)
             {
                 defs[def.Key] = def.Value;
             }
@@ -194,7 +194,7 @@ public class SvgRenderer
             if (!Matrix.IsDefaultMatrix(mat))
             {
                 string matrix = string.Join(", ", MatrixToList(mat));
-                XElement transform = new XElement("g", new XAttribute("transform", $"matrix({matrix})"));
+                XElement transform = new XElement(svgNs + "g", new XAttribute("transform", $"matrix({matrix})"));
                 foreach (XElement element_ in body)
                 {
                     transform.Add(element_);
@@ -216,10 +216,15 @@ public class SvgRenderer
         if (fill_g is not null)
         {
             string fill_id = $"{id}_FILL";
+            fill_g.Name = svgNs + "g";
+            foreach (var child in fill_g.Descendants())
+            {
+                child.Name = svgNs + child.Name.LocalName;
+            }
             fill_g.SetAttributeValue("id", fill_id);
             defs[fill_id] = fill_g;
 
-            XElement fill_use = new XElement("use", new XAttribute(HREF, $"#{fill_id}"));
+            XElement fill_use = new XElement(svgNs + "use", new XAttribute(HREF, $"#{fill_id}"));
             if (!insideMask && !IsColorIdentity(colorEffect))
             {
                 string colorId = colorEffect.Root?.Attribute("id")?.Value ?? throw new ArgumentNullException();
@@ -232,10 +237,15 @@ public class SvgRenderer
             if (stroke_g is not null)
             {
                 var stroke_id = $"{id}_STROKE";
+                stroke_g.Name = svgNs + "g";
+                foreach (var child in stroke_g.Descendants())
+                {
+                    child.Name = svgNs + child.Name.LocalName;
+                }
                 stroke_g.SetAttributeValue("id", stroke_id);
                 defs[stroke_id] = stroke_g;
 
-                body.Add(new XElement("use", new XAttribute(HREF, $"#{stroke_id}")));
+                body.Add(new XElement(svgNs + "use", new XAttribute(HREF, $"#{stroke_id}")));
             }
         }
 
