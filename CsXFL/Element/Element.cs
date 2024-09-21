@@ -2,7 +2,7 @@ using System.Xml.Linq;
 namespace CsXFL;
 public abstract class Element
 {
-    private static readonly HashSet<string> AcceptableElementTypes = new HashSet<string> { "shape", "text", "tflText", "instance", "shapeObj" };
+    private static readonly HashSet<string> AcceptableElementTypes = new HashSet<string> { "shape", "text", "tflText", "instance", "shapeObj", "group" };
     internal const string ELEMENTS_NODEGROUP_IDENTIFIER = "elements";
     public static class DefaultValues
     {
