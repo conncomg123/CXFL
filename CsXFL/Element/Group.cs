@@ -48,9 +48,9 @@ public class Group : Element, ILibraryEventReceiver
     {
         members = new List<Element>();
         this.library = library;
-        elementType = "group";
+        elementType = "shape";
     }
-    public Group(XElement groupNode, Library? library) : base(groupNode, "group")
+    public Group(XElement groupNode, Library? library) : base(groupNode, "shape")
     {
         members = new List<Element>();
         this.library = library;
