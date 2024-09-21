@@ -250,6 +250,9 @@ public class StrokeStyle
             case SolidStroke.SOLID_STROKE_NODE_IDENTIFIER:
                 stroke = new SolidStroke(root.Element(ns + SolidStroke.SOLID_STROKE_NODE_IDENTIFIER)!);
                 break;
+            case DashedStroke.DASHED_STROKE_NODE_IDENTIFIER:
+                stroke = new DashedStroke(root.Element(ns + DashedStroke.DASHED_STROKE_NODE_IDENTIFIER)!);
+                break;
             case DottedStroke.DOTTED_STROKE_NODE_IDENTIFIER:
                 stroke = new DottedStroke(root.Element(ns + DottedStroke.DOTTED_STROKE_NODE_IDENTIFIER)!);
                 break;
@@ -336,6 +339,10 @@ public class SolidStroke : Stroke
         widthMarkers = root.Element(ns + WidthMarker.WIDTH_MARKERS_NODEGROUP_IDENTIFIER) is null ? null : root.Element(ns + WidthMarker.WIDTH_MARKERS_NODEGROUP_IDENTIFIER)!.Elements(ns + WidthMarker.WIDTH_MARKER_NODE_IDENTIFIER).Select(x => new WidthMarker(x)).ToList();
         solidStyle = root.Attribute("solidStyle")?.Value ?? DefaultValues.SolidStyle;
     }
+}
+public class DashedStroke(XElement root) : Stroke(root)
+{
+    public const string DASHED_STROKE_NODE_IDENTIFIER = "DashedStroke";
 }
 public class DottedStroke : Stroke
 {
