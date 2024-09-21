@@ -3,6 +3,7 @@ using System.Xml.Linq;
 namespace CsXFL;
 public class BitmapInstance : Instance
 {
+    public const string BITMAPINSTANCE_NODE_IDENTIFIER = "DOMBitmapInstance";
     new public static class DefaultValues
     {
         public const int HPixels = 0;
@@ -24,7 +25,7 @@ public class BitmapInstance : Instance
         vPixels = other.vPixels;
     }
     // cast from BitmapItem to BitmapInstance
-    internal BitmapInstance(in BitmapItem item, Library? library) : base(item, "bitmap", "DOMBitmapInstance", library)
+    internal BitmapInstance(in BitmapItem item, Library? library) : base(item, "bitmap", BITMAPINSTANCE_NODE_IDENTIFIER, library)
     {
         hPixels = item.HPixels;
         vPixels = item.VPixels;
