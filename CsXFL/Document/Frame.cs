@@ -106,7 +106,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
             string elementName = elementNode.Name.LocalName.ToString();
             switch (elementName)
             {
-                case "DOMBitmapInstance":
+                case BitmapInstance.BITMAPINSTANCE_NODE_IDENTIFIER:
                     elements.Add(new BitmapInstance(elementNode, library));
                     var CorrespondingItem = (elements.Last() as BitmapInstance)!.CorrespondingItem;
                     if (CorrespondingItem is not null)
@@ -125,6 +125,9 @@ public class Frame : ILibraryEventReceiver, IDisposable
                     break;
                 case Shape.SHAPE_NODE_IDENTIFIER:
                     elements.Add(new Shape(elementNode));
+                    break;
+                case Group.GROUP_NODE_IDENTIFIER:
+                    elements.Add(new Group(elementNode, library));
                     break;
             }
         }
