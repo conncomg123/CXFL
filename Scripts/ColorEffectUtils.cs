@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-namespace Scripts
+namespace SkiaRendering
 {
     internal class ColorEffectUtils
     {
