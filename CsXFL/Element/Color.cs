@@ -86,5 +86,8 @@ public class Color
         greenOffset = other.GreenOffset;
         blueOffset = other.BlueOffset;
     }
-    
+    public static Color DefaultColor()
+    {
+        return new Color(XNamespace.Xml);
+    }
 }
