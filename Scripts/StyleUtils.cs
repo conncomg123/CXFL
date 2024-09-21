@@ -97,7 +97,7 @@ namespace SkiaRendering
                 // A hairline solidStyle overrides the "weight" XFL attribute.
                 attributes["stroke-width"] = "0.05";
             }
-            else if(solidStroke.SolidStyle != null)
+            else if(solidStroke.SolidStyle != string.Empty)
             {
                 throw new Exception($"Unknown 'solidStyle' value: {solidStroke.ToString()}");
             }
