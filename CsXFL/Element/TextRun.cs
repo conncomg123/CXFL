@@ -17,7 +17,7 @@ public class TextRun
     {
         root = elementNode;
         ns = root.Name.Namespace;
-        characters = (string?)elementNode.Attribute(TextRun.CHARACTERS_NODE_IDENTIFIER) ?? string.Empty;
+        characters = (string?)elementNode.Element(ns + TextRun.CHARACTERS_NODE_IDENTIFIER) ?? string.Empty;
         textAttrs = new TextAttrs(elementNode.Element(ns + TextAttrs.TEXTATTRS_NODEGROUP_IDENTIFIER)!.Element(ns + TextAttrs.TEXTATTRS_NODE_IDENTIFIER)!);
     }
     internal TextRun(string characters, XNamespace ns)
