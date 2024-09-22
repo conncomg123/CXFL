@@ -10,7 +10,7 @@ namespace SkiaRendering
     internal class MainLauncher
     {
 
-        public static void Main(string[] args)
+        public static void Run(string[] args)
         {
             Document testDoc = new Document("D:\\Documents\\EOJ Assets\\SimpleRenderTest\\SimpleRenderTest.xfl");
             SymbolItem testSymbol = (SymbolItem)testDoc.Library.Items["Horn"];

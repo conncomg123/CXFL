@@ -92,7 +92,7 @@ namespace XFL2SESX
             public int zOrder { get; set; }
         }
 
-        static void Main(string[] args)
+        static void Run(string[] args)
         {
             List<string> FLAfileList = new List<string>();
             string FLAfilePaths_ARGS = "";
