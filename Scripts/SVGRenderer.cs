@@ -176,6 +176,11 @@ public class SvgRenderer
             if (si.SymbolType != "graphic") throw new NotImplementedException("Only graphic symbols are supported for now");
             (defs, body) = RenderTimeline((si.CorrespondingItem as SymbolItem)!.Timeline, GetLoopFrame(si, frameOffset), colorEffect, insideMask);
         }
+        else if (element is Text text)
+        {
+            // <!> Hi Soundman!
+            body.Add(HandleText((Text)element));
+        }
         else if (element is Shape shape)
         {
             (defs, body) = HandleDomShape(shape, id, colorEffect, insideMask);
@@ -184,7 +189,7 @@ public class SvgRenderer
         {
             List<Element> children = group.Members;
             bool hasMoreThanOneChild = children.Count > 1;
-            for (int i = 0; i < children.Count; i++)
+            for (int i = 0; i < children.Count; i++) 
             {
                 string memId = hasMoreThanOneChild ? $"{id}_MEMBER_{i}" : id;
                 (defs, body) = RenderElement(children[i], memId, frameOffset, colorEffect, insideMask);
@@ -193,7 +198,7 @@ public class SvgRenderer
         else
         {
             throw new NotImplementedException($"Unknown element type: {element.GetType()}");
-        }
+        } 
         if (element is not CsXFL.Group)
         {
             Matrix mat = element.Matrix;
@@ -211,6 +216,32 @@ public class SvgRenderer
 
         return (defs, body);
     }
+
+    private XElement HandleText(Text TextElement)
+    {
+        // The handling of textAttrs is WRONG, needs to go into a <style> not like thiS1
+        //https://developer.mozilla.org/en-US/docs/Web/SVG/Element/text
+
+        // Only handles pure TextAttrs, come back to this later! > - >
+        string TextFace = TextElement.TextRuns[0].TextAttrs.Face;
+        string TextFillColor = TextElement.TextRuns[0].TextAttrs.FillColor;
+        string TextString = TextElement.TextRuns[0].Characters;
+        double FontSize = TextElement.TextRuns[0].TextAttrs.Size;
+        double LetterSpacing = TextElement.TextRuns[0].TextAttrs.LetterSpacing;
+
+        // Create the SVG text element
+        XElement textElement = new XElement(svgNs + "text",
+            new XAttribute("x", TextElement.Matrix.Tx),
+            new XAttribute("y", TextElement.Matrix.Ty),
+            new XAttribute("font-size", FontSize),
+            new XAttribute("font", TextFace),
+            new XAttribute("fill", TextFillColor),
+            new XText(TextString)
+        );
+
+        return textElement;
+    }
+
     private (Dictionary<string, XElement>, List<XElement>) HandleDomShape(Shape shape, string id, Color colorEffect, bool insideMask)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
