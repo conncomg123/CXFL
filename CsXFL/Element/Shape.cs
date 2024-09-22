@@ -92,7 +92,7 @@ public class SolidColor
 }
 public abstract class Gradient
 {
-    protected class DefaultValues
+    public static class DefaultValues
     {
         public const string SpreadMethod = "extend";
         public const string InterpolationMethod = "";
@@ -149,9 +149,21 @@ public abstract class Gradient
 public class RadialGradient : Gradient
 {
     public const string RADIAL_GRADIENT_NODE_IDENTIFIER = "RadialGradient", RADIAL_GRADIENT_NODEGROUP_IDENTIFIER = "fill";
-    internal RadialGradient(XNamespace ns) : base(ns) {}
-    internal RadialGradient(in XElement radialGradientNode) : base(radialGradientNode) {}
-    internal RadialGradient(in RadialGradient other) : base(other) {}
+    public new static class DefaultValues
+    {
+        public const double FocalPointRatio = 0.0;
+    }
+    private double focalPointRatio;
+    public double FocalPointRatio { get { return focalPointRatio; } set { focalPointRatio = value; root?.SetOrRemoveAttribute("focalPointRatio", value, DefaultValues.FocalPointRatio); } }
+    internal RadialGradient(XNamespace ns) : base(ns) { }
+    internal RadialGradient(in XElement radialGradientNode) : base(radialGradientNode)
+    {
+        focalPointRatio = (double?)radialGradientNode.Attribute("focalPointRatio") ?? DefaultValues.FocalPointRatio;
+    }
+    internal RadialGradient(in RadialGradient other) : base(other)
+    {
+        focalPointRatio = other.focalPointRatio;
+    }
 }
 public class LinearGradient : Gradient
 {
@@ -326,7 +338,8 @@ public abstract class Stroke
 }
 public class SolidStroke : Stroke
 {
-    new public static class DefaultValues {
+    new public static class DefaultValues
+    {
         public const string SolidStyle = "";
     }
     public const string SOLID_STROKE_NODE_IDENTIFIER = "SolidStroke";
