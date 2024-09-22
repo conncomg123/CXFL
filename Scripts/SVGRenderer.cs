@@ -127,7 +127,7 @@ public class SvgRenderer
             {
                 foreach (XElement e in b)
                 {
-                    body[-1].Add(e);
+                    body[^1].Add(e);
                 }
             }
             else
@@ -150,14 +150,20 @@ public class SvgRenderer
         int frameOffset = frameIndex - frame.StartFrame;
         for (int i = 0; i < frame.Elements.Count; i++)
         {
-            Dictionary<string, XElement> d = new Dictionary<string, XElement>();
-            List<XElement> b = new List<XElement>();
+            Dictionary<string, XElement> d;
+            List<XElement> b;
             (d, b) = RenderElement(frame.Elements[i], $"{id}_{i}", frameOffset, colorEffect, insideMask);
             foreach (var def in d)
             {
                 defs[def.Key] = def.Value;
             }
-            body.AddRange(b);
+            // add b to a new XElement g for organization and give it a name attribute
+            XElement g = new XElement(svgNs + "g", new XAttribute("name", $"{id}_{i}"));
+            foreach (XElement e in b)
+            {
+                g.Add(e);
+            }
+            body.Add(g);
         }
         return (defs, body);
     }
@@ -205,7 +211,6 @@ public class SvgRenderer
 
         return (defs, body);
     }
-
     private (Dictionary<string, XElement>, List<XElement>) HandleDomShape(Shape shape, string id, Color colorEffect, bool insideMask)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
