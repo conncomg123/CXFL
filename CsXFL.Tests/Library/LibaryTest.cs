@@ -118,7 +118,7 @@ public class LibraryTest
 
 
     }
-    
+
     [Fact]
     public void NewFolder_ShouldCreateDirectoryItem()
     {
@@ -132,5 +132,83 @@ public class LibraryTest
         Assert.True(doc.Library.ItemExists("YourMom"));
 
     }
+    [Fact]
+    public void ItemExists_ReturnsTrue_WhenItemIsInLibrary()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        string itemName = "Loop.wav";
 
+        // Act
+        bool exists = doc.Library.ItemExists(itemName);
+
+        // Assert
+        Assert.True(exists);
+    }
+
+    [Fact]
+    public void ItemExists_ReturnsFalse_WhenItemIsNotInLibrary()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        string itemName = "NonExistentItem.wav";
+
+        // Act
+        bool exists = doc.Library.ItemExists(itemName);
+
+        // Assert
+        Assert.False(exists);
+    }
+    [Fact]
+    public void AddNewItem_AddsItemToLibrary_WhenItemTypeIsValid()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        string itemType = "movie clip";
+        string itemName = "TestItem";
+
+        // Act
+        Item item = doc.Library.AddNewItem(itemType, itemName);
+
+        // Assert
+        Assert.NotNull(item);
+        Assert.True(doc.Library.ItemExists(itemName));
+    }
+
+    [Fact]
+    public void AddNewItem_ThrowsArgumentException_WhenItemAlreadyExists()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        string itemType = "movie clip";
+        string itemName = "loop.wav";
+        doc.Library.AddNewItem(itemType, itemName);
+
+        // Act and Assert
+        Assert.Throws<ArgumentException>(() => doc.Library.AddNewItem(itemType, itemName));
+    }
+
+    [Fact]
+    public void AddNewItem_ThrowsArgumentException_WhenItemTypeIsInvalid()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        string itemType = "invalid type";
+        string itemName = "TestItem";
+
+        // Act and Assert
+        Assert.Throws<ArgumentException>(() => doc.Library.AddNewItem(itemType, itemName));
+    }
+
+    [Fact]
+    public void AddNewItem_ThrowsNotImplementedException_WhenItemTypeIsNotImplemented()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        string itemType = "screen";
+        string itemName = "TestItem";
+
+        // Act and Assert
+        Assert.Throws<NotImplementedException>(() => doc.Library.AddNewItem(itemType, itemName));
+    }
 }
