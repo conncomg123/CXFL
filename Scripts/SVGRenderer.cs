@@ -72,8 +72,10 @@ public class SVGRenderer
             }
         }
     }
-    public XDocument Render(Timeline timeline, int frameIndex, int width, int height, string type = "symbol")
+    public XDocument Render(Timeline timeline, int frameIndex, int? width = null, int? height = null, string type = "symbol")
     {
+        width ??= Document.Width;
+        height ??= Document.Height;
         Color colorEffect = Color.DefaultColor();
         Dictionary<string, XElement> defs;
         List<XElement> body;
