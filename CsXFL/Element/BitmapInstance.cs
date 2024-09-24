@@ -12,8 +12,8 @@ public class BitmapInstance : Instance
 
     private readonly int hPixels, vPixels;
 
-    public int HPixels { get { return hPixels; } }
-    public int VPixels { get { return vPixels; } }
+    public int HPixels { get { return CorrespondingItem as BitmapItem is null ? hPixels : (CorrespondingItem as BitmapItem)!.HPixels; } }
+    public int VPixels { get { return CorrespondingItem as BitmapItem is null ? vPixels : (CorrespondingItem as BitmapItem)!.VPixels; } }
     internal BitmapInstance(in XElement instanceNode, Library? library) : base(instanceNode, library)
     {
         hPixels = (int?)instanceNode.Attribute("hPixels") ?? DefaultValues.HPixels;
@@ -21,8 +21,8 @@ public class BitmapInstance : Instance
     }
     internal BitmapInstance(ref BitmapInstance other) : base(other)
     {
-        hPixels = other.hPixels;
-        vPixels = other.vPixels;
+        hPixels = other.HPixels;
+        vPixels = other.VPixels;
     }
     // cast from BitmapItem to BitmapInstance
     internal BitmapInstance(in BitmapItem item, Library? library) : base(item, "bitmap", BITMAPINSTANCE_NODE_IDENTIFIER, library)
