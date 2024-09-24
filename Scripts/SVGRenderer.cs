@@ -1,11 +1,12 @@
 using CsXFL;
+using System.IO.Compression;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 
 namespace SkiaRendering;
 
-public class SvgRenderer
+public class SVGRenderer
 {
     XNamespace xlink = "http://www.w3.org/1999/xlink";
     XNamespace svgNs = "http://www.w3.org/2000/svg";
@@ -13,7 +14,7 @@ public class SvgRenderer
     XmlNamespaceManager nsmgr = new XmlNamespaceManager(new NameTable());
     Document Document { get; set; }
     // probably don't need the lru cache here
-    public SvgRenderer(Document document)
+    public SVGRenderer(Document document)
     {
         Document = document;
         HREF = XName.Get("href", xlink.ToString());
@@ -27,6 +28,49 @@ public class SvgRenderer
     private static List<double> MatrixToList(Matrix matrix)
     {
         return new List<double> { matrix.A, matrix.B, matrix.C, matrix.D, matrix.Tx, matrix.Ty };
+    }
+    private string GetImageType(string filename)
+    {
+        if (filename.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+        {
+            return "png";
+        }
+        else if (filename.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                 filename.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase))
+        {
+            return "jpeg";
+        }
+        else
+        {
+            throw new NotSupportedException("Unsupported image type");
+        }
+    }
+    private string GetBitmapData(BitmapInstance bitmap)
+    {
+        if (Document.IsXFL)
+        {
+            string imgPath = Path.Combine(Path.GetDirectoryName(Document.Filename)!, Library.LIBRARY_PATH, (bitmap.CorrespondingItem as BitmapItem)!.Href);
+            byte[] data = File.ReadAllBytes(imgPath);
+            string dataUrl = $"data:image/{GetImageType(imgPath)};base64,{Convert.ToBase64String(data)}";
+            return dataUrl;
+        }
+        else
+        {
+            using (ZipArchive archive = ZipFile.Open(Document.Filename, ZipArchiveMode.Read))
+            {
+                string imgPath = Path.Combine(Library.LIBRARY_PATH, (bitmap.CorrespondingItem as BitmapItem)!.Href).Replace("\\", "/");
+                ZipArchiveEntry? entry = archive.GetEntry(imgPath);
+                if (entry is null) throw new Exception("Image not found");
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    entry.Open().CopyTo(ms);
+                    byte[] imageData = ms.ToArray();
+
+                    string dataUrl = $"data:image/{GetImageType(imgPath)};base64,{Convert.ToBase64String(imageData)}";
+                    return dataUrl;
+                }
+            }
+        }
     }
     public XDocument Render(Timeline timeline, int frameIndex, int width, int height, string type = "symbol")
     {
@@ -189,16 +233,20 @@ public class SvgRenderer
         {
             List<Element> children = group.Members;
             bool hasMoreThanOneChild = children.Count > 1;
-            for (int i = 0; i < children.Count; i++) 
+            for (int i = 0; i < children.Count; i++)
             {
                 string memId = hasMoreThanOneChild ? $"{id}_MEMBER_{i}" : id;
                 (defs, body) = RenderElement(children[i], memId, frameOffset, colorEffect, insideMask);
             }
         }
+        else if (element is BitmapInstance bitmap)
+        {
+            body.Add(HandleBitmap(bitmap));
+        }
         else
         {
             throw new NotImplementedException($"Unknown element type: {element.GetType()}");
-        } 
+        }
         if (element is not CsXFL.Group)
         {
             Matrix mat = element.Matrix;
@@ -217,6 +265,20 @@ public class SvgRenderer
         return (defs, body);
     }
 
+    private XElement HandleBitmap(BitmapInstance bitmap)
+    {
+        string dataUrl = GetBitmapData(bitmap);
+
+        XNamespace xlinkNs = "http://www.w3.org/1999/xlink";
+        // x and y handled by the matrix
+        XElement imageElement = new XElement(svgNs + "image",
+            new XAttribute(xlinkNs + "href", dataUrl),
+            new XAttribute("width", bitmap.HPixels.ToString()),
+            new XAttribute("height", bitmap.VPixels.ToString())
+        );
+
+        return imageElement;
+    }
     private XElement HandleText(Text TextElement)
     {
         // The handling of textAttrs is WRONG, needs to go into a <style> not like thiS1
