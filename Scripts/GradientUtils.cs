@@ -13,6 +13,7 @@ namespace SkiaRendering
     /// </summary>
     internal class GradientUtils
     {
+        const double MAGIC_ADOBE_NUMBER = 16384 / 20.0;
         /// <summary>
         /// Creates a Unique ID for gradients.
         /// <remarks>
@@ -71,35 +72,30 @@ namespace SkiaRendering
         {
             XElement radialGradientElement = new XElement(SVGRenderer.svgNs + "radialGradient");
             radialGradientElement.SetAttributeValue("id", GenerateUniqueId());
-            radialGradientElement.SetAttributeValue("gradientUnits", "objectBoundingBox");
+            radialGradientElement.SetAttributeValue("gradientUnits", "userSpaceOnUse");
+            double norm = Math.Sqrt(Math.Pow(radialGradient.Matrix.A, 2) + Math.Pow(radialGradient.Matrix.B, 2));
+            double radius = norm * MAGIC_ADOBE_NUMBER;
+            double focalPoint = radius * radialGradient.FocalPointRatio;
+            double a = radialGradient.Matrix.A / norm, b = radialGradient.Matrix.B / norm, c = radialGradient.Matrix.C / norm, d = radialGradient.Matrix.D / norm,
+            tx = radialGradient.Matrix.Tx, ty = radialGradient.Matrix.Ty;
+            List<double> matrix = [a, b, c, d, tx, ty];
+            radialGradientElement.SetAttributeValue("cx", "0");
+            radialGradientElement.SetAttributeValue("cy", "0");
+            radialGradientElement.SetAttributeValue("r", radius.ToString());
+            radialGradientElement.SetAttributeValue("fx", focalPoint.ToString());
+            radialGradientElement.SetAttributeValue("fy", "0");
+            radialGradientElement.SetAttributeValue("gradientTransform", $"matrix({string.Join(',', matrix)})");
+            radialGradientElement.SetAttributeValue("spreadMethod", radialGradient.SpreadMethod == Gradient.DefaultValues.SpreadMethod ? "pad" : radialGradient.SpreadMethod);
 
-            // Calculate cx and cy based on matrix
-            Matrix matrix = radialGradient.Matrix;
-            double cx = matrix.Tx;
-            double cy = matrix.Ty;
-
-            radialGradientElement.SetAttributeValue("cx", cx.ToString());
-            radialGradientElement.SetAttributeValue("cy", cy.ToString());
-
-            // Calculate fx and fy based on focalPointRatio and matrix
-            double focalPointRatio = radialGradient.FocalPointRatio;
-            double rotation = Math.Atan2(matrix.B, matrix.A);
-            double fx = cx + focalPointRatio * Math.Cos(rotation);
-            double fy = cy + focalPointRatio * Math.Sin(rotation);
-
-            radialGradientElement.SetAttributeValue("fx", fx.ToString());
-            radialGradientElement.SetAttributeValue("fy", fy.ToString());
-
-            // Create stop elements
-            foreach (var stop in radialGradient.GradientEntries)
+            foreach (GradientEntry stopEntry in radialGradient.GradientEntries)
             {
-                XElement stopElement = new XElement(SVGRenderer.svgNs + "stop");
-                stopElement.SetAttributeValue("offset", $"{stop.Ratio * 100}%");
-                stopElement.SetAttributeValue("stop-color", stop.Color);
-                stopElement.SetAttributeValue("stop-opacity", stop.Alpha);
-                radialGradientElement.Add(stopElement);
+                XElement stopSVGElement = new XElement(SVGRenderer.svgNs + "stop");
+                double offset = stopEntry.Ratio * 100;
+                stopSVGElement.SetAttributeValue("offset", $"{offset}%");
+                stopSVGElement.SetAttributeValue("stop-color", stopEntry.Color);
+                stopSVGElement.SetAttributeValue("stop-opacity", stopEntry.Alpha);
+                radialGradientElement.Add(stopSVGElement);
             }
-
             return radialGradientElement;
         }
     }
