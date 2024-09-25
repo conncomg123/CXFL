@@ -9,7 +9,7 @@ public class SymbolInstance : Instance
     new public static class DefaultValues
     {
         public const int FirstFrame = 0;
-        public const string SymbolType = "";
+        public const string SymbolType = "movie clip";
         public const string Loop = "loop";
         public const string BlendMode = "normal";
     }
