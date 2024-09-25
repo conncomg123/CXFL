@@ -406,12 +406,12 @@ namespace SkiaRendering
             foreach (Edge edgeElement in edgesElement)
             {
                 // Get "edges" string, fill styles, and stroke styles of a specific Edge
-                string edgesString = edgeElement.Edges!;
+                string? edgesString = edgeElement.Edges;
                 int? fillStyleLeftIndex = edgeElement.FillStyle0;
                 int? fillStyleRightIndex = edgeElement.FillStyle1;
                 int? strokeStyleIndex = edgeElement.StrokeStyle;
 
-                IEnumerable<List<string>> edgesPointLists = ConvertEdgeFormatToPointLists(edgesString);
+                IEnumerable<List<string>> edgesPointLists = (edgesString is null) ? new List<List<string>>() : ConvertEdgeFormatToPointLists(edgesString);
 
                 // Associate point lists to appropriate fillStyle index and strokeStyle
 
