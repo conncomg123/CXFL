@@ -491,7 +491,7 @@ namespace SkiaRendering
             foreach (var (strokeIndex, pathString) in strokePathStrings)
             {
                 string svgPathString = string.Join(" ", pathString);
-                Dictionary<string, string> attributeDict = fillStylesAttributes[strokeIndex.ToString()];
+                Dictionary<string, string> attributeDict = strokeStylesAttributes[strokeIndex.ToString()];
                 attributeDict["d"] = svgPathString;
 
                 XElement newSKPath = CreatePathElement(attributeDict);
