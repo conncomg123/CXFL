@@ -60,7 +60,13 @@ public class SVGRenderer
             {
                 string imgPath = Path.Combine(Library.LIBRARY_PATH, (bitmap.CorrespondingItem as BitmapItem)!.Href).Replace("\\", "/");
                 ZipArchiveEntry? entry = archive.GetEntry(imgPath);
-                if (entry is null) throw new Exception("Image not found");
+                if (entry is null) 
+                {
+                    // try to find it while removing slashes from both paths
+                    imgPath = imgPath.Replace('/', '\\').Replace('\\', '_');
+                    entry = archive.Entries.Where(x => x.FullName.Replace('/', '\\').Replace('\\', '_') == imgPath).FirstOrDefault();
+                    if (entry is null) throw new Exception($"Bitmap not found: {imgPath}");
+                }
                 using (MemoryStream ms = new MemoryStream())
                 {
                     entry.Open().CopyTo(ms);
