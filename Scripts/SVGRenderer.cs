@@ -298,11 +298,14 @@ public class SVGRenderer
         string TextString = TextElement.TextRuns[0].Characters;
         double FontSize = TextElement.TextRuns[0].TextAttrs.Size;
         double LetterSpacing = TextElement.TextRuns[0].TextAttrs.LetterSpacing;
+        double x = TextElement.TextRuns[0].TextAttrs.Indent + TextElement.TextRuns[0].TextAttrs.LeftMargin;
+        double y = TextElement.TextRuns[0].TextAttrs.Size;
+
 
         // Create the SVG text element
         XElement textElement = new XElement(svgNs + "text",
-            new XAttribute("x", TextElement.Matrix.Tx),
-            new XAttribute("y", TextElement.Matrix.Ty),
+            new XAttribute("x", x),
+            new XAttribute("y", y),
             new XAttribute("font-size", FontSize),
             new XAttribute("font", TextFace),
             new XAttribute("fill", TextFillColor),
