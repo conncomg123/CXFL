@@ -165,7 +165,7 @@ public class SVGRenderer
                     defs[maskId] = mask;
 
                     XElement g = new XElement(svgNs + "g", new XAttribute("mask", $"url(#{maskId})"));
-                    body.Append(g);
+                    body.Add(g);
                 }
             }
 
