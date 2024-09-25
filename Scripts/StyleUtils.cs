@@ -36,13 +36,14 @@ namespace SkiaRendering
             else if(fillStyle.LinearGradient != null)
             {
                 XElement gradientElement = GradientUtils.ConvertLinearGradientToSVG(fillStyle.LinearGradient);
-                attributes["fill"] = $"url(#{gradientElement.Attribute("id")!.Value}";
+                attributes["fill"] = $"url(#{gradientElement.Attribute("id")!.Value})";
                 extraDefElements[gradientElement.Attribute("id")!.Value] = gradientElement;
             }
             else if(fillStyle.RadialGradient != null)
             {
-                // TODO: Support RadialGradient
-                throw new Exception("RadialGradient is not supported yet!");
+                XElement gradientElement = GradientUtils.ConvertRadialGradientToSVG(fillStyle.RadialGradient);
+                attributes["fill"] = $"url(#{gradientElement.Attribute("id")!.Value})";
+                extraDefElements[gradientElement.Attribute("id")!.Value] = gradientElement;
             }
             else
             {

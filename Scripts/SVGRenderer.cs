@@ -9,7 +9,7 @@ namespace SkiaRendering;
 public class SVGRenderer
 {
     XNamespace xlink = "http://www.w3.org/1999/xlink";
-    XNamespace svgNs = "http://www.w3.org/2000/svg";
+    public static XNamespace svgNs = "http://www.w3.org/2000/svg";
     XName HREF;
     XmlNamespaceManager nsmgr = new XmlNamespaceManager(new NameTable());
     Document Document { get; set; }
@@ -346,6 +346,14 @@ public class SVGRenderer
                 defs[stroke_id] = stroke_g;
 
                 body.Add(new XElement(svgNs + "use", new XAttribute(HREF, $"#{stroke_id}")));
+            }
+
+            if (extra_defs is not null)
+            {
+                foreach (var def in extra_defs)
+                {
+                    defs[def.Key] = def.Value;
+                }
             }
         }
 
