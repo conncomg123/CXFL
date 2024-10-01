@@ -334,4 +334,11 @@ public class Frame : ILibraryEventReceiver, IDisposable
         eases.Clear();
         EaseMethodName = DefaultValues.EaseMethodName;
     }
+    public double GetTweenMultiplier(int frameIndex, string target = "all")
+    {
+        if (eases.Count == 0) return 1;
+        if(frameIndex >= duration) throw new ArgumentOutOfRangeException(nameof(frameIndex), $"Frame index {frameIndex} is greater than duration {duration}");
+        IEase? targetEase = eases.FirstOrDefault(ease => ease.Target == target) ?? throw new ArgumentException($"No ease found for target: {target}");
+        return targetEase.GetMultiplier(frameIndex, duration);
+    }
 }
