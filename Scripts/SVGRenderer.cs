@@ -14,7 +14,8 @@ public class SVGRenderer
     XName HREF;
     XmlNamespaceManager nsmgr = new XmlNamespaceManager(new NameTable());
     Document Document { get; set; }
-    ConcurrentDictionary<Shape, (XElement?, XElement?, Dictionary<string, XElement>?)> ShapeCache = new();
+    ConcurrentDictionary<Shape, (XElement?, XElement?, Dictionary<string, XElement>?)> ShapeCache = new(),
+    MaskCache = new();
 
     public SVGRenderer(Document document)
     {
@@ -246,7 +247,7 @@ public class SVGRenderer
         }
         else if (element is BitmapInstance bitmap)
         {
-            body.Add(HandleBitmap(bitmap));
+            // body.Add(HandleBitmap(bitmap));
         }
         else
         {
@@ -318,14 +319,19 @@ public class SVGRenderer
         List<XElement> body = new List<XElement>();
         XElement? fill_g, stroke_g;
         Dictionary<string, XElement>? extra_defs;
-        if (!isMaskShape && ShapeCache.TryGetValue(shape, out (XElement?, XElement?, Dictionary<string, XElement>?) value))
+        if (!isMaskShape && ShapeCache.TryGetValue(shape, out (XElement?, XElement?, Dictionary<string, XElement>?) shapeVal))
         {
-            (fill_g, stroke_g, extra_defs) = value;
+            (fill_g, stroke_g, extra_defs) = shapeVal;
+        }
+        else if (isMaskShape && MaskCache.TryGetValue(shape, out (XElement?, XElement?, Dictionary<string, XElement>?) maskVal))
+        {
+            (fill_g, stroke_g, extra_defs) = maskVal;
         }
         else
         {
             (fill_g, stroke_g, extra_defs) = ShapeUtils.ConvertShapeToSVG(shape, insideMask, maskId);
             if(!isMaskShape) ShapeCache[shape] = (fill_g, stroke_g, extra_defs);
+            else MaskCache[shape] = (fill_g, stroke_g, extra_defs);
         }
         if (fill_g is not null)
         {
