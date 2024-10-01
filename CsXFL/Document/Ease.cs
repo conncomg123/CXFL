@@ -31,7 +31,7 @@ public interface IEase
         public const string Method = default;
     }
     public string Target { get; set; }
-    public double GetMultiplier(int frameIndex, int frameCount);
+    internal double GetMultiplier(int frameIndex, int frameCount);
 }
 public class Ease : IEase
 {
@@ -97,7 +97,7 @@ public class Ease : IEase
     }
 #pragma warning restore CS8618
 
-    public double GetMultiplier(int frameIndex, int frameCount)
+    double IEase.GetMultiplier(int frameIndex, int frameCount)
     {
         double progress = frameIndex / (double)(frameCount - 1);
         double oneMinusProgress = 1 - progress;
@@ -203,7 +203,7 @@ public class CustomEase : IEase
     }
 #pragma warning restore CS8618
 
-    public double GetMultiplier(int frameIndex, int frameCount)
+    double IEase.GetMultiplier(int frameIndex, int frameCount)
     {
         // cubic bezier evaluation
         double t = frameIndex / (double)(frameCount - 1);
