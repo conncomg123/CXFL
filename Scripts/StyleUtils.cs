@@ -69,7 +69,7 @@ namespace SkiaRendering
 
             if(strokeStyle.Stroke.ScaleMode != "normal")
             {
-                throw new Exception($"Unknown 'scaleMode' value: {strokeStyle.ToString()}");
+                Console.Error.WriteLine($"'stroke-scaleMode' value not supported: {strokeStyle.Stroke.ScaleMode}");
             }
 
             // Need to check if this should be the default value that should be set for SVG stroke-linecap
