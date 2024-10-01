@@ -3,6 +3,7 @@ using System.Xml.Linq;
 namespace CsXFL;
 public class TextAttrs
 {
+    private const double LINEHEIGHT_MULTIPLIER = 1.279;
     internal const string TEXTATTRS_NODE_IDENTIFIER = "DOMTextAttrs",
     TEXTATTRS_NODEGROUP_IDENTIFIER = "textAttrs";
     private static readonly HashSet<string> ACCEPTABLE_ALIGNMENTS = new HashSet<string> { "left", "center", "right", "justify" },
@@ -19,6 +20,7 @@ public class TextAttrs
     private string alignment, characterPosition, face, fillColor, target, url;
     private int indent, leftMargin, lineSpacing, rightMargin, size;
     private double letterSpacing;
+    private readonly double lineHeight;
     public bool AliasText { get { return aliasText; } set { aliasText = value; root?.SetOrRemoveAttribute("aliasText", value, DefaultValues.AliasText); } }
     public bool AutoKern { get { return autoKern; } set { autoKern = value; root?.SetOrRemoveAttribute("autoKern", value, DefaultValues.AutoKern); } }
     public bool Bold { get { return bold; } set { bold = value; root?.SetOrRemoveAttribute("bold", value, DefaultValues.Bold); } }
@@ -51,6 +53,7 @@ public class TextAttrs
     public int LeftMargin { get { return leftMargin; } set { leftMargin = value; root?.SetOrRemoveAttribute("leftMargin", value, DefaultValues.LeftMargin); } }
     public double LetterSpacing { get { return letterSpacing; } set { letterSpacing = value; root?.SetOrRemoveAttribute("letterSpacing", value, DefaultValues.LetterSpacing); } }
     public int LineSpacing { get { return lineSpacing; } set { lineSpacing = value; root?.SetOrRemoveAttribute("lineSpacing", value, DefaultValues.LineSpacing); } }
+    public double LineHeight { get { return lineHeight; } } 
     public int RightMargin { get { return rightMargin; } set { rightMargin = value; root?.SetOrRemoveAttribute("rightMargin", value, DefaultValues.RightMargin); } }
     public int Size { get { return size; } set { size = value; root?.SetOrRemoveAttribute("size", value, DefaultValues.Size); } }
     #pragma warning disable CS8618
@@ -74,6 +77,7 @@ public class TextAttrs
         LineSpacing = DefaultValues.LineSpacing;
         RightMargin = DefaultValues.RightMargin;
         Size = DefaultValues.Size;
+        lineHeight = Size * LINEHEIGHT_MULTIPLIER;
     }
     #pragma warning restore CS8618
     internal TextAttrs(XElement textAttrsNode)
@@ -96,6 +100,7 @@ public class TextAttrs
         lineSpacing = (int?)textAttrsNode.Attribute("lineSpacing") ?? DefaultValues.LineSpacing;
         rightMargin = (int?)textAttrsNode.Attribute("rightMargin") ?? DefaultValues.RightMargin;
         size = (int?)textAttrsNode.Attribute("size") ?? DefaultValues.Size;
+        lineHeight = (double?)textAttrsNode.Attribute("lineHeight") ?? size * LINEHEIGHT_MULTIPLIER;
     }
     internal TextAttrs(TextAttrs other)
     {
@@ -117,6 +122,7 @@ public class TextAttrs
         lineSpacing = other.lineSpacing;
         rightMargin = other.rightMargin;
         size = other.size;
+        lineHeight = other.lineHeight;
     }
     internal void SetAttr(string name, object value)
     {
