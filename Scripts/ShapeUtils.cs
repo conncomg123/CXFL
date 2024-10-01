@@ -24,7 +24,7 @@ namespace SkiaRendering
         /// SVG g element containing stroked path elements, and
         /// dict of extra elements to put in SVG defs element (e.g.filters and gradients)</returns>
         public static (XElement?, XElement?, Dictionary<string, XElement>?) 
-            ConvertShapeToSVG(Shape shapeElement, bool mask = false)
+            ConvertShapeToSVG(Shape shapeElement, bool mask = false, string? maskId = null)
         {
             // Dictionary that keeps track of style attributes associated with SVG equivalent of fillStyle with specific
             // fillStyle index
@@ -67,11 +67,6 @@ namespace SkiaRendering
             // For each StrokeStyle of DOMShape, create SVG attributes of its SVG equivalent
             foreach (StrokeStyle strokeStyle in shapeElement.Strokes)
             {
-                // TODO: Figure out how strokes are supposed to behave in masks
-                if (mask)
-                {
-                    throw new Exception("Strokes in masks not supported yet!");
-                }
                 int index = strokeStyle.Index;
                 strokeStylesAttributes[index.ToString()] = StyleUtils.ParseStrokeStyle(strokeStyle);
             }
