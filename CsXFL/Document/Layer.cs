@@ -15,12 +15,13 @@ public class Layer : IDisposable
         public const bool Locked = false;
         public const bool Current = false;
         public const bool Selected = false;
+        public const bool Visible = true;
     }
     private readonly XElement? root;
     private readonly XNamespace ns;
     private string color, layerType, name;
     private readonly List<Frame> frames;
-    private bool locked, current, selected;
+    private bool locked, current, selected, visible;
     int? parentLayerIndex;
     private readonly Library? library;
     internal XElement? Root { get { return root; } }
@@ -42,6 +43,7 @@ public class Layer : IDisposable
     public bool Locked { get { return locked; } set { locked = value; root?.SetOrRemoveAttribute("locked", value, DefaultValues.Locked); } }
     public bool Current { get { return current; } set { current = value; root?.SetOrRemoveAttribute("current", value, DefaultValues.Current); } }
     public bool Selected { get { return selected; } set { selected = value; root?.SetOrRemoveAttribute("isSelected", value, DefaultValues.Selected); } }
+    public bool Visible { get { return visible; } set { visible = value; root?.SetOrRemoveAttribute("visible", value, DefaultValues.Visible); } }
     public int? ParentLayerIndex { get { return parentLayerIndex; } set { parentLayerIndex = value; root?.SetOrRemoveAttribute("parentLayerIndex", value, null); } }
     public ReadOnlyCollection<Frame> KeyFrames { get { return frames.AsReadOnly(); } }
     private void LoadFrames(XElement layerNode)
@@ -67,6 +69,7 @@ public class Layer : IDisposable
         locked = (bool?)layerNode.Attribute("locked") ?? DefaultValues.Locked;
         current = (bool?)layerNode.Attribute("current") ?? DefaultValues.Current;
         selected = (bool?)layerNode.Attribute("isSelected") ?? DefaultValues.Selected;
+        visible = (bool?)layerNode.Attribute("visible") ?? DefaultValues.Visible;
         parentLayerIndex = (int?)layerNode.Attribute("parentLayerIndex");
         frames = new List<Frame>();
         this.library = library;
@@ -83,6 +86,7 @@ public class Layer : IDisposable
         locked = other.locked;
         current = other.current;
         selected = other.selected;
+        visible = other.visible;
         parentLayerIndex = other.parentLayerIndex;
         frames = new List<Frame>();
         library = other.library;
