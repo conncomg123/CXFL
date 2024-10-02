@@ -196,7 +196,7 @@ public class SVGRenderer
         {
             Dictionary<string, XElement> d;
             List<XElement> b;
-            (d, b) = RenderElement(frame.Elements[i], $"{id}_{i}", frameOffset, colorEffect, insideMask, maskId, isMaskLayer);
+            (d, b) = RenderElement(frame.Elements[i], $"{id}_{i}", frameOffset, colorEffect, insideMask, isMaskLayer);
             foreach (var def in d)
             {
                 defs[def.Key] = def.Value;
@@ -212,7 +212,7 @@ public class SVGRenderer
         }
         return (defs, body);
     }
-    private (Dictionary<string, XElement>, List<XElement>) RenderElement(Element element, string id, int frameOffset, Color colorEffect, bool insideMask, string? maskId = null, bool isMaskShape = false)
+    private (Dictionary<string, XElement>, List<XElement>) RenderElement(Element element, string id, int frameOffset, Color colorEffect, bool insideMask, bool isMaskShape = false)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
         List<XElement> body = new List<XElement>();
@@ -228,7 +228,7 @@ public class SVGRenderer
         }
         else if (element is Shape shape)
         {
-            (defs, body) = HandleDomShape(shape, id, colorEffect, insideMask, maskId, isMaskShape);
+            (defs, body) = HandleDomShape(shape, id, colorEffect, insideMask, isMaskShape);
         }
         else if (element is CsXFL.Group group)
         {
@@ -237,7 +237,7 @@ public class SVGRenderer
             for (int i = 0; i < children.Count; i++)
             {
                 string memId = hasMoreThanOneChild ? $"{id}_MEMBER_{i}" : id;
-                var (d, b) = RenderElement(children[i], memId, frameOffset, colorEffect, insideMask, maskId, isMaskShape);
+                var (d, b) = RenderElement(children[i], memId, frameOffset, colorEffect, insideMask, isMaskShape);
                 foreach (var def in d)
                 {
                     defs[def.Key] = def.Value;
@@ -313,7 +313,7 @@ public class SVGRenderer
         return textElement;
     }
 
-    private (Dictionary<string, XElement>, List<XElement>) HandleDomShape(Shape shape, string id, Color colorEffect, bool insideMask, string? maskId = null, bool isMaskShape = false)
+    private (Dictionary<string, XElement>, List<XElement>) HandleDomShape(Shape shape, string id, Color colorEffect, bool insideMask, bool isMaskShape = false)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
         List<XElement> body = new List<XElement>();
@@ -322,15 +322,21 @@ public class SVGRenderer
         if (!isMaskShape && ShapeCache.TryGetValue(shape, out (XElement?, XElement?, Dictionary<string, XElement>?) shapeVal))
         {
             (fill_g, stroke_g, extra_defs) = shapeVal;
+            fill_g = fill_g is null ? null : new XElement(fill_g);
+            stroke_g = stroke_g is null ? null : new XElement(stroke_g);
+            extra_defs = extra_defs is null ? null : new Dictionary<string, XElement>(extra_defs);
         }
         else if (isMaskShape && MaskCache.TryGetValue(shape, out (XElement?, XElement?, Dictionary<string, XElement>?) maskVal))
         {
             (fill_g, stroke_g, extra_defs) = maskVal;
+            fill_g = fill_g is null ? null : new XElement(fill_g);
+            stroke_g = stroke_g is null ? null : new XElement(stroke_g);
+            extra_defs = extra_defs is null ? null : new Dictionary<string, XElement>(extra_defs);
         }
         else
         {
-            (fill_g, stroke_g, extra_defs) = ShapeUtils.ConvertShapeToSVG(shape, insideMask, maskId);
-            if(!isMaskShape) ShapeCache[shape] = (fill_g, stroke_g, extra_defs);
+            (fill_g, stroke_g, extra_defs) = ShapeUtils.ConvertShapeToSVG(shape, isMaskShape);
+            if (!isMaskShape) ShapeCache[shape] = (fill_g, stroke_g, extra_defs);
             else MaskCache[shape] = (fill_g, stroke_g, extra_defs);
         }
         if (fill_g is not null)
@@ -343,7 +349,6 @@ public class SVGRenderer
             }
             fill_g.SetAttributeValue("id", fill_id);
             defs[fill_id] = fill_g;
-
             XElement fill_use = new XElement(svgNs + "use", new XAttribute(HREF, $"#{fill_id}"));
             if (!IsColorIdentity(colorEffect))
             {
