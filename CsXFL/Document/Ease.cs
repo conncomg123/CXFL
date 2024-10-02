@@ -28,16 +28,21 @@ public interface IEase
     public static class DefaultValues
     {
         public const string Target = default;
-        public const string Method = default;
+        public const string Method = Frame.DefaultValues.EaseMethodName;
     }
     public string Target { get; set; }
     internal double GetMultiplier(int frameIndex, int frameCount);
 }
 public class Ease : IEase
 {
+    public static class DefaultValues
+    {
+        public const int Intensity = 0;
+    }
     internal const string EASE_NODE_IDENTIFIER = "Ease";
     private string target;
     private string method;
+    private int intensity;
     private XElement? root;
     private XNamespace ns;
 
@@ -65,12 +70,14 @@ public class Ease : IEase
             root?.SetOrRemoveAttribute("method", value, IEase.DefaultValues.Method);
         }
     }
+    public int Intensity { get => intensity; set { intensity = value; root?.SetOrRemoveAttribute("intensity", value, DefaultValues.Intensity); } }
     internal Ease(XElement easeNode)
     {
         root = easeNode;
         ns = easeNode.Name.Namespace;
         target = easeNode.Attribute("target")?.Value ?? "";
         method = easeNode.Attribute("method")?.Value ?? "";
+        intensity = (int?)easeNode.Attribute("intensity") ?? DefaultValues.Intensity;
         if (!IEase.ACCEPTABLE_TARGETS.Contains(target))
         {
             throw new ArgumentException($"Invalid target: {target}");
@@ -81,12 +88,13 @@ public class Ease : IEase
         }
     }
 #pragma warning disable CS8618
-    public Ease(string? target, string? method, XNamespace ns)
+    public Ease(string? target, string? method, XNamespace ns, int intensity = 0)
     {
         root = new XElement(ns + Ease.EASE_NODE_IDENTIFIER);
         this.ns = ns;
         Target = target ?? IEase.DefaultValues.Target;
         Method = method ?? IEase.DefaultValues.Method;
+        Intensity = intensity;
     }
     public Ease(Ease other)
     {
@@ -94,6 +102,7 @@ public class Ease : IEase
         ns = other.ns;
         Target = other.Target;
         Method = other.Method;
+        Intensity = other.Intensity;
     }
 #pragma warning restore CS8618
 
@@ -105,8 +114,8 @@ public class Ease : IEase
         const double elasticConst1 = 2 * Math.PI / 3.0, elasticConst2 = 2 * Math.PI / 4.5;
         return method switch
         {
-            "" => progress,
-            "linear" => progress,
+            "none" => progress,
+            "classic" => EvaluateClassicEase(progress),
             "quadIn" => progress * progress,
             "quadOut" => 1 - oneMinusProgress * oneMinusProgress,
             "quadInOut" => progress < 0.5 ? 2 * progress * progress : 1 - Math.Pow(-2 * progress + 2, 2) / 2,
@@ -134,6 +143,11 @@ public class Ease : IEase
             _ => throw new ArgumentException($"Invalid method: {method}"),
         };
     }
+    private double EvaluateClassicEase(double progress)
+    {
+        double delta = (100.0 - intensity) / 300.0;
+        Point p0 = new(0, 0, ""), p1 = new(1.0/3.0, delta, ""), p2 = new(2.0/3.0, 1.0/3.0 + delta, ""), p3 = new(1, 1, "");
+        return CustomEase.EvaluateBezierPoint(p0, p1, p2, p3, progress);}
     private static double EaseOutBounce(double x)
     {
         const double n1 = 7.5625;
@@ -207,10 +221,10 @@ public class CustomEase : IEase
     {
         // cubic bezier evaluation
         double t = frameIndex / (double)(frameCount - 1);
-        if(t == 1) return 1;    
-        if(t == 0) return 0;
+        if (t == 1) return 1;
+        if (t == 0) return 0;
         List<double> xVals = [Points[0].X];
-        for(int i = 3; i < Points.Count - 1; i += 3)
+        for (int i = 3; i < Points.Count - 1; i += 3)
         {
             xVals.Add(Points[i].X);
         }
@@ -223,6 +237,10 @@ public class CustomEase : IEase
         Point p3 = Points[3 * tIndex + 3];
         // update t to fit the new frame of reference
         t = (t - p0.X) / (p3.X - p0.X);
+        return EvaluateBezierPoint(p0, p1, p2, p3, t);
+    }
+    public static double EvaluateBezierPoint(Point p0, Point p1, Point p2, Point p3, double t)
+    {
         double t2 = t * t;
         double t3 = t * t2;
         double mt = 1 - t;
