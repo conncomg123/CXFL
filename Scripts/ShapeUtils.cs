@@ -24,7 +24,7 @@ namespace SkiaRendering
         /// SVG g element containing stroked path elements, and
         /// dict of extra elements to put in SVG defs element (e.g.filters and gradients)</returns>
         public static (XElement?, XElement?, Dictionary<string, XElement>?) 
-            ConvertShapeToSVG(Shape shapeElement, bool mask = false, string? maskId = null)
+            ConvertShapeToSVG(Shape shapeElement, bool mask = false)
         {
             // Dictionary that keeps track of style attributes associated with SVG equivalent of fillStyle with specific
             // fillStyle index
