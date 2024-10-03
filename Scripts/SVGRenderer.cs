@@ -247,7 +247,7 @@ public class SVGRenderer
         }
         else if (element is BitmapInstance bitmap)
         {
-            // body.Add(HandleBitmap(bitmap));
+            body.Add(HandleBitmap(bitmap));
         }
         else
         {
@@ -387,17 +387,18 @@ public class SVGRenderer
         int firstFrame = instance.FirstFrame;
         int? lastFrame = instance.LastFrame;
         int loopLength;
+        int numFrames = (instance.CorrespondingItem as SymbolItem)!.Timeline.GetFrameCount();
         if (lastFrame is null)
         {
-            lastFrame = (instance.CorrespondingItem as SymbolItem)!.Timeline.GetFrameCount() - 1;
+            lastFrame = numFrames - 1;
             loopLength = lastFrame.Value + 1;
         }
-        else loopLength = lastFrame.Value - firstFrame + 1;
+        else loopLength = int.IsNegative(lastFrame.Value) ? numFrames - firstFrame : lastFrame.Value - firstFrame + 1;
         string loopType = instance.Loop;
         if (loopType == "single frame") return firstFrame;
-        if (loopType == "loop") return (firstFrame + frameOffset) % loopLength;
+        if (loopType == "loop") return firstFrame + (frameOffset % loopLength);
         if (loopType == "play once") return Math.Min(firstFrame + frameOffset, lastFrame.Value);
-        if (loopType == "loop reverse") return (firstFrame + loopLength - frameOffset) % loopLength;
+        if (loopType == "loop reverse") return firstFrame + loopLength - (frameOffset % loopLength);
         if (loopType == "play once reverse") return Math.Max(firstFrame - frameOffset, 0);
         else throw new Exception("Invalid loop type: " + loopType);
     }
