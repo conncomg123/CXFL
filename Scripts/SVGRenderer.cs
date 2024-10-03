@@ -288,6 +288,8 @@ public class SVGRenderer
         return imageElement;
     }
 
+    // Animate mangles font names. Is it possible to take TextAttrs.Face and get the corresponding Windows font? Will be needed for font embedding.
+
     // Intended approach for Animate is to create a mask of text bounding box dimensions, and mask the text to the bounding box.
     // This logic is not present at the moment, so text will never cut off if it goes out of bounds
     private XElement HandleText(Text TextElement)
@@ -296,13 +298,12 @@ public class SVGRenderer
             new XAttribute("writing-mode", "lr") // Force writing mode to left-right. Circle back to this later.
         );
 
-        double carriage_y = 1;
-
         for (int i = 0; i < TextElement.TextRuns.Count; i++)
         {
             var textRun = TextElement.TextRuns[i];
             string[] characters = textRun.Characters.Split('\r');
 
+            double carriage_y = 1;
             double anticipated_x = textRun.TextAttrs.LeftMargin + textRun.TextAttrs.Indent;
             double anticipated_y = textRun.TextAttrs.Size;
 
@@ -314,8 +315,23 @@ public class SVGRenderer
                     new XAttribute("font-size", textRun.TextAttrs.Size),
                     new XAttribute("fill", textRun.TextAttrs.FillColor),
                     new XAttribute("letter-spacing", textRun.TextAttrs.LetterSpacing),
+                    new XAttribute("fill-opacity", textRun.TextAttrs.Alpha),
                     new XText(characters[j])
                 );
+
+                // ???
+                if (textRun.TextAttrs.Bold) { new XAttribute("font-weight", "bold"); };
+                if (textRun.TextAttrs.Italic) { new XAttribute("font-style", "italic"); };
+
+                if (textRun.TextAttrs.Face.IndexOf("Bold", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    tspan.Add(new XAttribute("font-weight", "bold"));
+                }
+
+                if (textRun.TextAttrs.Face.IndexOf("Italic", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    tspan.Add(new XAttribute("font-style", "italic"));
+                }
 
                 // Specify X & Y for first TextRun
                 if (i == 0)
@@ -327,7 +343,8 @@ public class SVGRenderer
                 // If previous TextRuns.Characters had length zero or TextRun.Characters contains escape character \r
                 if ((i > 0 && TextElement.TextRuns[i - 1].Characters.Length == 0) || i > 0 && TextElement.TextRuns[i - 1].Characters.Contains("\r"))
                 {
-                    tspan.Add(new XAttribute("dy", carriage_y + "em"));
+                    // Paragraph spacing support, affected by line spacing of previous text run
+                    tspan.Add(new XAttribute("dy", carriage_y + (TextElement.TextRuns[i - 1].TextAttrs.LineSpacing / 20) + "em"));
                     tspan.Add(new XAttribute("x", anticipated_x));
                 }
 
