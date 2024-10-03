@@ -67,11 +67,6 @@ namespace SkiaRendering
             // For each StrokeStyle of DOMShape, create SVG attributes of its SVG equivalent
             foreach (StrokeStyle strokeStyle in shapeElement.Strokes)
             {
-                // TODO: Figure out how strokes are supposed to behave in masks
-                if (mask)
-                {
-                    throw new Exception("Strokes in masks not supported yet!");
-                }
                 int index = strokeStyle.Index;
                 strokeStylesAttributes[index.ToString()] = StyleUtils.ParseStrokeStyle(strokeStyle);
             }
