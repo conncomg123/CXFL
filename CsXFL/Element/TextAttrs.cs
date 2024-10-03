@@ -13,13 +13,13 @@ public class TextAttrs
         public const bool AutoKern = true, AliasText = true, Bold = false, Italic = false, Rotation = false;
         public const string Alignment = "left", CharacterPosition = "normal", FillColor = "#000000", Target = "", Url = "", Face = "Suburga2-SemicondensedRegular";
         public const int Indent = 0, LeftMargin = 0, LineSpacing = 0, RightMargin = 0, Size = 12;
-        public const double LetterSpacing = 0;
+        public const double LetterSpacing = 0, Alpha = 1;
     }
     private readonly XElement? root;
     private bool aliasText, autoKern, bold, italic, rotation;
     private string alignment, characterPosition, face, fillColor, target, url;
     private int indent, leftMargin, lineSpacing, rightMargin, size;
-    private double letterSpacing;
+    private double letterSpacing, alpha;
     private readonly double lineHeight;
     public bool AliasText { get { return aliasText; } set { aliasText = value; root?.SetOrRemoveAttribute("aliasText", value, DefaultValues.AliasText); } }
     public bool AutoKern { get { return autoKern; } set { autoKern = value; root?.SetOrRemoveAttribute("autoKern", value, DefaultValues.AutoKern); } }
@@ -54,6 +54,7 @@ public class TextAttrs
     public double LetterSpacing { get { return letterSpacing; } set { letterSpacing = value; root?.SetOrRemoveAttribute("letterSpacing", value, DefaultValues.LetterSpacing); } }
     public int LineSpacing { get { return lineSpacing; } set { lineSpacing = value; root?.SetOrRemoveAttribute("lineSpacing", value, DefaultValues.LineSpacing); } }
     public double LineHeight { get { return lineHeight; } } 
+    public double Alpha { get { return alpha; } set { alpha = value; root?.SetOrRemoveAttribute("alpha", value, DefaultValues.Alpha); } }
     public int RightMargin { get { return rightMargin; } set { rightMargin = value; root?.SetOrRemoveAttribute("rightMargin", value, DefaultValues.RightMargin); } }
     public int Size { get { return size; } set { size = value; root?.SetOrRemoveAttribute("size", value, DefaultValues.Size); } }
     #pragma warning disable CS8618
@@ -78,6 +79,7 @@ public class TextAttrs
         RightMargin = DefaultValues.RightMargin;
         Size = DefaultValues.Size;
         lineHeight = Size * LINEHEIGHT_MULTIPLIER;
+        alpha = DefaultValues.Alpha;
     }
     #pragma warning restore CS8618
     internal TextAttrs(XElement textAttrsNode)
@@ -101,6 +103,7 @@ public class TextAttrs
         rightMargin = (int?)textAttrsNode.Attribute("rightMargin") ?? DefaultValues.RightMargin;
         size = (int?)textAttrsNode.Attribute("size") ?? DefaultValues.Size;
         lineHeight = (double?)textAttrsNode.Attribute("lineHeight") ?? size * LINEHEIGHT_MULTIPLIER;
+        alpha = (double?)textAttrsNode.Attribute("alpha") ?? DefaultValues.Alpha;
     }
     internal TextAttrs(TextAttrs other)
     {
@@ -123,6 +126,7 @@ public class TextAttrs
         rightMargin = other.rightMargin;
         size = other.size;
         lineHeight = other.lineHeight;
+        alpha = other.alpha;
     }
     internal void SetAttr(string name, object value)
     {
@@ -178,6 +182,9 @@ public class TextAttrs
                 break;
             case "size":
                 Size = (int)value;
+                break;
+            case "alpha":
+                Alpha = Convert.ToDouble(value);
                 break;
             default:
                 throw new ArgumentException($"Invalid attribute name: {name}");
