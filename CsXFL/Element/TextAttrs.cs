@@ -19,7 +19,7 @@ public class TextAttrs
     private bool aliasText, autoKern, bold, italic, rotation;
     private string alignment, characterPosition, face, fillColor, target, url;
     private int leftMargin, lineSpacing, rightMargin, size;
-    private double indent, letterSpacing, alpha;;
+    private double indent, letterSpacing, alpha;
     private readonly double lineHeight;
     public bool AliasText { get { return aliasText; } set { aliasText = value; root?.SetOrRemoveAttribute("aliasText", value, DefaultValues.AliasText); } }
     public bool AutoKern { get { return autoKern; } set { autoKern = value; root?.SetOrRemoveAttribute("autoKern", value, DefaultValues.AutoKern); } }
