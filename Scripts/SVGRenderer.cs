@@ -1,9 +1,11 @@
 using CsXFL;
+using SixLabors.Fonts;
 using System.Collections.Concurrent;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
+using SixLabors.Fonts;
 
 namespace SkiaRendering;
 
@@ -285,30 +287,53 @@ public class SVGRenderer
 
         return imageElement;
     }
+
+    // Intended approach for Animate is to create a mask of text bounding box dimensions, and mask the text to the bounding box.
+    // This logic is not present at the moment, so text will never cut off if it goes out of bounds
     private XElement HandleText(Text TextElement)
     {
-        // The handling of textAttrs is WRONG, needs to go into a <style> not like thiS1
-        //https://developer.mozilla.org/en-US/docs/Web/SVG/Element/text
-
-        // Only handles pure TextAttrs, come back to this later! > - >
-        string TextFace = TextElement.TextRuns[0].TextAttrs.Face;
-        string TextFillColor = TextElement.TextRuns[0].TextAttrs.FillColor;
-        string TextString = TextElement.TextRuns[0].Characters;
-        double FontSize = TextElement.TextRuns[0].TextAttrs.Size;
-        double LetterSpacing = TextElement.TextRuns[0].TextAttrs.LetterSpacing;
-        double x = TextElement.TextRuns[0].TextAttrs.Indent + TextElement.TextRuns[0].TextAttrs.LeftMargin;
-        double y = TextElement.TextRuns[0].TextAttrs.Size;
-
-
-        // Create the SVG text element
         XElement textElement = new XElement(svgNs + "text",
-            new XAttribute("x", x),
-            new XAttribute("y", y),
-            new XAttribute("font-size", FontSize),
-            new XAttribute("font", TextFace),
-            new XAttribute("fill", TextFillColor),
-            new XText(TextString)
+            new XAttribute("writing-mode", "lr") // Force writing mode to left-right. Circle back to this later.
         );
+
+        double carriage_y = 1;
+
+        for (int i = 0; i < TextElement.TextRuns.Count; i++)
+        {
+            var textRun = TextElement.TextRuns[i];
+            string[] characters = textRun.Characters.Split('\r');
+
+            double anticipated_x = textRun.TextAttrs.LeftMargin + textRun.TextAttrs.Indent;
+            double anticipated_y = textRun.TextAttrs.Size;
+
+            for (int j = 0; j < characters.Length; j++)
+            {
+                var tspan = new XElement("tspan",
+                    new XAttribute("baseline-shift", "0%"),
+                    new XAttribute("font-family", textRun.TextAttrs.Face),
+                    new XAttribute("font-size", textRun.TextAttrs.Size),
+                    new XAttribute("fill", textRun.TextAttrs.FillColor),
+                    new XAttribute("letter-spacing", textRun.TextAttrs.LetterSpacing),
+                    new XText(characters[j])
+                );
+
+                // Specify X & Y for first TextRun
+                if (i == 0)
+                {
+                    tspan.Add(new XAttribute("x", anticipated_x));
+                    tspan.Add(new XAttribute("y", anticipated_y));
+                }
+
+                // If previous TextRuns.Characters had length zero or TextRun.Characters contains escape character \r
+                if ((i > 0 && TextElement.TextRuns[i - 1].Characters.Length == 0) || i > 0 && TextElement.TextRuns[i - 1].Characters.Contains("\r"))
+                {
+                    tspan.Add(new XAttribute("dy", carriage_y + "em"));
+                    tspan.Add(new XAttribute("x", anticipated_x));
+                }
+
+                textElement.Add(tspan);
+            }
+        }
 
         return textElement;
     }
