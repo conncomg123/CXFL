@@ -12,14 +12,14 @@ public class TextAttrs
     {
         public const bool AutoKern = true, AliasText = true, Bold = false, Italic = false, Rotation = false;
         public const string Alignment = "left", CharacterPosition = "normal", FillColor = "#000000", Target = "", Url = "", Face = "Suburga2-SemicondensedRegular";
-        public const int Indent = 0, LeftMargin = 0, LineSpacing = 0, RightMargin = 0, Size = 12;
-        public const double LetterSpacing = 0;
+        public const int LeftMargin = 0, LineSpacing = 0, RightMargin = 0, Size = 12;
+        public const double Indent = 0, LetterSpacing = 0;
     }
     private readonly XElement? root;
     private bool aliasText, autoKern, bold, italic, rotation;
     private string alignment, characterPosition, face, fillColor, target, url;
-    private int indent, leftMargin, lineSpacing, rightMargin, size;
-    private double letterSpacing;
+    private int leftMargin, lineSpacing, rightMargin, size;
+    private double indent, letterSpacing;
     private readonly double lineHeight;
     public bool AliasText { get { return aliasText; } set { aliasText = value; root?.SetOrRemoveAttribute("aliasText", value, DefaultValues.AliasText); } }
     public bool AutoKern { get { return autoKern; } set { autoKern = value; root?.SetOrRemoveAttribute("autoKern", value, DefaultValues.AutoKern); } }
@@ -49,7 +49,7 @@ public class TextAttrs
     public string FillColor { get { return fillColor; } set { fillColor = value; root?.SetOrRemoveAttribute("fillColor", value, DefaultValues.FillColor); } }
     public string Target { get { return target; } set { target = value; root?.SetOrRemoveAttribute("target", value, DefaultValues.Target); } }
     public string Url { get { return url; } set { url = value; root?.SetOrRemoveAttribute("url", value, DefaultValues.Url); } }
-    public int Indent { get { return indent; } set { indent = value; root?.SetOrRemoveAttribute("indent", value, DefaultValues.Indent); } }
+    public double Indent { get { return indent; } set { indent = value; root?.SetOrRemoveAttribute("indent", value, DefaultValues.Indent); } }
     public int LeftMargin { get { return leftMargin; } set { leftMargin = value; root?.SetOrRemoveAttribute("leftMargin", value, DefaultValues.LeftMargin); } }
     public double LetterSpacing { get { return letterSpacing; } set { letterSpacing = value; root?.SetOrRemoveAttribute("letterSpacing", value, DefaultValues.LetterSpacing); } }
     public int LineSpacing { get { return lineSpacing; } set { lineSpacing = value; root?.SetOrRemoveAttribute("lineSpacing", value, DefaultValues.LineSpacing); } }
@@ -94,7 +94,7 @@ public class TextAttrs
         fillColor = (string?)textAttrsNode.Attribute("fillColor") ?? DefaultValues.FillColor;
         target = (string?)textAttrsNode.Attribute("target") ?? DefaultValues.Target;
         url = (string?)textAttrsNode.Attribute("url") ?? DefaultValues.Url;
-        indent = (int?)textAttrsNode.Attribute("indent") ?? DefaultValues.Indent;
+        indent = (double?)textAttrsNode.Attribute("indent") ?? DefaultValues.Indent;
         leftMargin = (int?)textAttrsNode.Attribute("leftMargin") ?? DefaultValues.LeftMargin;
         letterSpacing = (double?)textAttrsNode.Attribute("letterSpacing") ?? DefaultValues.LetterSpacing;
         lineSpacing = (int?)textAttrsNode.Attribute("lineSpacing") ?? DefaultValues.LineSpacing;

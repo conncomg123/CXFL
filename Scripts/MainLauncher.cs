@@ -12,12 +12,9 @@ namespace SkiaRendering
 
         public static void Run(string[] args)
         {
-            Document testDoc = new Document("D:\\Documents\\EOJ Assets\\SimpleRenderTest\\SimpleRenderTest.xfl");
-            SymbolItem testSymbol = (SymbolItem)testDoc.Library.Items["Horn"];
-            Element testElement = testSymbol.Timeline.Layers[0].KeyFrames[0].Elements[0];
-            Shape testShape = (Shape)testElement;
-            //EdgeUtils.ConvertEdgesToSvgPath(testShape.Edges, testShape.Fills, testShape.Strokes);
-            var testing = ShapeUtils.ConvertShapeToSVG(testShape);
+            Document testDoc = new Document("C:\\Users\\Administrator\\Desktop\\TextRendering\\TextRendering.fla");
+            var svgSave = new SVGRenderer(testDoc).Render(testDoc.Timelines[0], 0, testDoc.Width, testDoc.Height);
+            svgSave.Save("C:\\Users\\Administrator\\Desktop\\TextRendering\\TextRendering_export.svg");
         }
     }
 }
