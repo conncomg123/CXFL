@@ -13,18 +13,27 @@ public class TextAttrs
         public const string Alignment = "left", CharacterPosition = "normal", FillColor = "#000000", Target = "", Url = "", Face = "Suburga2-SemicondensedRegular";
         public const int Indent = 0, LeftMargin = 0, LineSpacing = 0, RightMargin = 0, Size = 12;
         public const double LetterSpacing = 0;
+
+        public const string StrokeColor = "#000000"; 
+        public const int StrokeWidth = 0;  
     }
     private readonly XElement? root;
     private bool aliasText, autoKern, bold, italic, rotation;
     private string alignment, characterPosition, face, fillColor, target, url;
     private int indent, leftMargin, lineSpacing, rightMargin, size;
     private double letterSpacing;
+    private string strokeColor;
+    private int strokeWidth;
     public bool AliasText { get { return aliasText; } set { aliasText = value; root?.SetOrRemoveAttribute("aliasText", value, DefaultValues.AliasText); } }
     public bool AutoKern { get { return autoKern; } set { autoKern = value; root?.SetOrRemoveAttribute("autoKern", value, DefaultValues.AutoKern); } }
     public bool Bold { get { return bold; } set { bold = value; root?.SetOrRemoveAttribute("bold", value, DefaultValues.Bold); } }
     public bool Italic { get { return italic; } set { italic = value; root?.SetOrRemoveAttribute("italic", value, DefaultValues.Italic); } }
     public bool Rotation { get { return rotation; } set { rotation = value; root?.SetOrRemoveAttribute("rotation", value, DefaultValues.Rotation); } }
+    public string StrokeColor{ get { return strokeColor; } set { strokeColor = value; root?.SetOrRemoveAttribute("strokeColor", value, DefaultValues.StrokeColor); }}
+    public int StrokeWidth{ get { return strokeWidth; } set { strokeWidth = value; root?.SetOrRemoveAttribute("strokeWidth", value, DefaultValues.StrokeWidth); }}
     public XElement Root { get { return root!; } }
+
+    
     public string Alignment
     {
         get { return alignment; }
@@ -74,6 +83,8 @@ public class TextAttrs
         LineSpacing = DefaultValues.LineSpacing;
         RightMargin = DefaultValues.RightMargin;
         Size = DefaultValues.Size;
+        StrokeColor = DefaultValues.StrokeColor;
+        StrokeWidth = DefaultValues.StrokeWidth;
     }
     #pragma warning restore CS8618
     internal TextAttrs(XElement textAttrsNode)
@@ -96,6 +107,8 @@ public class TextAttrs
         lineSpacing = (int?)textAttrsNode.Attribute("lineSpacing") ?? DefaultValues.LineSpacing;
         rightMargin = (int?)textAttrsNode.Attribute("rightMargin") ?? DefaultValues.RightMargin;
         size = (int?)textAttrsNode.Attribute("size") ?? DefaultValues.Size;
+        strokeColor = (string?)textAttrsNode.Attribute("strokeColor") ?? DefaultValues.StrokeColor;
+        strokeWidth = (int?)textAttrsNode.Attribute("strokeWidth") ?? DefaultValues.StrokeWidth;
     }
     internal TextAttrs(TextAttrs other)
     {
@@ -117,6 +130,8 @@ public class TextAttrs
         lineSpacing = other.lineSpacing;
         rightMargin = other.rightMargin;
         size = other.size;
+        strokeColor = other.strokeColor;
+        strokeWidth = other.strokeWidth;
     }
     internal void SetAttr(string name, object value)
     {
@@ -172,6 +187,12 @@ public class TextAttrs
                 break;
             case "size":
                 Size = (int)value;
+                break;
+            case "strokeColor":
+                StrokeColor = (string)value;
+                break;
+            case "strokeWidth":
+                StrokeWidth = (int)value;
                 break;
             default:
                 throw new ArgumentException($"Invalid attribute name: {name}");
