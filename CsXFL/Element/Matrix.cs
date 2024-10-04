@@ -168,4 +168,8 @@ public class Matrix
         tx = other.Tx;
         ty = other.Ty;
     }
+    public Matrix()
+    {
+        ns = string.Empty;
+    }
 }
