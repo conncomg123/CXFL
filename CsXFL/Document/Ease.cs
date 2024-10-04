@@ -105,10 +105,16 @@ public class Ease : IEase
         Intensity = other.Intensity;
     }
 #pragma warning restore CS8618
+    public Ease(XNamespace ns)
+    {
+        this.ns = ns;
+        method = IEase.DefaultValues.Method;
+        target = IEase.DefaultValues.Target;
+    }
 
     double IEase.GetMultiplier(int frameIndex, int frameCount)
     {
-        double progress = frameIndex / (double)(frameCount - 1);
+        double progress = frameIndex / (double)frameCount;
         double oneMinusProgress = 1 - progress;
         const double backConst1 = 1.70158, backConst2 = backConst1 + 1, backConst3 = backConst1 * 1.525;
         const double elasticConst1 = 2 * Math.PI / 3.0, elasticConst2 = 2 * Math.PI / 4.5;
@@ -146,8 +152,9 @@ public class Ease : IEase
     private double EvaluateClassicEase(double progress)
     {
         double delta = (100.0 - intensity) / 300.0;
-        Point p0 = new(0, 0, ""), p1 = new(1.0/3.0, delta, ""), p2 = new(2.0/3.0, 1.0/3.0 + delta, ""), p3 = new(1, 1, "");
-        return CustomEase.EvaluateBezierPoint(p0, p1, p2, p3, progress);}
+        Point p0 = new(0, 0, ""), p1 = new(1.0 / 3.0, delta, ""), p2 = new(2.0 / 3.0, 1.0 / 3.0 + delta, ""), p3 = new(1, 1, "");
+        return CustomEase.EvaluateBezierPoint(p0, p1, p2, p3, progress);
+    }
     private static double EaseOutBounce(double x)
     {
         const double n1 = 7.5625;
@@ -220,7 +227,7 @@ public class CustomEase : IEase
     double IEase.GetMultiplier(int frameIndex, int frameCount)
     {
         // cubic bezier evaluation
-        double t = frameIndex / (double)(frameCount - 1);
+        double t = frameIndex / (double)frameCount;
         if (t == 1) return 1;
         if (t == 0) return 0;
         List<double> xVals = [Points[0].X];

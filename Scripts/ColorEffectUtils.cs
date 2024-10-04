@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-namespace SkiaRendering
+namespace Rendering
 {
     internal class ColorEffectUtils
     {
@@ -19,7 +19,7 @@ namespace SkiaRendering
         public static string GenerateUniqueId()
         {
             int randomNumber = Random.Shared.Next();
-            return $"Gradient_{(randomNumber.GetHashCode() & 0xFFFFFFFF):x8}";
+            return $"Color_{(randomNumber.GetHashCode() & 0xFFFFFFFF):x8}";
         }
 
         /// <summary>
@@ -40,10 +40,10 @@ namespace SkiaRendering
                 "0 0 {2} 0 {6} " +
                 "0 0 0 {3} {7}",
                 multiplier.Item1, multiplier.Item2, multiplier.Item3, multiplier.Item4,
-                offset.Item1, offset.Item2, offset.Item3, offset.Item4
+                offset.Item1 / 255.0, offset.Item2 / 255.0, offset.Item3 / 255.0, offset.Item4 / 255.0
             );
 
-            XElement element = new XElement(
+            XElement element = new XElement( SVGRenderer.svgNs + 
                 "filter",
                 new XAttribute("id", GenerateUniqueId()),
                 new XAttribute("x", "-20%"),
@@ -53,7 +53,7 @@ namespace SkiaRendering
                 new XAttribute("color-interpolation-filters", "sRGB")
             );
 
-            XElement feColorMatrix = new XElement(
+            XElement feColorMatrix = new XElement( SVGRenderer.svgNs +
                 "feColorMatrix",
                 new XAttribute("in", "SourceGraphic"),
                 new XAttribute("type", "matrix"),
@@ -86,13 +86,8 @@ namespace SkiaRendering
             (double, double, double, double) multiplier;
             (double, double, double, double) offset;
 
-            if (colorEffect.AlphaMultiplier != 0)
-            {
-                multiplier = (1, 1, 1, colorEffect.AlphaMultiplier);
-                offset = (0, 0, 0, 0);
-            }
             // Brightness: linearly interpolate towards black or white
-            else if (colorEffect.Brightness != 0)
+            if (colorEffect.Brightness != 0)
             {
                 double brightness = colorEffect.Brightness;
                 if (brightness < 0)
@@ -109,7 +104,7 @@ namespace SkiaRendering
                 }
             }
             // Tint: linearly interpolate between the original color and a tint color
-            else if (colorEffect.TintMultiplier != 0 || colorEffect.TintColor != null)
+            else if (colorEffect.TintMultiplier != 0)
             {
                 // color * (1 - tint_multiplier) + tint_color * tint_multiplier
                 double tintMultiplier = colorEffect.TintMultiplier;
@@ -126,9 +121,9 @@ namespace SkiaRendering
                 }
 
                 offset = (
-                    tintMultiplier * int.Parse(tintColor.Substring(1, 3), NumberStyles.HexNumber) / 255f,
-                    tintMultiplier * int.Parse(tintColor.Substring(3, 5), NumberStyles.HexNumber) / 255f,
-                    tintMultiplier * int.Parse(tintColor.Substring(5, 7), NumberStyles.HexNumber) / 255f,
+                    tintMultiplier * int.Parse(tintColor.Substring(1, 2), NumberStyles.HexNumber) / 255f,
+                    tintMultiplier * int.Parse(tintColor.Substring(3, 2), NumberStyles.HexNumber) / 255f,
+                    tintMultiplier * int.Parse(tintColor.Substring(5, 2), NumberStyles.HexNumber) / 255f,
                     0);
             }
             // Advanced: multiply and offset each channel
@@ -144,10 +139,10 @@ namespace SkiaRendering
 
                 // Offsets are in [-255, 255]
                 offset = (
-                    colorEffect.RedOffset / 255,
-                    colorEffect.GreenOffset / 255,
-                    colorEffect.BlueOffset / 255,
-                    colorEffect.AlphaOffset / 255);
+                    colorEffect.RedOffset,
+                    colorEffect.GreenOffset,
+                    colorEffect.BlueOffset,
+                    colorEffect.AlphaOffset);
             }
 
             List<(double, double, double, double)> multipliersList = new List<(double, double, double, double)>

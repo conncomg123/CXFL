@@ -22,6 +22,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         public const int Duration = 1;
         public const int KeyMode = (int)KeyModes.Normal;
         public const int InPoint44 = 0;
+        public const int MotionTweenRotateTimes = 0;
         public const string LabelType = "none";
         public const string Name = "";
         public const string SoundName = "";
@@ -29,22 +30,25 @@ public class Frame : ILibraryEventReceiver, IDisposable
         public const string TweenType = "none";
         public const bool MotionTweenSnap = false;
         public const string EaseMethodName = "classic";
+        public const string MotionTweenRotate = "auto";
         public const bool HasCustomEase = false;
         public const bool Bookmark = false;
+        public const bool UseSingleEaseCurve = true;
     }
     private readonly XElement? root;
     private readonly XNamespace ns;
     private readonly List<Element> elements;
     private readonly List<IEase> eases;
-    private int startFrame, duration, keyMode, inPoint44;
-    private string labelType, name, soundName, soundSync, tweenType, easeMethodName;
-    private bool registeredForSoundItem, motionTweenSnap, hasCustomEase, bookmark;
+    private int startFrame, duration, keyMode, inPoint44, motionTweenRotateTimes;
+    private string labelType, name, soundName, soundSync, tweenType, easeMethodName, motionTweenRotate;
+    private bool registeredForSoundItem, motionTweenSnap, hasCustomEase, bookmark, useSingleEaseCurve;
     private Library? library;
     internal XElement? Root { get { return root; } }
     public int StartFrame { get { return startFrame; } set { startFrame = value; root?.SetAttributeValue("index", value); } }
     public int Duration { get { return duration; } set { duration = value; root?.SetOrRemoveAttribute("duration", value, DefaultValues.Duration); } }
     public int KeyMode { get { return keyMode; } set { keyMode = value; root?.SetOrRemoveAttribute("keyMode", value, DefaultValues.KeyMode); } }
     public int InPoint44 { get { return inPoint44; } set { inPoint44 = value; root?.SetOrRemoveAttribute("inPoint44", value, DefaultValues.InPoint44); } }
+    public int MotionTweenRotateTimes { get { return motionTweenRotateTimes; } set { motionTweenRotateTimes = value; root?.SetOrRemoveAttribute("motionTweenRotateTimes", value, DefaultValues.MotionTweenRotateTimes); } }
     public string LabelType
     {
         get { return labelType; }
@@ -94,7 +98,9 @@ public class Frame : ILibraryEventReceiver, IDisposable
     public bool MotionTweenSnap { get { return motionTweenSnap; } set { motionTweenSnap = value; root?.SetOrRemoveAttribute("motionTweenSnap", value, DefaultValues.MotionTweenSnap); } }
     public bool HasCustomEase { get { return hasCustomEase; } set { hasCustomEase = value; root?.SetOrRemoveAttribute("hasCustomEase", value, DefaultValues.HasCustomEase); } }
     public bool Bookmark { get { return bookmark; } set { bookmark = value; root?.SetOrRemoveAttribute("bookmark", value, DefaultValues.Bookmark); } }
+    public bool UseSingleEaseCurve { get { return useSingleEaseCurve; } set { useSingleEaseCurve = value; root?.SetOrRemoveAttribute("useSingleEaseCurve", value, DefaultValues.UseSingleEaseCurve); } }
     public string EaseMethodName { get { return easeMethodName; } private set { easeMethodName = value; root?.SetOrRemoveAttribute("easeMethodName", value, DefaultValues.EaseMethodName); } }
+    public string MotionTweenRotate { get { return motionTweenRotate; } set { motionTweenRotate = value; root?.SetOrRemoveAttribute("motionTweenRotate", value, DefaultValues.MotionTweenRotate); } }
     private static readonly HashSet<string> AcceptableSoundSyncs = new HashSet<string> { "event", "start", "stop", "stream" };
     public ReadOnlyCollection<Element> Elements { get { return elements.AsReadOnly(); } }
     private void LoadElements(in XElement frameNode)
@@ -158,6 +164,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         duration = (int?)frameNode.Attribute("duration") ?? DefaultValues.Duration;
         keyMode = (int?)frameNode.Attribute("keyMode") ?? DefaultValues.KeyMode;
         inPoint44 = (int?)frameNode.Attribute("inPoint44") ?? DefaultValues.InPoint44;
+        motionTweenRotateTimes = (int?)frameNode.Attribute("motionTweenRotateTimes") ?? DefaultValues.MotionTweenRotateTimes;
         labelType = (string?)frameNode.Attribute("labelType") ?? DefaultValues.LabelType;
         name = (string?)frameNode.Attribute("name") ?? DefaultValues.Name;
         soundName = (string?)frameNode.Attribute("soundName") ?? DefaultValues.SoundName;
@@ -166,6 +173,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         motionTweenSnap = (bool?)frameNode.Attribute("motionTweenSnap") ?? DefaultValues.MotionTweenSnap;
         hasCustomEase = (bool?)frameNode.Attribute("hasCustomEase") ?? DefaultValues.HasCustomEase;
         easeMethodName = (string?)frameNode.Attribute("easeMethodName") ?? DefaultValues.EaseMethodName;
+        motionTweenRotate = (string?)frameNode.Attribute("motionTweenRotate") ?? DefaultValues.MotionTweenRotate;
         this.library = library;
         elements = new List<Element>();
         eases = new List<IEase>();
@@ -190,6 +198,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         duration = other.duration;
         keyMode = other.keyMode;
         inPoint44 = other.inPoint44;
+        motionTweenRotateTimes = other.motionTweenRotateTimes;
         labelType = other.labelType;
         name = other.name;
         soundName = other.soundName;
@@ -198,6 +207,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         motionTweenSnap = other.motionTweenSnap;
         hasCustomEase = other.hasCustomEase;
         easeMethodName = other.easeMethodName;
+        motionTweenRotate = other.motionTweenRotate;
         library = other.library;
         elements = new List<Element>();
         eases = new List<IEase>();
@@ -336,9 +346,16 @@ public class Frame : ILibraryEventReceiver, IDisposable
     }
     public double GetTweenMultiplier(int frameIndex, string target = "all")
     {
-        if (eases.Count == 0) return 1;
-        if(frameIndex >= duration) throw new ArgumentOutOfRangeException(nameof(frameIndex), $"Frame index {frameIndex} is greater than duration {duration}");
-        IEase? targetEase = eases.FirstOrDefault(ease => ease.Target == target) ?? throw new ArgumentException($"No ease found for target: {target}");
+        if (!useSingleEaseCurve && target == "all") throw new ArgumentException($"Target {target} is not supported for multiple ease curve mode", nameof(target));
+        if (frameIndex >= duration) throw new ArgumentOutOfRangeException(nameof(frameIndex), $"Frame index {frameIndex} is greater than duration {duration}");
+        if (useSingleEaseCurve)
+        {
+            // bandaid fix for now; need to properly implement default eases simliar to matrices
+            IEase allCurve = eases.FirstOrDefault(x => x.Target == "all") ?? new Ease(ns);
+            return allCurve.GetMultiplier(frameIndex, duration);
+        }
+        IEase? targetEase = eases.FirstOrDefault(x => x.Target == target);
+        if (targetEase is null) return (new Ease(ns) as IEase).GetMultiplier(frameIndex, duration);
         return targetEase.GetMultiplier(frameIndex, duration);
     }
 }

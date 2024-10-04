@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
-namespace SkiaRendering
+namespace Rendering
 {
     /// <summary>
     /// Utils for converting CSXFL gradient elements into their equivalent SVG elements.
