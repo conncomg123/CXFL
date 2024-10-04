@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
-namespace SkiaRendering
+namespace Rendering
 {
     /// <summary>
     /// Utils for converting a XFL DOMShape element into its equivalent SVG path elements.

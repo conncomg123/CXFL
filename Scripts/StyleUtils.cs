@@ -1,5 +1,5 @@
 ﻿using CsXFL;
-using SkiaRendering;
+using Rendering;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
-namespace SkiaRendering
+namespace Rendering
 {
     /// <summary>
     /// Utils for converting CSXFL Fill/StrokeStyle elements into their equivalent SVG elements.

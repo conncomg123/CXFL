@@ -1,13 +1,11 @@
 using CsXFL;
-using SixLabors.Fonts;
 using System.Collections.Concurrent;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
-using SixLabors.Fonts;
 
-namespace SkiaRendering;
+namespace Rendering;
 
 public class SVGRenderer
 {
@@ -184,6 +182,22 @@ public class SVGRenderer
 
         return (defs, body);
     }
+    private static (Matrix?, Color?) ParseClassicTween(Frame srcFrame, Frame destFrame, int frameOffset, int elementIndex)
+    {
+        if (srcFrame.IsEmpty() || destFrame.IsEmpty()) return (null, null);
+        // check if both frames have at least one symbolInstance
+        if (!srcFrame.Elements.OfType<SymbolInstance>().Any() || !destFrame.Elements.OfType<SymbolInstance>().Any()) return (null, null);
+        if (srcFrame.Elements[elementIndex] is not SymbolInstance si) return (null, null);
+        int rotation = srcFrame.MotionTweenRotateTimes;
+        if (srcFrame.MotionTweenRotate == "clockwise") rotation = -rotation;
+        Matrix firstMat = si.Matrix;
+        Matrix lastMat = destFrame.Elements.OfType<SymbolInstance>().First().Matrix;
+        Color firstColor = si.Color;
+        Color lastColor = destFrame.Elements.OfType<SymbolInstance>().First().Color;
+        Matrix interpMat = TweenUtils.MatrixInterpolation(firstMat, lastMat, rotation, srcFrame, frameOffset, si.TransformationPoint);
+        Color interpColor = TweenUtils.ColorInterpolation(firstColor, lastColor, srcFrame, frameOffset);
+        return (interpMat, interpColor);
+    }
     private (Dictionary<string, XElement>, List<XElement>) RenderLayer(Layer layer, int frameIndex, string id, Color colorEffect, bool insideMask, string? maskId = null, bool isMaskLayer = false)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
@@ -194,11 +208,21 @@ public class SVGRenderer
         }
         Frame frame = layer.GetFrame(frameIndex);
         int frameOffset = frameIndex - frame.StartFrame;
+        bool hasValidClassicTween = frame.KeyMode.Equals((int)Frame.KeyModes.ClassicTween) && frame.StartFrame + frame.Duration < layer.GetFrameCount();
+        Frame? nextFrame;
         for (int i = 0; i < frame.Elements.Count; i++)
         {
             Dictionary<string, XElement> d;
             List<XElement> b;
-            (d, b) = RenderElement(frame.Elements[i], $"{id}_{i}", frameOffset, colorEffect, insideMask, isMaskLayer);
+            Matrix? interpMat = null;
+            Color? interpColor = null;
+            if (hasValidClassicTween)
+            {
+                nextFrame = layer.GetFrame(frame.StartFrame + frame.Duration);
+                (interpMat, interpColor) = ParseClassicTween(frame, nextFrame, frameOffset, i);
+            }
+            colorEffect = (frame.Elements[i] as SymbolInstance)?.Color ?? colorEffect;
+            (d, b) = RenderElement(frame.Elements[i], $"{id}_{i}", frameOffset, interpColor ?? colorEffect, insideMask, isMaskLayer, interpMat);
             foreach (var def in d)
             {
                 defs[def.Key] = def.Value;
@@ -214,14 +238,14 @@ public class SVGRenderer
         }
         return (defs, body);
     }
-    private (Dictionary<string, XElement>, List<XElement>) RenderElement(Element element, string id, int frameOffset, Color colorEffect, bool insideMask, bool isMaskShape = false)
+    private (Dictionary<string, XElement>, List<XElement>) RenderElement(Element element, string id, int frameOffset, Color colorEffect, bool insideMask, bool isMaskShape = false, Matrix? interpMat = null)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
         List<XElement> body = new List<XElement>();
         if (element is SymbolInstance si)
         {
             if (si.SymbolType != "graphic") return (defs, body);
-            (defs, body) = RenderTimeline((si.CorrespondingItem as SymbolItem)!.Timeline, GetLoopFrame(si, frameOffset), colorEffect, insideMask, "symbol", isMaskShape);
+            (defs, body) = RenderTimeline((si.CorrespondingItem as SymbolItem)!.Timeline, GetLoopFrame(si, frameOffset), Color.DefaultColor(), insideMask, "symbol", isMaskShape);
         }
         else if (element is Text text)
         {
@@ -257,21 +281,33 @@ public class SVGRenderer
         }
         if (element is not CsXFL.Group)
         {
-            Matrix mat = element.Matrix;
-            if (!Matrix.IsDefaultMatrix(mat))
+            Matrix mat = interpMat ?? element.Matrix;
+            if (!Matrix.IsDefaultMatrix(mat) || !IsColorIdentity(colorEffect))
             {
-                string matrix = string.Join(", ", MatrixToList(mat));
-                XElement transform = new XElement(svgNs + "g", new XAttribute("transform", $"matrix({matrix})"));
+                XElement g = new XElement(svgNs + "g");
+                if (!Matrix.IsDefaultMatrix(mat))
+                {
+                    string matrix = string.Join(", ", MatrixToList(mat));
+                    g.Add(new XAttribute("transform", $"matrix({matrix})"));
+                }
+                if (!IsColorIdentity(colorEffect))
+                {
+                    var colorSVG = ColorEffectUtils.ConvertColorEffectToSVG(colorEffect);
+                    string colorId = (string)colorSVG.Attribute("id")!;
+                    defs[colorId] = colorSVG;
+                    g.Add(new XAttribute("filter", $"url(#{colorId})"));
+                }
                 foreach (XElement element_ in body)
                 {
-                    transform.Add(element_);
+                    g.Add(element_);
                 }
-                body = new List<XElement> { transform };
+                body = new List<XElement> { g };
             }
         }
 
         return (defs, body);
     }
+
 
     private XElement HandleBitmap(BitmapInstance bitmap)
     {
@@ -392,13 +428,7 @@ public class SVGRenderer
             fill_g.SetAttributeValue("id", fill_id);
             defs[fill_id] = fill_g;
             XElement fill_use = new XElement(svgNs + "use", new XAttribute(HREF, $"#{fill_id}"));
-            if (!IsColorIdentity(colorEffect))
-            {
-                string colorId = colorEffect.Root?.Attribute("id")?.Value ?? throw new ArgumentNullException();
-                // assume this function exists
-                defs[colorId] = ColorEffectUtils.ConvertColorEffectToSVG(colorEffect);
-                fill_use.SetAttributeValue("filter", $"url(#{colorId})");
-            }
+
             body.Add(fill_use);
             if (stroke_g is not null)
             {

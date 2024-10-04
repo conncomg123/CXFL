@@ -2,7 +2,7 @@
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-namespace SkiaRendering
+namespace Rendering
 {
     // Logic and Documentation largely taken from [https://github.com/PluieElectrique/xfl2svg/blob/master/xfl2svg/shape/edge.py]
     // One aspect that had to be accounted for is the use of defaultdict, which assigns default

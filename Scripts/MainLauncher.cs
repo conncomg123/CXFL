@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SkiaRendering
+namespace Rendering
 {
     internal class MainLauncher
     {
