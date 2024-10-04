@@ -205,7 +205,7 @@ public class SVGRenderer
             }
             // add b to a new XElement g for organization and give it a name attribute
             XElement g = new XElement(svgNs + "g", new XAttribute("name", $"{id}_{i}"));
-            if (insideMask) g.SetAttributeValue("mask", $"url(#{maskId})");
+            if (insideMask && !isMaskLayer) g.SetAttributeValue("mask", $"url(#{maskId})");
             foreach (XElement e in b)
             {
                 g.Add(e);
