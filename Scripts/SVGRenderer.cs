@@ -290,7 +290,7 @@ public class SVGRenderer
                     string matrix = string.Join(", ", MatrixToList(mat));
                     g.Add(new XAttribute("transform", $"matrix({matrix})"));
                 }
-                if (!IsColorIdentity(colorEffect))
+                if (!IsColorIdentity(colorEffect) && !isMaskShape)
                 {
                     var colorSVG = ColorEffectUtils.ConvertColorEffectToSVG(colorEffect);
                     string colorId = (string)colorSVG.Attribute("id")!;
