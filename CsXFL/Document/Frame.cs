@@ -44,6 +44,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
     private bool registeredForSoundItem, motionTweenSnap, hasCustomEase, bookmark, useSingleEaseCurve;
     private Library? library;
     internal XElement? Root { get { return root; } }
+    public string Ns { get { return ns.ToString(); } }
     public int StartFrame { get { return startFrame; } set { startFrame = value; root?.SetAttributeValue("index", value); } }
     public int Duration { get { return duration; } set { duration = value; root?.SetOrRemoveAttribute("duration", value, DefaultValues.Duration); } }
     public int KeyMode { get { return keyMode; } set { keyMode = value; root?.SetOrRemoveAttribute("keyMode", value, DefaultValues.KeyMode); } }
@@ -172,6 +173,8 @@ public class Frame : ILibraryEventReceiver, IDisposable
         tweenType = (string?)frameNode.Attribute("tweenType") ?? DefaultValues.TweenType;
         motionTweenSnap = (bool?)frameNode.Attribute("motionTweenSnap") ?? DefaultValues.MotionTweenSnap;
         hasCustomEase = (bool?)frameNode.Attribute("hasCustomEase") ?? DefaultValues.HasCustomEase;
+        bookmark = (bool?)frameNode.Attribute("bookmark") ?? DefaultValues.Bookmark;
+        useSingleEaseCurve = (bool?)frameNode.Attribute("useSingleEaseCurve") ?? DefaultValues.UseSingleEaseCurve;
         easeMethodName = (string?)frameNode.Attribute("easeMethodName") ?? DefaultValues.EaseMethodName;
         motionTweenRotate = (string?)frameNode.Attribute("motionTweenRotate") ?? DefaultValues.MotionTweenRotate;
         this.library = library;
