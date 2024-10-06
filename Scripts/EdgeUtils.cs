@@ -16,7 +16,7 @@ namespace Rendering
         // <fills> element- indicate the stroke style or fill style that will fill the shape
         // <edges> element- contain <Edge> elements-
         // "edges" attribute- string of commands and coordinates that indicate shape outline
-        
+
         // outline is broken into pieces called segments- represented here as "point lists"
         // This outline will then be filled in using <fills> elements
         // Process: "edges" strings -> list of points -> SVG path elements -> render SVG as bitmap
@@ -50,7 +50,7 @@ namespace Rendering
         public static float ParseNumber(string numberString)
         {
             // Check if the coordinate is signed and 32-bit fixed-point number in hex
-            if(numberString[0] == '#')
+            if (numberString[0] == '#')
             {
                 // Split the coordinate into the integer and fractional parts
                 string[] parts = numberString.Substring(1).Split('.');
@@ -66,6 +66,107 @@ namespace Rendering
                 // The number is a decimal number. Scale it down by 20.
                 return float.Parse(numberString) / 20f;
             }
+        }
+
+        /// <summary>
+        /// Gets the bounding box of a line segment.
+        /// </summary>
+        /// <param name="point1">First point of line segment.</param>
+        /// <param name="point2">Second point of line segment.</param>
+        /// <returns></returns>
+        public (double, double, double, double) GetLineBoundingBox((double, double) point1, (double, double) point2)
+        {
+            return (Math.Min(point1.Item1, point2.Item1), Math.Min(point1.Item2, point2.Item2),
+                Math.Max(point1.Item1, point2.Item1), Math.Max(point1.Item2, point2.Item2));
+        }
+
+        /// <summary>
+        /// Gets a point on a quadratic Bezier curve.
+        /// </summary>
+        /// <param name="point1">Start point of Bezier curve.</param>
+        /// <param name="point2">Control point of Beizer curve.</param>
+        /// <param name="point3">End point of Bezier curve.</param>
+        /// <param name="t">How far from the start point the point being calculated is [0, 1]- with
+        /// 0 being the start point and 1 being the end point.</param>
+        /// <returns>A point on the Bezier curve that is t from the start point.</returns>
+        public (double, double) GetPointOnQuadraticBezier((double, double) point1,
+            (double, double) point2, (double, double) point3, double t)
+        {
+            double x = (1 - t) * ((1 - t) * point1.Item1 + t * point2.Item1) + t * ((1 - t) * point2.Item1 + point3.Item1);
+            double y = (1 - t) * ((1 - t) * point1.Item2 + t * point2.Item2) + t * ((1 - t) * point2.Item2 + point3.Item2);
+            return (x, y);
+        }
+
+        public (double, double) GetQuadraticCriticalPoints((double, double) point1,
+            (double, double) point2, (double, double) point3)
+        {
+            double xDenom = point1.Item1 - 2 * point2.Item1 + point3.Item1;
+            double xCritical = 0;
+            double yCritical = 0;
+
+            if (xDenom == 0)
+            {
+                xCritical = Double.MaxValue;
+            }
+            else
+            {
+                xCritical = (point1.Item1 - point2.Item2) / xDenom;
+            }
+
+            double yDenom = point1.Item2 - 2 * point2.Item2 + point3.Item2;
+            if (yDenom == 0)
+            {
+                yCritical = Double.MaxValue;
+            }
+            else
+            {
+                yCritical = (point1.Item1 - point2.Item2) / yDenom;
+            }
+
+            return (xCritical, yCritical);
+        }
+
+        /// <summary>
+        /// Gets the bounding box of a quadratic Bezier curve.
+        /// </summary>
+        /// <param name="point1">Start point of Bezier curve.</param>
+        /// <param name="controlPoint">Control point of Beizer curve.</param>
+        /// <param name="point3">End point of Bezier curve.</param>
+        /// <returns></returns>
+        public (double, double, double, double) GetQuadraticBoundingBox ((double, double) point1,
+            (double, double) controlPoint, (double, double) point2)
+        {
+            (double, double) criticalPoints = GetQuadraticCriticalPoints(point1, controlPoint, point2);
+            (double, double) point3, point4;
+            
+            if(criticalPoints.Item1 > 0 && criticalPoints.Item1 < 1)
+            {
+                point3 = GetPointOnQuadraticBezier(point1, controlPoint, point2, criticalPoints.Item1);
+            }
+            else
+            {
+                // Pick either the start or the end of the curve arbitrarily so it doesn't affect
+                // the max/min point calculation
+                point3 = point1;
+            }
+
+            if(criticalPoints.Item2 > 0 && criticalPoints.Item2 < 1)
+            {
+                point4 = GetPointOnQuadraticBezier(point1, controlPoint, point2, criticalPoints.Item2);
+            }
+            else
+            {
+                // Pick either the start or the end of the curve arbitrarily so it doesn't affect
+                // the max/min point calculation
+                point4 = point1;
+            }
+
+            return (
+                Math.Min(Math.Min(point1.Item1, point2.Item1), Math.Min(point3.Item1, point4.Item1)),
+                Math.Min(Math.Min(point1.Item2, point2.Item2), Math.Min(point3.Item2, point4.Item2)),
+                Math.Max(Math.Max(point1.Item1, point2.Item1), Math.Max(point3.Item1, point4.Item1)),
+                Math.Max(Math.Max(point1.Item2, point2.Item2), Math.Max(point3.Item2, point4.Item2))
+            );
         }
 
         //Point Format: "x y" string, "quadto" command control (start) point- "[x y]"
