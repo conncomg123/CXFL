@@ -98,8 +98,8 @@ namespace Rendering
         public (double, double) GetPointOnQuadraticBezier((double, double) point1,
             (double, double) point2, (double, double) point3, double t)
         {
-            double x = (1 - t) * ((1 - t) * point1.Item1 + t * point2.Item1) + t * ((1 - t) * point2.Item1 + point3.Item1);
-            double y = (1 - t) * ((1 - t) * point1.Item2 + t * point2.Item2) + t * ((1 - t) * point2.Item2 + point3.Item2);
+            double x = (1 - t) * ((1 - t) * point1.Item1 + t * point2.Item1) + t * ((1 - t) * point2.Item1 + t + point3.Item1);
+            double y = (1 - t) * ((1 - t) * point1.Item2 + t * point2.Item2) + t * ((1 - t) * point2.Item2 + t + point3.Item2);
             return (x, y);
         }
 
