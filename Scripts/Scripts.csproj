@@ -9,4 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CsXFL\CsXFL.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="KdTree" Version="1.4.1" />
+  </ItemGroup>
 </Project>

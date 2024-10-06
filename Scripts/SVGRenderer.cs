@@ -198,6 +198,16 @@ public class SVGRenderer
         Color interpColor = TweenUtils.ColorInterpolation(firstColor, lastColor, srcFrame, frameOffset);
         return (interpMat, interpColor);
     }
+    private static Shape? ParseShapeTween(Frame srcFrame, Frame destFrame, int frameOffset, int elementIndex)
+    {
+        if (srcFrame.IsEmpty() || destFrame.IsEmpty()) return null;
+        if (!srcFrame.Elements.OfType<Shape>().Any() || !destFrame.Elements.OfType<Shape>().Any()) return null;
+        if (srcFrame.Elements[elementIndex] is not Shape shape) return null;
+        Shape firstShape = shape;
+        Shape lastShape = destFrame.Elements.OfType<Shape>().First();
+        Shape interpShape = TweenUtils.ShapeInterpolation(firstShape, lastShape, srcFrame, frameOffset);
+        return interpShape; 
+    }
     private (Dictionary<string, XElement>, List<XElement>) RenderLayer(Layer layer, int frameIndex, string id, Color colorEffect, bool insideMask, string? maskId = null, bool isMaskLayer = false)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
@@ -209,6 +219,7 @@ public class SVGRenderer
         Frame frame = layer.GetFrame(frameIndex);
         int frameOffset = frameIndex - frame.StartFrame;
         bool hasValidClassicTween = frame.KeyMode.Equals((int)Frame.KeyModes.ClassicTween) && frame.StartFrame + frame.Duration < layer.GetFrameCount();
+        bool hasValidShapeTween = frame.TweenType == "shape" && frame.StartFrame + frame.Duration < layer.GetFrameCount();
         Frame? nextFrame;
         for (int i = 0; i < frame.Elements.Count; i++)
         {
@@ -216,13 +227,19 @@ public class SVGRenderer
             List<XElement> b;
             Matrix? interpMat = null;
             Color? interpColor = null;
+            Shape? interpShape = null;
             if (hasValidClassicTween)
             {
                 nextFrame = layer.GetFrame(frame.StartFrame + frame.Duration);
                 (interpMat, interpColor) = ParseClassicTween(frame, nextFrame, frameOffset, i);
             }
+            else if (hasValidShapeTween)
+            {
+                nextFrame = layer.GetFrame(frame.StartFrame + frame.Duration);
+                interpShape = ParseShapeTween(frame, nextFrame, frameOffset, i);
+            }
             colorEffect = (frame.Elements[i] as SymbolInstance)?.Color ?? colorEffect;
-            (d, b) = RenderElement(frame.Elements[i], $"{id}_{i}", frameOffset, interpColor ?? colorEffect, insideMask, isMaskLayer, interpMat);
+            (d, b) = RenderElement(frame.Elements[i], $"{id}_{i}", frameOffset, interpColor ?? colorEffect, insideMask, isMaskLayer, interpMat, interpShape);
             foreach (var def in d)
             {
                 defs[def.Key] = def.Value;
@@ -238,7 +255,7 @@ public class SVGRenderer
         }
         return (defs, body);
     }
-    private (Dictionary<string, XElement>, List<XElement>) RenderElement(Element element, string id, int frameOffset, Color colorEffect, bool insideMask, bool isMaskShape = false, Matrix? interpMat = null)
+    private (Dictionary<string, XElement>, List<XElement>) RenderElement(Element element, string id, int frameOffset, Color colorEffect, bool insideMask, bool isMaskShape = false, Matrix? interpMat = null, Shape? interpShape = null)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
         List<XElement> body = new List<XElement>();
@@ -254,7 +271,7 @@ public class SVGRenderer
         }
         else if (element is Shape shape)
         {
-            (defs, body) = HandleDomShape(shape, id, colorEffect, insideMask, isMaskShape);
+            (defs, body) = HandleDomShape(interpShape ?? shape, id, colorEffect, insideMask, isMaskShape);
         }
         else if (element is CsXFL.Group group)
         {

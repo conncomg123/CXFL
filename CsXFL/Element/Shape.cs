@@ -7,9 +7,9 @@ public class Shape : Element
     private List<FillStyle> fills;
     private List<StrokeStyle> strokes;
     private List<Edge> edges;
-    public List<FillStyle> Fills { get { return fills; } }
-    public List<StrokeStyle> Strokes { get { return strokes; } }
-    public List<Edge> Edges { get { return edges; } }
+    public List<FillStyle> Fills { get { return fills; } set { fills = value; } }
+    public List<StrokeStyle> Strokes { get { return strokes; } set { strokes = value; } }
+    public List<Edge> Edges { get { return edges; } set { edges = value; } }
 
     public Shape(XElement root) : base(root, "shape")
     {
@@ -19,7 +19,12 @@ public class Shape : Element
         strokes = root.Element(ns + StrokeStyle.STROKE_STYLES_NODEGROUP_IDENTIFIER)?.Elements(ns + StrokeStyle.STROKE_STYLE_NODE_IDENTIFIER)?.Select(x => new StrokeStyle(x)).ToList() ?? new List<StrokeStyle>();
         edges = root.Element(ns + Edge.EDGES_NODEGROUP_IDENTIFIER)?.Elements(ns + Edge.EDGE_NODE_IDENTIFIER)?.Select(x => new Edge(x)).ToList() ?? new List<Edge>();
     }
-
+    public Shape(Shape other) : base(other)
+    {
+        fills = other.fills.Select(x => new FillStyle(x)).ToList();
+        strokes = other.strokes.Select(x => new StrokeStyle(x)).ToList();
+        edges = other.edges.Select(x => new Edge(x)).ToList();
+    }
 }
 
 public class FillStyle
@@ -29,15 +34,16 @@ public class FillStyle
     private readonly XElement root;
     private readonly XNamespace ns;
     private readonly int index;
-    private readonly SolidColor? solidColor;
-    private readonly LinearGradient? linearGradient;
-    private readonly RadialGradient? radialGradient;
-    private readonly BitmapFill? bitmapFill;
+    private SolidColor? solidColor;
+    private LinearGradient? linearGradient;
+    private RadialGradient? radialGradient;
+    private BitmapFill? bitmapFill;
+    public XElement Root { get { return root; } }
     public int Index { get { return index; } }
-    public SolidColor? SolidColor { get { return solidColor; } }
-    public LinearGradient? LinearGradient { get { return linearGradient; } }
-    public RadialGradient? RadialGradient { get { return radialGradient; } }
-    public BitmapFill? BitmapFill { get { return bitmapFill; } }
+    public SolidColor? SolidColor { get { return solidColor; } set { solidColor = value; } }
+    public LinearGradient? LinearGradient { get { return linearGradient; } set { linearGradient = value; } }
+    public RadialGradient? RadialGradient { get { return radialGradient; } set { radialGradient = value; } }
+    public BitmapFill? BitmapFill { get { return bitmapFill; } set { bitmapFill = value; } }
 
     internal FillStyle(XElement root)
     {
@@ -60,6 +66,16 @@ public class FillStyle
         {
             bitmapFill = new BitmapFill(root.Element(ns + BitmapFill.BITMAPFILL_NODE_IDENTIFIER)!);
         }
+    }
+    public FillStyle(FillStyle other)
+    {
+        root = new XElement(other.Root);
+        ns = other.ns;
+        index = other.Index;
+        solidColor = other.SolidColor is null ? null : new SolidColor(other.SolidColor);
+        linearGradient = other.LinearGradient is null ? null : new LinearGradient(other.LinearGradient);
+        radialGradient = other.RadialGradient is null ? null : new RadialGradient(other.RadialGradient);
+        bitmapFill = other.BitmapFill is null ? null : new BitmapFill(other.BitmapFill);
     }
 }
 public class SolidColor
@@ -89,6 +105,12 @@ public class SolidColor
         alpha = DefaultValues.Alpha;
         root = new XElement(ns + SOLID_COLOR_NODE_IDENTIFIER);
     }
+    public SolidColor(SolidColor other)
+    {
+        root = new XElement(other.root);
+        color = other.color;
+        alpha = other.alpha;
+    }
 }
 public abstract class Gradient
 {
@@ -106,7 +128,7 @@ public abstract class Gradient
     public string SpreadMethod { get { return spreadMethod; } set { spreadMethod = value; root?.SetOrRemoveAttribute("spreadMethod", value, DefaultValues.SpreadMethod); } }
     public string InterpolationMethod { get { return interpolationMethod; } set { interpolationMethod = value; root?.SetOrRemoveAttribute("interpolationMethod", value, DefaultValues.InterpolationMethod); } }
     public Matrix Matrix { get { return matrix; } set { SetMatrix(value); } }
-    public List<GradientEntry> GradientEntries { get { return gradientEntries; } }
+    public List<GradientEntry> GradientEntries { get { return gradientEntries; } set { gradientEntries = value; } }
     private void SetMatrix(Matrix matrix)
     {
         // set values, not the matrix itself
@@ -160,7 +182,7 @@ public class RadialGradient : Gradient
     {
         focalPointRatio = (double?)radialGradientNode.Attribute("focalPointRatio") ?? DefaultValues.FocalPointRatio;
     }
-    internal RadialGradient(in RadialGradient other) : base(other)
+    public RadialGradient(in RadialGradient other) : base(other)
     {
         focalPointRatio = other.focalPointRatio;
     }
@@ -170,7 +192,7 @@ public class LinearGradient : Gradient
     public const string LINEAR_GRADIENT_NODE_IDENTIFIER = "LinearGradient", LINEAR_GRADIENT_NODEGROUP_IDENTIFIER = "fill";
     internal LinearGradient(XNamespace ns) : base(ns) { }
     internal LinearGradient(in XElement linearGradientNode) : base(linearGradientNode) { }
-    internal LinearGradient(in LinearGradient other) : base(other) { }
+    public LinearGradient(in LinearGradient other) : base(other) { }
 }
 public class BitmapFill
 {
@@ -222,13 +244,13 @@ public class Edge
     private readonly XElement root;
     private readonly XNamespace ns;
     private readonly int? fillStyle0, fillStyle1, strokeStyle;
-    private readonly string? edges, cubics;
+    private string? edges, cubics;
     public XElement Root { get { return root; } }
     public int? FillStyle0 { get { return fillStyle0; } }
     public int? FillStyle1 { get { return fillStyle1; } }
     public int? StrokeStyle { get { return strokeStyle; } }
-    public string? Edges { get { return edges; } }
-    public string? Cubics { get { return cubics; } }
+    public string? Edges { get { return edges; } set { edges = value; root.SetOrRemoveAttribute("edges", value, ""); } }
+    public string? Cubics { get { return cubics; } set { cubics = value; root.SetOrRemoveAttribute("cubics", value, ""); } }
     internal Edge(XElement root)
     {
         this.root = root;
@@ -238,6 +260,16 @@ public class Edge
         strokeStyle = (int?)root.Attribute("strokeStyle");
         edges = root.Attribute("edges")?.Value;
         cubics = root.Attribute("cubics")?.Value;
+    }
+    public Edge(Edge other)
+    {
+        root = new XElement(other.Root);
+        ns = other.ns;
+        fillStyle0 = other.fillStyle0;
+        fillStyle1 = other.fillStyle1;
+        strokeStyle = other.strokeStyle;
+        edges = other.edges;
+        cubics = other.cubics;
     }
 }
 public class StrokeStyle
@@ -282,6 +314,36 @@ public class StrokeStyle
 
         }
     }
+    public StrokeStyle(StrokeStyle other)
+    {
+        root = new XElement(other.Root);
+        ns = other.ns;
+        index = other.index;
+        if(other.stroke is SolidStroke ss)
+        {
+            stroke = new SolidStroke(ss);
+        }
+        else if(other.stroke is DashedStroke ds)
+        {
+            stroke = new DashedStroke(ds);
+        }
+        else if(other.stroke is DottedStroke dos)
+        {
+            stroke = new DottedStroke(dos);
+        }
+        else if(other.stroke is RaggedStroke rs)
+        {
+            stroke = new RaggedStroke(rs);
+        }
+        else if(other.stroke is StippleStroke sts)
+        {
+            stroke = new StippleStroke(sts);
+        }
+        else if(other.stroke is HatchedStroke hs)
+        {
+            stroke = new HatchedStroke(hs);
+        } else throw new Exception("Unknown stroke type: " + other.stroke);
+    }
 }
 public abstract class Stroke
 {
@@ -312,9 +374,9 @@ public abstract class Stroke
     public string Joints { get { return joints; } set { joints = value; root?.SetOrRemoveAttribute("joints", value, DefaultValues.Joints); } }
     public double Weight { get { return weight; } set { weight = value; root?.SetOrRemoveAttribute("weight", value, DefaultValues.Weight); } }
     public int MiterLimit { get { return miterLimit; } set { miterLimit = value; root?.SetOrRemoveAttribute("miterLimit", value, DefaultValues.MiterLimit); } }
-    public SolidColor? SolidColor { get { return solidColor; } }
-    public LinearGradient? LinearGradient { get { return linearGradient; } }
-    public RadialGradient? RadialGradient { get { return radialGradient; } }
+    public SolidColor? SolidColor { get { return solidColor; } set { solidColor = value; } }
+    public LinearGradient? LinearGradient { get { return linearGradient; } set { linearGradient = value; } }
+    public RadialGradient? RadialGradient { get { return radialGradient; } set { radialGradient = value; } }
     public BitmapFill? BitmapFill { get { return bitmapFill; } }
     internal Stroke(XElement root)
     {
@@ -335,6 +397,21 @@ public abstract class Stroke
         else if (root.Element(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER)!.Element(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER) != null)
             bitmapFill = new BitmapFill(root.Element(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER)!.Element(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER)!);
     }
+    public Stroke(Stroke other)
+    {
+        root = new XElement(other.Root);
+        ns = other.ns;
+        scaleMode = other.scaleMode;
+        caps = other.caps;
+        pixelHinting = other.pixelHinting;
+        joints = other.joints;
+        weight = other.weight;
+        miterLimit = other.miterLimit;
+        solidColor = other.solidColor;
+        linearGradient = other.linearGradient;
+        radialGradient = other.radialGradient;
+        bitmapFill = other.bitmapFill;
+    }
 }
 public class SolidStroke : Stroke
 {
@@ -352,10 +429,17 @@ public class SolidStroke : Stroke
         widthMarkers = root.Element(ns + WidthMarker.WIDTH_MARKERS_NODEGROUP_IDENTIFIER) is null ? null : root.Element(ns + WidthMarker.WIDTH_MARKERS_NODEGROUP_IDENTIFIER)!.Elements(ns + WidthMarker.WIDTH_MARKER_NODE_IDENTIFIER).Select(x => new WidthMarker(x)).ToList();
         solidStyle = root.Attribute("solidStyle")?.Value ?? DefaultValues.SolidStyle;
     }
+    public SolidStroke(SolidStroke other) : base(other)
+    {
+        widthMarkers = (other.widthMarkers is null) ? null : other.widthMarkers.Select(x => new WidthMarker(x)).ToList();
+        solidStyle = other.solidStyle;
+    }
 }
-public class DashedStroke(XElement root) : Stroke(root)
+public class DashedStroke : Stroke
 {
     public const string DASHED_STROKE_NODE_IDENTIFIER = "DashedStroke";
+    public DashedStroke(XElement root) : base(root) { }
+    public DashedStroke(DashedStroke other) : base(other) { }
 }
 public class DottedStroke : Stroke
 {
@@ -367,18 +451,29 @@ public class DottedStroke : Stroke
         dotSpace = (int?)root.Attribute("dotSpace") ?? throw new ArgumentNullException(nameof(root));
     }
 
+    public DottedStroke(DottedStroke other) : base(other)
+    {
+        dotSpace = other.dotSpace;
+    }
+
 }
-public class RaggedStroke(XElement root) : Stroke(root)
+public class RaggedStroke : Stroke
 {
     public const string RAGGED_STROKE_NODE_IDENTIFIER = "RaggedStroke";
+    public RaggedStroke(XElement root) : base(root) { }
+    public RaggedStroke(RaggedStroke other) : base(other) { }
 }
-public class StippleStroke(XElement root) : Stroke(root)
+public class StippleStroke : Stroke
 {
     public const string STIPPLE_STROKE_NODE_IDENTIFIER = "StippleStroke";
+    public StippleStroke(XElement root) : base(root) { }
+    public StippleStroke(StippleStroke other) : base(other) { }
 }
-public class HatchedStroke(XElement root) : Stroke(root)
+public class HatchedStroke : Stroke
 {
     public const string HATCHED_STROKE_NODE_IDENTIFIER = "HatchedStroke";
+    public HatchedStroke(XElement root) : base(root) { }
+    public HatchedStroke(HatchedStroke other) : base(other) { }
 }
 public class WidthMarker
 {
@@ -399,5 +494,13 @@ public class WidthMarker
         left = (double?)root.Attribute("left") ?? throw new ArgumentNullException(nameof(root));
         right = (double?)root.Attribute("right") ?? throw new ArgumentNullException(nameof(root));
         type = (string?)root.Attribute("type");
+    }
+    public WidthMarker(WidthMarker other)
+    {
+        root = new XElement(other.Root);
+        position = other.position;
+        left = other.left;
+        right = other.right;
+        type = other.type;
     }
 }
