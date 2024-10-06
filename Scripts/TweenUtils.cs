@@ -374,36 +374,35 @@ public static class TweenUtils
             throw new Exception($"Unknown fill style: {startFill}");
         }
     }
-    public static void ReplaceFill(StrokeStyle element, object start, object? repalcement)
+    public static void ReplaceFill(StrokeStyle element, object start, object? replacement)
     {
-        object newFill;
-        if (repalcement is SolidColor rsc)
+        if (replacement is SolidColor rsc)
         {
-            newFill = rsc;
+            element.Stroke.SolidColor = rsc;
         }
-        else if (repalcement is LinearGradient rlg)
+        else if (replacement is LinearGradient rlg)
         {
-            newFill = rlg;
+            element.Stroke.LinearGradient = rlg;
         }
-        else if (repalcement is RadialGradient rrg)
+        else if (replacement is RadialGradient rrg)
         {
-            newFill = rrg;
+            element.Stroke.RadialGradient = rrg;
         }
         else
         {
-            throw new Exception($"Unknown fill style: {repalcement}");
+            throw new Exception($"Unknown fill style: {replacement}");
         }
-        if (start is SolidColor sc)
+        if (start is SolidColor)
         {
-            element.Stroke.SolidColor = newFill as SolidColor;
+            element.Stroke.SolidColor = null; // this is bad-- should have function within Stroke/Fill to remove a fill type
         }
-        else if (start is LinearGradient lg)
+        else if (start is LinearGradient)
         {
-            element.Stroke.LinearGradient = newFill as LinearGradient;
+            element.Stroke.LinearGradient = null;
         }
-        else if (start is RadialGradient rg)
+        else if (start is RadialGradient)
         {
-            element.Stroke.RadialGradient = newFill as RadialGradient;
+            element.Stroke.RadialGradient = null;
         }
         else
         {
@@ -412,34 +411,33 @@ public static class TweenUtils
     }
     public static void ReplaceFill(FillStyle element, object start, object? repalcement)
     {
-        object newFill;
         if (repalcement is SolidColor rsc)
         {
-            newFill = rsc;
+            element.SolidColor = rsc;
         }
         else if (repalcement is LinearGradient rlg)
         {
-            newFill = rlg;
+            element.LinearGradient = rlg;
         }
         else if (repalcement is RadialGradient rrg)
         {
-            newFill = rrg;
+            element.RadialGradient = rrg;
         }
         else
         {
             throw new Exception($"Unknown fill style: {repalcement}");
         }
-        if (start is SolidColor sc)
+        if (start is SolidColor)
         {
-            element.SolidColor = newFill as SolidColor;
+            element.SolidColor = null;
         }
-        else if (start is LinearGradient lg)
+        else if (start is LinearGradient)
         {
-            element.LinearGradient = newFill as LinearGradient;
+            element.LinearGradient = null;
         }
-        else if (start is RadialGradient rg)
+        else if (start is RadialGradient)
         {
-            element.RadialGradient = newFill as RadialGradient;
+            element.RadialGradient = null;
         }
         else
         {
