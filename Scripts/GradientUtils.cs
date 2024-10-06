@@ -68,13 +68,19 @@ namespace Rendering
 
             return linearGradientElement;
         }
+        public static double GetRadius(RadialGradient gradient)
+        {
+            double norm = Math.Sqrt(Math.Pow(gradient.Matrix.A, 2) + Math.Pow(gradient.Matrix.B, 2));
+            double radius = norm * MAGIC_ADOBE_NUMBER;
+            return radius;
+        }
         public static XElement ConvertRadialGradientToSVG(RadialGradient radialGradient)
         {
             XElement radialGradientElement = new XElement(SVGRenderer.svgNs + "radialGradient");
             radialGradientElement.SetAttributeValue("id", GenerateUniqueId());
             radialGradientElement.SetAttributeValue("gradientUnits", "userSpaceOnUse");
             double norm = Math.Sqrt(Math.Pow(radialGradient.Matrix.A, 2) + Math.Pow(radialGradient.Matrix.B, 2));
-            double radius = norm * MAGIC_ADOBE_NUMBER;
+            double radius = GetRadius(radialGradient);
             double focalPoint = radius * radialGradient.FocalPointRatio;
             double a = radialGradient.Matrix.A / norm, b = radialGradient.Matrix.B / norm, c = radialGradient.Matrix.C / norm, d = radialGradient.Matrix.D / norm,
             tx = radialGradient.Matrix.Tx, ty = radialGradient.Matrix.Ty;

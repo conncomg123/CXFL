@@ -42,6 +42,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
     private int startFrame, duration, keyMode, inPoint44, motionTweenRotateTimes;
     private string labelType, name, soundName, soundSync, tweenType, easeMethodName, motionTweenRotate;
     private bool registeredForSoundItem, motionTweenSnap, hasCustomEase, bookmark, useSingleEaseCurve;
+    private MorphShape? morphShape;
     private Library? library;
     internal XElement? Root { get { return root; } }
     public string Ns { get { return ns.ToString(); } }
@@ -104,6 +105,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
     public string MotionTweenRotate { get { return motionTweenRotate; } set { motionTweenRotate = value; root?.SetOrRemoveAttribute("motionTweenRotate", value, DefaultValues.MotionTweenRotate); } }
     private static readonly HashSet<string> AcceptableSoundSyncs = new HashSet<string> { "event", "start", "stop", "stream" };
     public ReadOnlyCollection<Element> Elements { get { return elements.AsReadOnly(); } }
+    public MorphShape? MorphShape { get { return morphShape; } }
     private void LoadElements(in XElement frameNode)
     {
         List<XElement>? elementNodes = frameNode.Element(ns + Element.ELEMENTS_NODEGROUP_IDENTIFIER)?.Elements().ToList();
@@ -177,6 +179,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         useSingleEaseCurve = (bool?)frameNode.Attribute("useSingleEaseCurve") ?? DefaultValues.UseSingleEaseCurve;
         easeMethodName = (string?)frameNode.Attribute("easeMethodName") ?? DefaultValues.EaseMethodName;
         motionTweenRotate = (string?)frameNode.Attribute("motionTweenRotate") ?? DefaultValues.MotionTweenRotate;
+        morphShape = (frameNode.Element(ns + MorphShape.MORPHSHAPE_NODE_IDENTIEFIER) is null) ? null : new MorphShape(frameNode.Element(ns + MorphShape.MORPHSHAPE_NODE_IDENTIEFIER)!);
         this.library = library;
         elements = new List<Element>();
         eases = new List<IEase>();
@@ -211,6 +214,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         hasCustomEase = other.hasCustomEase;
         easeMethodName = other.easeMethodName;
         motionTweenRotate = other.motionTweenRotate;
+        morphShape = other.morphShape is null ? null : new MorphShape(other.morphShape);
         library = other.library;
         elements = new List<Element>();
         eases = new List<IEase>();
