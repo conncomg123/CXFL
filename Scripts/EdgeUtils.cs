@@ -69,12 +69,40 @@ namespace Rendering
         }
 
         /// <summary>
+        /// Merges two bounding boxes together.
+        /// </summary>
+        /// <param name="original">The first bounding box being merged.</param>
+        /// <param name="addition">The second bounding box being merged.</param>
+        /// <returns>A Rectangle representing the new combined bounding box.</returns>
+        public static Rectangle? MergeBoundingBoxes(Rectangle? original, Rectangle? addition)
+        {
+            if(addition == null)
+            {
+                return original;
+            }
+            else if(original == null)
+            {
+                return addition;
+            }
+
+            // The way that rectangles are stored is left = x of left side, top = y of top side, right = x of right side
+            // bottom = y of bottom side
+            // min x = left, max y = top, max x = right, min y = bottom
+            double minX = Math.Min(original.Left, addition.Left);
+            double maxY = Math.Max(original.Top, addition.Top);
+            double maxX = Math.Max(original.Right, addition.Right);
+            double minY = Math.Min(original.Bottom, addition.Bottom);
+
+            return new Rectangle(minX, maxY, maxX, minY);
+        }
+
+        /// <summary>
         /// Gets the bounding box of a line segment.
         /// </summary>
         /// <param name="point1">First point of line segment.</param>
         /// <param name="point2">Second point of line segment.</param>
         /// <returns></returns>
-        public Rectangle GetLineBoundingBox((double, double) point1, (double, double) point2)
+        public static Rectangle GetLineBoundingBox((double, double) point1, (double, double) point2)
         {
             // The way that rectangles are stored is left = x of left side, top = y of top side, right = x of right side
             // bottom = y of bottom side
@@ -95,7 +123,7 @@ namespace Rendering
         /// <param name="t">How far from the start point the point being calculated is [0, 1]- with
         /// 0 being the start point and 1 being the end point.</param>
         /// <returns>A point on the Bezier curve that is t from the start point.</returns>
-        public (double, double) GetPointOnQuadraticBezier((double, double) point1,
+        public static (double, double) GetPointOnQuadraticBezier((double, double) point1,
             (double, double) point2, (double, double) point3, double t)
         {
             double x = (1 - t) * ((1 - t) * point1.Item1 + t * point2.Item1) + t * ((1 - t) * point2.Item1 + t + point3.Item1);
@@ -103,7 +131,7 @@ namespace Rendering
             return (x, y);
         }
 
-        public (double, double) GetQuadraticCriticalPoints((double, double) point1,
+        public static (double, double) GetQuadraticCriticalPoints((double, double) point1,
             (double, double) point2, (double, double) point3)
         {
             double xDenom = point1.Item1 - 2 * point2.Item1 + point3.Item1;
@@ -139,7 +167,7 @@ namespace Rendering
         /// <param name="controlPoint">Control point of Beizer curve.</param>
         /// <param name="point3">End point of Bezier curve.</param>
         /// <returns>Bounding box assoicated with a quadratic Bezier curve.</returns>
-        public Rectangle GetQuadraticBoundingBox ((double, double) point1,
+        public static Rectangle GetQuadraticBoundingBox ((double, double) point1,
             (double, double) controlPoint, (double, double) point2)
         {
             (double, double) criticalPoints = GetQuadraticCriticalPoints(point1, controlPoint, point2);
@@ -193,7 +221,7 @@ namespace Rendering
         /// </summary>
         /// <param name="edges">The "edges" attribute of an Edge XFL element.</param>
         /// <returns>An enumerable of lists of string points in "x y" format- each list of points is a segment of the "edges" attribute.</returns>
-        public static IEnumerable<List<string>> ConvertEdgeFormatToPointLists(string edges)
+        public static IEnumerable<(List<string>, Rectangle?)> ConvertEdgeFormatToPointLists(string edges)
         {
             // As MatchCollection was written before .NET 2, it uses IEnumerable for iteration rather
             // than IEnumerable<T>, meaning it defaults to an enumerable of objects.
