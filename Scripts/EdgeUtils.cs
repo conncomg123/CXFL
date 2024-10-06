@@ -74,10 +74,16 @@ namespace Rendering
         /// <param name="point1">First point of line segment.</param>
         /// <param name="point2">Second point of line segment.</param>
         /// <returns></returns>
-        public (double, double, double, double) GetLineBoundingBox((double, double) point1, (double, double) point2)
+        public Rectangle GetLineBoundingBox((double, double) point1, (double, double) point2)
         {
-            return (Math.Min(point1.Item1, point2.Item1), Math.Min(point1.Item2, point2.Item2),
-                Math.Max(point1.Item1, point2.Item1), Math.Max(point1.Item2, point2.Item2));
+            // The way that rectangles are stored is left = x of left side, top = y of top side, right = x of right side
+            // bottom = y of bottom side
+            // min x = left, max y = top, max x = right, min y = bottom
+
+            Rectangle boundingBox = new Rectangle(Math.Min(point1.Item1, point2.Item1), Math.Max(point1.Item2, point2.Item2),
+                Math.Max(point1.Item1, point2.Item1), Math.Min(point1.Item2, point2.Item2));
+
+            return boundingBox;
         }
 
         /// <summary>
@@ -132,8 +138,8 @@ namespace Rendering
         /// <param name="point1">Start point of Bezier curve.</param>
         /// <param name="controlPoint">Control point of Beizer curve.</param>
         /// <param name="point3">End point of Bezier curve.</param>
-        /// <returns></returns>
-        public (double, double, double, double) GetQuadraticBoundingBox ((double, double) point1,
+        /// <returns>Bounding box assoicated with a quadratic Bezier curve.</returns>
+        public Rectangle GetQuadraticBoundingBox ((double, double) point1,
             (double, double) controlPoint, (double, double) point2)
         {
             (double, double) criticalPoints = GetQuadraticCriticalPoints(point1, controlPoint, point2);
@@ -161,12 +167,17 @@ namespace Rendering
                 point4 = point1;
             }
 
-            return (
-                Math.Min(Math.Min(point1.Item1, point2.Item1), Math.Min(point3.Item1, point4.Item1)),
-                Math.Min(Math.Min(point1.Item2, point2.Item2), Math.Min(point3.Item2, point4.Item2)),
-                Math.Max(Math.Max(point1.Item1, point2.Item1), Math.Max(point3.Item1, point4.Item1)),
-                Math.Max(Math.Max(point1.Item2, point2.Item2), Math.Max(point3.Item2, point4.Item2))
-            );
+            // The way that rectangles are stored is left = x of left side, top = y of top side, right = x of right side
+            // bottom = y of bottom side
+            // min x = left, max y = top, max x = right, min y = bottom
+
+            double minX = Math.Min(Math.Min(point1.Item1, point2.Item1), Math.Min(point3.Item1, point4.Item1));
+            double maxY = Math.Max(Math.Max(point1.Item2, point2.Item2), Math.Max(point3.Item2, point4.Item2));
+            double maxX = Math.Min(Math.Min(point1.Item2, point2.Item2), Math.Min(point3.Item2, point4.Item2));
+            double minY = Math.Max(Math.Max(point1.Item1, point2.Item1), Math.Max(point3.Item1, point4.Item1));
+
+            Rectangle boundingBox = new Rectangle(minX, maxY, maxX, minY);
+            return boundingBox;
         }
 
         //Point Format: "x y" string, "quadto" command control (start) point- "[x y]"
