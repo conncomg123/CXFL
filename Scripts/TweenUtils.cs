@@ -376,6 +376,22 @@ public static class TweenUtils
     }
     public static void ReplaceFill(StrokeStyle element, object start, object? replacement)
     {
+        if (start is SolidColor)
+        {
+            element.Stroke.SolidColor = null;
+        }
+        else if (start is LinearGradient)
+        {
+            element.Stroke.LinearGradient = null;
+        }
+        else if (start is RadialGradient)
+        {
+            element.Stroke.RadialGradient = null;
+        }
+        else
+        {
+            throw new Exception($"Unknown fill style: {start}");
+        }
         if (replacement is SolidColor rsc)
         {
             element.Stroke.SolidColor = rsc;
@@ -392,41 +408,9 @@ public static class TweenUtils
         {
             throw new Exception($"Unknown fill style: {replacement}");
         }
-        if (start is SolidColor)
-        {
-            element.Stroke.SolidColor = null; // this is bad-- should have function within Stroke/Fill to remove a fill type
-        }
-        else if (start is LinearGradient)
-        {
-            element.Stroke.LinearGradient = null;
-        }
-        else if (start is RadialGradient)
-        {
-            element.Stroke.RadialGradient = null;
-        }
-        else
-        {
-            throw new Exception($"Unknown fill style: {start}");
-        }
     }
     public static void ReplaceFill(FillStyle element, object start, object? repalcement)
     {
-        if (repalcement is SolidColor rsc)
-        {
-            element.SolidColor = rsc;
-        }
-        else if (repalcement is LinearGradient rlg)
-        {
-            element.LinearGradient = rlg;
-        }
-        else if (repalcement is RadialGradient rrg)
-        {
-            element.RadialGradient = rrg;
-        }
-        else
-        {
-            throw new Exception($"Unknown fill style: {repalcement}");
-        }
         if (start is SolidColor)
         {
             element.SolidColor = null;
@@ -442,6 +426,22 @@ public static class TweenUtils
         else
         {
             throw new Exception($"Unknown fill style: {start}");
+        }
+        if (repalcement is SolidColor rsc)
+        {
+            element.SolidColor = rsc;
+        }
+        else if (repalcement is LinearGradient rlg)
+        {
+            element.LinearGradient = rlg;
+        }
+        else if (repalcement is RadialGradient rrg)
+        {
+            element.RadialGradient = rrg;
+        }
+        else
+        {
+            throw new Exception($"Unknown fill style: {repalcement}");
         }
     }
     public static (List<StrokeStyle>, List<FillStyle>) InterpolateColorMaps(Shape startShape, Shape endShape, int frameIndex, Frame tweenFrame)
