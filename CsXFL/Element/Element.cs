@@ -64,8 +64,20 @@ public abstract class Element
         width = other.width;
         height = other.height;
         selected = other.selected;
-        matrix = new Matrix(root?.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER), root);
-        transformationPoint = new Point(root?.Element(ns + Point.TRANSFORMATION_POINT_NODE_IDENTIFIER)!.Element(ns + Point.POINT_NODE_IDENTIFIER)!);
+        matrix = new Matrix(other.matrix);
+        matrix.SetParent(root);
+        if(matrix.Root is not null)
+        {
+            root?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER)!.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Remove();
+            root?.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Add(matrix.Root);
+        }
+        transformationPoint = new Point(other.transformationPoint);
+        if(transformationPoint.Root is not null)
+        {
+            root?.Element(ns + Point.TRANSFORMATION_POINT_NODE_IDENTIFIER)?.Remove();
+            root?.Add(new XElement(ns + Point.TRANSFORMATION_POINT_NODE_IDENTIFIER));
+            root?.Element(ns + Point.TRANSFORMATION_POINT_NODE_IDENTIFIER)!.Add(transformationPoint.Root);
+        }
     }
     internal Element(Item item, string elementType, string nodeName) : this(item.Namespace)
     {

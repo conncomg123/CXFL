@@ -7,9 +7,9 @@ public class Shape : Element
     private List<FillStyle> fills;
     private List<StrokeStyle> strokes;
     private List<Edge> edges;
-    public List<FillStyle> Fills { get { return fills; } set { fills = value; } }
-    public List<StrokeStyle> Strokes { get { return strokes; } set { strokes = value; } }
-    public List<Edge> Edges { get { return edges; } set { edges = value; } }
+    public List<FillStyle> Fills { get { return fills; } set { SetFills(value); } }
+    public List<StrokeStyle> Strokes { get { return strokes; } set { SetStrokes(value); } }
+    public List<Edge> Edges { get { return edges; } set { SetEdges(value); } }
 
     public Shape(XElement root) : base(root, "shape")
     {
@@ -24,6 +24,45 @@ public class Shape : Element
         fills = other.fills.Select(x => new FillStyle(x)).ToList();
         strokes = other.strokes.Select(x => new StrokeStyle(x)).ToList();
         edges = other.edges.Select(x => new Edge(x)).ToList();
+        SetFills(fills);
+        SetStrokes(strokes);
+        SetEdges(edges);
+    }
+    private void SetFills(List<FillStyle> fills)
+    {
+        this.fills = fills;
+        if (root is null) return;
+        root.Element(ns + FillStyle.FILL_STYLES_NODEGROUP_IDENTIFIER)?.Remove();
+        XElement fillsNode = new XElement(ns + FillStyle.FILL_STYLES_NODEGROUP_IDENTIFIER);
+        foreach (FillStyle fill in fills)
+        {
+            fillsNode.Add(fill.Root);
+        }
+        root.Add(fillsNode);
+    }
+    private void SetStrokes(List<StrokeStyle> strokes)
+    {
+        this.strokes = strokes;
+        if (root is null) return;
+        root.Element(ns + StrokeStyle.STROKE_STYLES_NODEGROUP_IDENTIFIER)?.Remove();
+        XElement strokesNode = new XElement(ns + StrokeStyle.STROKE_STYLES_NODEGROUP_IDENTIFIER);
+        foreach (StrokeStyle stroke in strokes)
+        {
+            strokesNode.Add(stroke.Root);
+        }
+        root.Add(strokesNode);
+    }
+    private void SetEdges(List<Edge> edges)
+    {
+        this.edges = edges;
+        if (root is null) return;
+        root.Element(ns + Edge.EDGES_NODEGROUP_IDENTIFIER)?.Remove();
+        XElement edgesNode = new XElement(ns + Edge.EDGES_NODEGROUP_IDENTIFIER);
+        foreach (Edge edge in edges)
+        {
+            edgesNode.Add(edge.Root);
+        }
+        root.Add(edgesNode);
     }
 }
 
@@ -40,10 +79,10 @@ public class FillStyle
     private BitmapFill? bitmapFill;
     public XElement Root { get { return root; } }
     public int Index { get { return index; } }
-    public SolidColor? SolidColor { get { return solidColor; } set { solidColor = value; } }
-    public LinearGradient? LinearGradient { get { return linearGradient; } set { linearGradient = value; } }
-    public RadialGradient? RadialGradient { get { return radialGradient; } set { radialGradient = value; } }
-    public BitmapFill? BitmapFill { get { return bitmapFill; } set { bitmapFill = value; } }
+    public SolidColor? SolidColor { get { return solidColor; } set { SetSolidColor(value); } }
+    public LinearGradient? LinearGradient { get { return linearGradient; } set { SetLinearGradient(value); } }
+    public RadialGradient? RadialGradient { get { return radialGradient; } set { SetRadialGradient(value); } }
+    public BitmapFill? BitmapFill { get { return bitmapFill; } set { SetBitmapFill(value); } }
 
     internal FillStyle(XElement root)
     {
@@ -76,6 +115,70 @@ public class FillStyle
         linearGradient = other.LinearGradient is null ? null : new LinearGradient(other.LinearGradient);
         radialGradient = other.RadialGradient is null ? null : new RadialGradient(other.RadialGradient);
         bitmapFill = other.BitmapFill is null ? null : new BitmapFill(other.BitmapFill);
+    }
+    private void SetSolidColor(SolidColor? color)
+    {
+        solidColor = color;
+        XElement? solidColorNode = root.Element(ns + SolidColor.SOLID_COLOR_NODEGROUP_IDENTIFIER)?.Element(ns + SolidColor.SOLID_COLOR_NODE_IDENTIFIER);
+        solidColorNode?.Remove();
+        if (color is not null)
+        {
+            XElement? solidColorNodegroup = root.Element(ns + SolidColor.SOLID_COLOR_NODEGROUP_IDENTIFIER);
+            if (solidColorNodegroup is null)
+            {
+                solidColorNodegroup = new XElement(ns + SolidColor.SOLID_COLOR_NODEGROUP_IDENTIFIER);
+                root.Add(solidColorNodegroup);
+            }
+            solidColorNodegroup.Add(color.Root);
+        }
+    }
+    private void SetLinearGradient(LinearGradient? gradient)
+    {
+        linearGradient = gradient;
+        XElement? linearGradientNode = root.Element(ns + LinearGradient.LINEAR_GRADIENT_NODEGROUP_IDENTIFIER)?.Element(ns + LinearGradient.LINEAR_GRADIENT_NODE_IDENTIFIER);
+        linearGradientNode?.Remove();
+        if (gradient is not null)
+        {
+            XElement? linearGradientNodegroup = root.Element(ns + LinearGradient.LINEAR_GRADIENT_NODEGROUP_IDENTIFIER);
+            if (linearGradientNodegroup is null)
+            {
+                linearGradientNodegroup = new XElement(ns + LinearGradient.LINEAR_GRADIENT_NODEGROUP_IDENTIFIER);
+                root.Add(linearGradientNodegroup);
+            }
+            linearGradientNodegroup.Add(gradient.Root);
+        }
+    }
+    private void SetRadialGradient(RadialGradient? gradient)
+    {
+        radialGradient = gradient;
+        XElement? radialGradientNode = root.Element(ns + RadialGradient.RADIAL_GRADIENT_NODEGROUP_IDENTIFIER)?.Element(ns + RadialGradient.RADIAL_GRADIENT_NODE_IDENTIFIER);
+        radialGradientNode?.Remove();
+        if (gradient is not null)
+        {
+            XElement? radialGradientNodegroup = root.Element(ns + RadialGradient.RADIAL_GRADIENT_NODEGROUP_IDENTIFIER);
+            if (radialGradientNodegroup is null)
+            {
+                radialGradientNodegroup = new XElement(ns + RadialGradient.RADIAL_GRADIENT_NODEGROUP_IDENTIFIER);
+                root.Add(radialGradientNodegroup);
+            }
+            radialGradientNodegroup.Add(gradient.Root);
+        }
+    }
+    private void SetBitmapFill(BitmapFill? fill)
+    {
+        bitmapFill = fill;
+        XElement? bitmapFillNode = root.Element(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER)?.Element(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER);
+        bitmapFillNode?.Remove();
+        if (fill is not null)
+        {
+            XElement? bitmapFillNodegroup = root.Element(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER);
+            if (bitmapFillNodegroup is null)
+            {
+                bitmapFillNodegroup = new XElement(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER);
+                root.Add(bitmapFillNodegroup);
+            }
+            bitmapFillNodegroup.Add(fill.Root);
+        }
     }
 }
 public class SolidColor
@@ -128,7 +231,7 @@ public abstract class Gradient
     public string SpreadMethod { get { return spreadMethod; } set { spreadMethod = value; root?.SetOrRemoveAttribute("spreadMethod", value, DefaultValues.SpreadMethod); } }
     public string InterpolationMethod { get { return interpolationMethod; } set { interpolationMethod = value; root?.SetOrRemoveAttribute("interpolationMethod", value, DefaultValues.InterpolationMethod); } }
     public Matrix Matrix { get { return matrix; } set { SetMatrix(value); } }
-    public List<GradientEntry> GradientEntries { get { return gradientEntries; } set { gradientEntries = value; } }
+    public List<GradientEntry> GradientEntries { get { return gradientEntries; } set { SetGradientEntries(value); } }
     private void SetMatrix(Matrix matrix)
     {
         // set values, not the matrix itself
@@ -165,7 +268,18 @@ public abstract class Gradient
         spreadMethod = other.spreadMethod;
         interpolationMethod = other.interpolationMethod;
         matrix = new Matrix(root?.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER)!, root);
-        gradientEntries = other.gradientEntries;
+        gradientEntries = new List<GradientEntry>();
+        var gradientEntriesCpy = other.gradientEntries.Select(e => new GradientEntry(e)).ToList();
+        SetGradientEntries(gradientEntriesCpy);
+    }
+    private void SetGradientEntries(List<GradientEntry> gradientEntries)
+    {
+        root?.Elements(ns + GradientEntry.GRADIENTENTRY_NODE_IDENTIFIER)?.Remove();
+        foreach (var gradientEntry in gradientEntries)
+        {
+            root?.Add(gradientEntry.Root);
+        }
+        this.gradientEntries = gradientEntries;
     }
 }
 public class RadialGradient : Gradient
@@ -203,7 +317,7 @@ public class BitmapFill
     private string? bitmapPath;
     private Matrix matrix;
     public XElement? Root { get { return root; } }
-    public string? BitmapPath { get { return bitmapPath; } set { bitmapPath = value; } }
+    public string? BitmapPath { get { return bitmapPath; } set { bitmapPath = value; root?.SetAttributeValue("bitmapPath", value); } }
     public Matrix Matrix { get { return matrix; } set { SetMatrix(value); } }
     private void SetMatrix(Matrix matrix)
     {
@@ -319,30 +433,66 @@ public class StrokeStyle
         root = new XElement(other.Root);
         ns = other.ns;
         index = other.index;
-        if(other.stroke is SolidStroke ss)
+        if (other.stroke is SolidStroke ss)
         {
             stroke = new SolidStroke(ss);
         }
-        else if(other.stroke is DashedStroke ds)
+        else if (other.stroke is DashedStroke ds)
         {
             stroke = new DashedStroke(ds);
         }
-        else if(other.stroke is DottedStroke dos)
+        else if (other.stroke is DottedStroke dos)
         {
             stroke = new DottedStroke(dos);
         }
-        else if(other.stroke is RaggedStroke rs)
+        else if (other.stroke is RaggedStroke rs)
         {
             stroke = new RaggedStroke(rs);
         }
-        else if(other.stroke is StippleStroke sts)
+        else if (other.stroke is StippleStroke sts)
         {
             stroke = new StippleStroke(sts);
         }
-        else if(other.stroke is HatchedStroke hs)
+        else if (other.stroke is HatchedStroke hs)
         {
             stroke = new HatchedStroke(hs);
-        } else throw new Exception("Unknown stroke type: " + other.stroke);
+        }
+        else throw new Exception("Unknown stroke type: " + other.stroke);
+        SetStroke(stroke);
+    }
+    private void SetStroke(Stroke stroke)
+    {
+        root.Element(ns + SolidStroke.SOLID_STROKE_NODE_IDENTIFIER)?.Remove();
+        root.Element(ns + DashedStroke.DASHED_STROKE_NODE_IDENTIFIER)?.Remove();
+        root.Element(ns + DottedStroke.DOTTED_STROKE_NODE_IDENTIFIER)?.Remove();
+        root.Element(ns + RaggedStroke.RAGGED_STROKE_NODE_IDENTIFIER)?.Remove();
+        root.Element(ns + StippleStroke.STIPPLE_STROKE_NODE_IDENTIFIER)?.Remove();
+        root.Element(ns + HatchedStroke.HATCHED_STROKE_NODE_IDENTIFIER)?.Remove();
+        if (stroke is SolidStroke ss)
+        {
+            root.Add(ss.Root);
+        }
+        else if (stroke is DashedStroke ds)
+        {
+            root.Add(ds.Root);
+        }
+        else if (stroke is DottedStroke dos)
+        {
+            root.Add(dos.Root);
+        }
+        else if (stroke is RaggedStroke rs)
+        {
+            root.Add(rs.Root);
+        }
+        else if (stroke is StippleStroke sts)
+        {
+            root.Add(sts.Root);
+        }
+        else if (stroke is HatchedStroke hs)
+        {
+            root.Add(hs.Root);
+        }
+        this.stroke = stroke;
     }
 }
 public abstract class Stroke
@@ -374,10 +524,10 @@ public abstract class Stroke
     public string Joints { get { return joints; } set { joints = value; root?.SetOrRemoveAttribute("joints", value, DefaultValues.Joints); } }
     public double Weight { get { return weight; } set { weight = value; root?.SetOrRemoveAttribute("weight", value, DefaultValues.Weight); } }
     public int MiterLimit { get { return miterLimit; } set { miterLimit = value; root?.SetOrRemoveAttribute("miterLimit", value, DefaultValues.MiterLimit); } }
-    public SolidColor? SolidColor { get { return solidColor; } set { solidColor = value; } }
-    public LinearGradient? LinearGradient { get { return linearGradient; } set { linearGradient = value; } }
-    public RadialGradient? RadialGradient { get { return radialGradient; } set { radialGradient = value; } }
-    public BitmapFill? BitmapFill { get { return bitmapFill; } }
+    public SolidColor? SolidColor { get { return solidColor; } set { SetSolidColor(value); } }
+    public LinearGradient? LinearGradient { get { return linearGradient; } set { SetLinearGradient(value); } }
+    public RadialGradient? RadialGradient { get { return radialGradient; } set { SetRadialGradient(value); } }
+    public BitmapFill? BitmapFill { get { return bitmapFill; } set { SetBitmapFill(value); } }
     internal Stroke(XElement root)
     {
         this.root = root;
@@ -407,10 +557,74 @@ public abstract class Stroke
         joints = other.joints;
         weight = other.weight;
         miterLimit = other.miterLimit;
-        solidColor = other.solidColor;
-        linearGradient = other.linearGradient;
-        radialGradient = other.radialGradient;
-        bitmapFill = other.bitmapFill;
+        SetSolidColor(other.SolidColor is null ? null : new SolidColor(other.SolidColor));
+        SetLinearGradient(other.LinearGradient is null ? null : new LinearGradient(other.LinearGradient));
+        SetRadialGradient(other.RadialGradient is null ? null : new RadialGradient(other.RadialGradient));
+        SetBitmapFill(other.BitmapFill is null ? null : new BitmapFill(other.BitmapFill));
+    }
+    private void SetSolidColor(SolidColor? color)
+    {
+        solidColor = color;
+        XElement? solidColorNode = root.Element(ns + SolidColor.SOLID_COLOR_NODEGROUP_IDENTIFIER)?.Element(ns + SolidColor.SOLID_COLOR_NODE_IDENTIFIER);
+        solidColorNode?.Remove();
+        if (color is not null)
+        {
+            XElement? solidColorNodegroup = root.Element(ns + SolidColor.SOLID_COLOR_NODEGROUP_IDENTIFIER);
+            if (solidColorNodegroup is null)
+            {
+                solidColorNodegroup = new XElement(ns + SolidColor.SOLID_COLOR_NODEGROUP_IDENTIFIER);
+                root.Add(solidColorNodegroup);
+            }
+            solidColorNodegroup.Add(color.Root);
+        }
+    }
+    private void SetLinearGradient(LinearGradient? gradient)
+    {
+        linearGradient = gradient;
+        XElement? linearGradientNode = root.Element(ns + LinearGradient.LINEAR_GRADIENT_NODEGROUP_IDENTIFIER)?.Element(ns + LinearGradient.LINEAR_GRADIENT_NODE_IDENTIFIER);
+        linearGradientNode?.Remove();
+        if (gradient is not null)
+        {
+            XElement? linearGradientNodegroup = root.Element(ns + LinearGradient.LINEAR_GRADIENT_NODEGROUP_IDENTIFIER);
+            if (linearGradientNodegroup is null)
+            {
+                linearGradientNodegroup = new XElement(ns + LinearGradient.LINEAR_GRADIENT_NODEGROUP_IDENTIFIER);
+                root.Add(linearGradientNodegroup);
+            }
+            linearGradientNodegroup.Add(gradient.Root);
+        }
+    }
+    private void SetRadialGradient(RadialGradient? gradient)
+    {
+        radialGradient = gradient;
+        XElement? radialGradientNode = root.Element(ns + RadialGradient.RADIAL_GRADIENT_NODEGROUP_IDENTIFIER)?.Element(ns + RadialGradient.RADIAL_GRADIENT_NODE_IDENTIFIER);
+        radialGradientNode?.Remove();
+        if (gradient is not null)
+        {
+            XElement? radialGradientNodegroup = root.Element(ns + RadialGradient.RADIAL_GRADIENT_NODEGROUP_IDENTIFIER);
+            if (radialGradientNodegroup is null)
+            {
+                radialGradientNodegroup = new XElement(ns + RadialGradient.RADIAL_GRADIENT_NODEGROUP_IDENTIFIER);
+                root.Add(radialGradientNodegroup);
+            }
+            radialGradientNodegroup.Add(gradient.Root);
+        }
+    }
+    private void SetBitmapFill(BitmapFill? fill)
+    {
+        bitmapFill = fill;
+        XElement? bitmapFillNode = root.Element(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER)?.Element(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER);
+        bitmapFillNode?.Remove();
+        if (fill is not null)
+        {
+            XElement? bitmapFillNodegroup = root.Element(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER);
+            if (bitmapFillNodegroup is null)
+            {
+                bitmapFillNodegroup = new XElement(ns + BitmapFill.BITMAPFILL_NODEGROUP_IDENTIFIER);
+                root.Add(bitmapFillNodegroup);
+            }
+            bitmapFillNodegroup.Add(fill.Root);
+        }
     }
 }
 public class SolidStroke : Stroke
@@ -423,7 +637,7 @@ public class SolidStroke : Stroke
     private List<WidthMarker>? widthMarkers;
     private string solidStyle;
     public string SolidStyle { get { return solidStyle; } set { solidStyle = value; root?.SetOrRemoveAttribute("solidStyle", value, DefaultValues.SolidStyle); } }
-    public List<WidthMarker>? WidthMarkers { get { return widthMarkers; } }
+    public List<WidthMarker>? WidthMarkers { get { return widthMarkers; } set { SetWidthMarkers(value); } }
     public SolidStroke(XElement root) : base(root)
     {
         widthMarkers = root.Element(ns + WidthMarker.WIDTH_MARKERS_NODEGROUP_IDENTIFIER) is null ? null : root.Element(ns + WidthMarker.WIDTH_MARKERS_NODEGROUP_IDENTIFIER)!.Elements(ns + WidthMarker.WIDTH_MARKER_NODE_IDENTIFIER).Select(x => new WidthMarker(x)).ToList();
@@ -431,8 +645,22 @@ public class SolidStroke : Stroke
     }
     public SolidStroke(SolidStroke other) : base(other)
     {
-        widthMarkers = (other.widthMarkers is null) ? null : other.widthMarkers.Select(x => new WidthMarker(x)).ToList();
+        widthMarkers = other.widthMarkers?.Select(x => new WidthMarker(x)).ToList();
+        SetWidthMarkers(widthMarkers);
         solidStyle = other.solidStyle;
+    }
+    private void SetWidthMarkers(List<WidthMarker>? widthMarkers)
+    {
+        root.Element(ns + WidthMarker.WIDTH_MARKERS_NODEGROUP_IDENTIFIER)?.Remove();
+        if (widthMarkers is not null)
+        {
+            XElement widthMarkersNode = new(ns + WidthMarker.WIDTH_MARKERS_NODEGROUP_IDENTIFIER);
+            foreach (WidthMarker widthMarker in widthMarkers)
+            {
+                widthMarkersNode.Add(widthMarker.Root);
+            }
+            root.Add(widthMarkersNode);
+        }
     }
 }
 public class DashedStroke : Stroke

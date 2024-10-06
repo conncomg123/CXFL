@@ -396,6 +396,7 @@ public class GradientEntry
     internal XElement? root;
     private string color;
     private double alpha, ratio;
+    public XElement? Root { get { return root; } }
     public string Color { get { return color; } set { color = value; root?.SetOrRemoveAttribute("color", value, DefaultValues.Color); } }
     public double Alpha { get { return alpha; } set { alpha = value; root?.SetOrRemoveAttribute("alpha", value, DefaultValues.Alpha); } }
     public double Ratio { get { return ratio; } set { ratio = value; root?.SetAttributeValue("ratio", value); } }
