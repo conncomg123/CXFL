@@ -257,7 +257,7 @@ public abstract class Gradient
         ns = gradientNode.Name.Namespace;
         spreadMethod = gradientNode.Attribute("spreadMethod")?.Value ?? DefaultValues.SpreadMethod;
         interpolationMethod = gradientNode.Attribute("interpolationMethod")?.Value ?? DefaultValues.InterpolationMethod;
-        matrix = gradientNode.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER) is not null ? new Matrix(gradientNode.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)!.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER), gradientNode) : new Matrix(ns, gradientNode);
+        matrix = gradientNode.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER) is not null ? new Matrix(gradientNode.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER)!.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER), gradientNode) : new Matrix(ns, gradientNode);
         gradientEntries = gradientNode?.Elements(ns + GradientEntry.GRADIENTENTRY_NODE_IDENTIFIER).Select(e => new GradientEntry(e)).ToList() ?? new List<GradientEntry>();
 
     }
@@ -267,7 +267,7 @@ public abstract class Gradient
         ns = other.ns;
         spreadMethod = other.spreadMethod;
         interpolationMethod = other.interpolationMethod;
-        matrix = new Matrix(root?.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER)!, root);
+        matrix = new Matrix(root?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)!, root);
         gradientEntries = new List<GradientEntry>();
         var gradientEntriesCpy = other.gradientEntries.Select(e => new GradientEntry(e)).ToList();
         SetGradientEntries(gradientEntriesCpy);
@@ -341,14 +341,14 @@ public class BitmapFill
         root = bitmapFillNode;
         ns = bitmapFillNode.Name.Namespace;
         bitmapPath = bitmapFillNode.Attribute("bitmapPath")?.Value;
-        matrix = bitmapFillNode.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER) is not null ? new Matrix(bitmapFillNode.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)!.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER), bitmapFillNode) : new Matrix(ns, bitmapFillNode);
+        matrix = bitmapFillNode.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER) is not null ? new Matrix(bitmapFillNode.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER)!.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER), bitmapFillNode) : new Matrix(ns, bitmapFillNode);
     }
     internal BitmapFill(BitmapFill other)
     {
         root = other.Root is null ? null : new XElement(other.Root);
         ns = other.ns;
         bitmapPath = other.bitmapPath;
-        matrix = new Matrix(root?.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER)!, root);
+        matrix = new Matrix(root?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)!, root);
     }
 }
 public class Edge
@@ -357,15 +357,15 @@ public class Edge
     EDGES_NODEGROUP_IDENTIFIER = "edges";
     private readonly XElement root;
     private readonly XNamespace ns;
-    private readonly int? fillStyle0, fillStyle1, strokeStyle;
+    private int? fillStyle0, fillStyle1, strokeStyle;
     private string? edges, cubics;
     public XElement Root { get { return root; } }
-    public int? FillStyle0 { get { return fillStyle0; } }
-    public int? FillStyle1 { get { return fillStyle1; } }
-    public int? StrokeStyle { get { return strokeStyle; } }
+    public int? FillStyle0 { get { return fillStyle0; } set { fillStyle0 = value; root.SetAttributeValue("fillStyle0", value); } }
+    public int? FillStyle1 { get { return fillStyle1; } set { fillStyle1 = value; root.SetAttributeValue("fillStyle1", value); } }
+    public int? StrokeStyle { get { return strokeStyle; } set { strokeStyle = value; root.SetAttributeValue("strokeStyle", value); } }
     public string? Edges { get { return edges; } set { edges = value; root.SetOrRemoveAttribute("edges", value, ""); } }
     public string? Cubics { get { return cubics; } set { cubics = value; root.SetOrRemoveAttribute("cubics", value, ""); } }
-    internal Edge(XElement root)
+    public Edge(XElement root)
     {
         this.root = root;
         ns = root.Name.Namespace;
