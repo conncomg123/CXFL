@@ -53,7 +53,7 @@ public abstract class Element
         width = double.NaN;
         height = double.NaN;
         selected = (bool?)elementNode.Attribute("isSelected") ?? DefaultValues.Selected;
-        matrix = elementNode.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER) is not null ? new Matrix(elementNode.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)!.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER), root) : new Matrix(ns, root);
+        matrix = elementNode.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER)?.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER) is not null ? new Matrix(elementNode.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER)!.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER), root) : new Matrix(ns, root);
         transformationPoint = elementNode.Element(ns + Point.TRANSFORMATION_POINT_NODE_IDENTIFIER)?.Element(ns + Point.POINT_NODE_IDENTIFIER) is not null ? new Point(elementNode.Element(ns + Point.TRANSFORMATION_POINT_NODE_IDENTIFIER)!.Element(ns + Point.POINT_NODE_IDENTIFIER)!) : new Point(ns);
     }
     internal Element(in Element other)
@@ -69,7 +69,7 @@ public abstract class Element
         if(matrix.Root is not null)
         {
             root?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER)!.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Remove();
-            root?.Element(ns + Matrix.MATRIX_NODE_IDENTIFIER)?.Add(matrix.Root);
+            root?.Element(ns + Matrix.MATRIX_NODEGROUP_IDENTIFIER)?.Add(matrix.Root);
         }
         transformationPoint = new Point(other.transformationPoint);
         if(transformationPoint.Root is not null)

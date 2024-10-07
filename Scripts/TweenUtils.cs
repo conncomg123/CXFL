@@ -1,6 +1,7 @@
 namespace Rendering;
 
 using System.Numerics;
+using System.Xml.Linq;
 using CsXFL;
 using KdTree.Math;
 
@@ -222,13 +223,21 @@ public static class TweenUtils
         {
             var ratio = stop.Ratio;
             double match = availableEnds.GetNearestNeighbours([ratio], 1)[0].Point[0];
-            forwardMap[ratio].Add(match);
-            coverCount[match]++;
+            if (!forwardMap.TryGetValue(ratio, out List<double>? ratios))
+            {
+                forwardMap[ratio] = [match];
+                coverCount[match] = 1;
+            }
+            else
+            {
+                forwardMap[ratio].Add(match);
+                coverCount[match]++;
+            }
         }
         foreach (var stop in fin)
         {
             var ratio = stop.Ratio;
-            if (coverCount[ratio] > 0) continue;
+            if (coverCount.TryGetValue(ratio, out int count) && count > 0) continue;
             double match = availableStarts.GetNearestNeighbours([ratio], 1)[0].Point[0];
             if (forwardMap.TryGetValue(match, out List<double>? matches))
             {
@@ -495,7 +504,7 @@ public static class TweenUtils
                 startFill ??= fillStyle.LinearGradient;
                 startFill ??= fillStyle.RadialGradient;
                 if (startFill is null) throw new Exception($"Unknown fill style: {startFill}");
-                var interpolated = InterpolateFillStyles(startFill, endFills[fillStyle.Index], t);
+                var interpolated = InterpolateFillStyles(startFill, endFills[fillStyle.Index > endFills.Count ? endFills.Count : fillStyle.Index], t);
                 ReplaceFill(fillStyle, startFill, interpolated);
             }
         }
@@ -543,9 +552,9 @@ public static class TweenUtils
             return items[(pt.Point[0], pt.Point[1])];
         }
     }
-    public static KDMap<string> GetEdgesByStartpoint(Shape shape)
+    public static KDMap<Edge> GetEdgesByStartpoint(Shape shape)
     {
-        KDMap<string> result = new KDMap<string>();
+        KDMap<Edge> result = new KDMap<Edge>();
         foreach (var edge in shape.Edges)
         {
             var edges = edge.Edges;
@@ -555,9 +564,10 @@ public static class TweenUtils
             {
                 foreach (var pt in pl)
                 {
+                    if(pt.StartsWith('[')) continue;
                     double x = 20.0 * double.Parse(pt.Split(' ')[0]);
                     double y = 20.0 * double.Parse(pt.Split(' ')[1]);
-                    result.Add((x, y), pt);
+                    result.Add((x, y), edge);
                 }
             }
         }
@@ -584,7 +594,7 @@ public static class TweenUtils
             {
                 fraction += Convert.ToInt32(parts[1][i].ToString(), 16) / Math.Pow(16, i + 1);
             }
-            return numberInt + fraction;
+            return numberInt + (numberInt < 0 ? -fraction : fraction);
         }
         else
         {
@@ -604,11 +614,11 @@ public static class TweenUtils
         if (morphShape.MorphSegments.Count == 0) return start;
         if (frameIndex == 0) return start;
         Shape result = new Shape(start);
-        Edge dummyEdge = start.Edges[0];
         var (strokes, fills) = InterpolateColorMaps(start, end, frameIndex, tweenFrame);
         var edgesByStartpoint = GetEdgesByStartpoint(start);
         List<Edge> edges = new List<Edge>();
-        foreach (MorphSegment morphSegment in morphShape.MorphSegments)
+        bool hasDuplicatedSegmments = 2 * start.Edges.Count == morphShape.MorphSegments.Count;
+        foreach (MorphSegment morphSegment in !hasDuplicatedSegmments ? morphShape.MorphSegments : morphShape.MorphSegments.Where((x, i) => i % 2 == 1)) // for some reason they're always duplicated and the second one is always correct
         {
             List<string> points = new List<string>();
             (double, double) startA;
@@ -638,10 +648,9 @@ public static class TweenUtils
                 }
             }
             var pointsStr = string.Join("", points);
-            var edgeStr = edgesByStartpoint.Get(startA)[0];
-            Edge edge = new Edge(dummyEdge); // too lazy to do this properly
+            var newEdge = edgesByStartpoint.Get(startA)[0];
+            Edge edge = new Edge(newEdge);
             edge.Edges = pointsStr;
-            edge.Cubics = "";
             edges.Add(edge);
         }
         result.Edges = edges;

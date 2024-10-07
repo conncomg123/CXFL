@@ -45,7 +45,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
     private MorphShape? morphShape;
     private Library? library;
     internal XElement? Root { get { return root; } }
-    public string Ns { get { return ns.ToString(); } }
+    public XNamespace Ns { get { return ns.ToString(); } }
     public int StartFrame { get { return startFrame; } set { startFrame = value; root?.SetAttributeValue("index", value); } }
     public int Duration { get { return duration; } set { duration = value; root?.SetOrRemoveAttribute("duration", value, DefaultValues.Duration); } }
     public int KeyMode { get { return keyMode; } set { keyMode = value; root?.SetOrRemoveAttribute("keyMode", value, DefaultValues.KeyMode); } }
