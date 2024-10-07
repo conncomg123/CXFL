@@ -236,22 +236,23 @@ namespace Rendering
             }
 
             // Using local delegate versus function for better performance
-            Func<string> nextPoint = () =>
+            Func<(double, double)> nextPoint = () =>
             {
                 matchTokens.MoveNext();
-                string x = ParseNumber(matchTokens.Current).ToString();
+                double x = ParseNumber(matchTokens.Current);
                 matchTokens.MoveNext();
-                string y = ParseNumber(matchTokens.Current).ToString();
-                return $"{x} {y}";
+                double y = ParseNumber(matchTokens.Current);
+                return (x, y);
             };
+            List<string> pointList = new List<string>();
 
-            string prevPoint = nextPoint();
-            List<string> pointList = new List<string> { prevPoint };
+            (double, double) prevPoint = nextPoint();
+            Rectangle? boundingBox = new Rectangle(prevPoint.Item1, prevPoint.Item2, prevPoint.Item1, prevPoint.Item2);
 
             while(matchTokens.MoveNext())
             {
                 string command = matchTokens.Current;
-                string currPoint = nextPoint();
+                (double, double) currPoint = nextPoint();
 
                 // "moveto" command
                 if(command == "!")
@@ -260,30 +261,39 @@ namespace Rendering
                     if(currPoint != prevPoint)
                     {
                         // Otherwise, a new segment is starting, so we must yield the current point list and begin a new one.
-                        yield return pointList;
-                        pointList = new List<string> { currPoint };
+                        yield return (pointList, boundingBox);
+                        pointList = new List<string>();
                         prevPoint = currPoint;
+                        boundingBox = null;
                     }
                 }
                 // "lineto" command
                 else if(command == "|" || command == "/")
                 {
-                    pointList.Add(currPoint);
+                    pointList.Add($"{prevPoint.Item1} {prevPoint.Item2}");
+                    pointList.Add($"{currPoint.Item1} {currPoint.Item2}");
+                    boundingBox = MergeBoundingBoxes(boundingBox, GetLineBoundingBox(prevPoint, currPoint));
+
                     prevPoint = currPoint;
                 }
                 // "quadto" command
                 else if(command == "[" || command == "]")
                 {
-                    // Previous point (the point before this in list) is the start of the quadratic Bézier curve
+                    // prevPoint (the point before this in list) is the start of the quadratic Bézier curve
                     // currPoint is control point- this is denoted as a point string surrounded by []
                     // nextPoint() is destination point of curve
-                    pointList.Add($"[{currPoint}]");
-                    prevPoint = nextPoint();
-                    pointList.Add($"{prevPoint}");
+                    (double, double) endPoint = nextPoint();
+
+                    pointList.Add($"{prevPoint.Item1} {prevPoint.Item2}");
+                    pointList.Add($"[{currPoint.Item1} {currPoint.Item2}]");
+                    pointList.Add($"{endPoint.Item1} {endPoint.Item2}");
+                    boundingBox = MergeBoundingBoxes(boundingBox, GetQuadraticBoundingBox(prevPoint, currPoint, endPoint));
+                    prevPoint = endPoint; // As we called nextPoint() prior- that's what the current Point atm is
                 }
             }
 
-            yield return pointList;
+            yield return (pointList, boundingBox);
+            boundingBox = null;
         }
 
         /// <summary>
