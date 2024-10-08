@@ -1,4 +1,6 @@
 ﻿using CsXFL;
+using System.Collections.Generic;
+using System.Diagnostics.Tracing;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
@@ -16,7 +18,7 @@ namespace Rendering
         // <fills> element- indicate the stroke style or fill style that will fill the shape
         // <edges> element- contain <Edge> elements-
         // "edges" attribute- string of commands and coordinates that indicate shape outline
-        
+
         // outline is broken into pieces called segments- represented here as "point lists"
         // This outline will then be filled in using <fills> elements
         // Process: "edges" strings -> list of points -> SVG path elements -> render SVG as bitmap
@@ -50,7 +52,7 @@ namespace Rendering
         public static float ParseNumber(string numberString)
         {
             // Check if the coordinate is signed and 32-bit fixed-point number in hex
-            if(numberString[0] == '#')
+            if (numberString[0] == '#')
             {
                 // Split the coordinate into the integer and fractional parts
                 string[] parts = numberString.Substring(1).Split('.');
@@ -68,6 +70,146 @@ namespace Rendering
             }
         }
 
+        /// <summary>
+        /// Merges two bounding boxes together.
+        /// </summary>
+        /// <param name="original">The first bounding box being merged.</param>
+        /// <param name="addition">The second bounding box being merged.</param>
+        /// <returns>A Rectangle representing the new combined bounding box.</returns>
+        public static Rectangle? MergeBoundingBoxes(Rectangle? original, Rectangle? addition)
+        {
+            if(addition == null)
+            {
+                return original;
+            }
+            else if(original == null)
+            {
+                return addition;
+            }
+
+            // The way that rectangles are stored is left = x of left side, top = y of top side, right = x of right side
+            // bottom = y of bottom side
+            // min x = left, max y = top, max x = right, min y = bottom
+            double minX = Math.Min(original.Left, addition.Left);
+            double maxY = Math.Max(original.Top, addition.Top);
+            double maxX = Math.Max(original.Right, addition.Right);
+            double minY = Math.Min(original.Bottom, addition.Bottom);
+
+            return new Rectangle(minX, maxY, maxX, minY);
+        }
+
+        /// <summary>
+        /// Gets the bounding box of a line segment.
+        /// </summary>
+        /// <param name="point1">First point of line segment.</param>
+        /// <param name="point2">Second point of line segment.</param>
+        /// <returns></returns>
+        public static Rectangle GetLineBoundingBox((double, double) point1, (double, double) point2)
+        {
+            // The way that rectangles are stored is left = x of left side, top = y of top side, right = x of right side
+            // bottom = y of bottom side
+            // min x = left, max y = top, max x = right, min y = bottom
+
+            Rectangle boundingBox = new Rectangle(Math.Min(point1.Item1, point2.Item1), Math.Max(point1.Item2, point2.Item2),
+                Math.Max(point1.Item1, point2.Item1), Math.Min(point1.Item2, point2.Item2));
+
+            return boundingBox;
+        }
+
+        /// <summary>
+        /// Gets a point on a quadratic Bezier curve.
+        /// </summary>
+        /// <param name="point1">Start point of Bezier curve.</param>
+        /// <param name="point2">Control point of Beizer curve.</param>
+        /// <param name="point3">End point of Bezier curve.</param>
+        /// <param name="t">How far from the start point the point being calculated is [0, 1]- with
+        /// 0 being the start point and 1 being the end point.</param>
+        /// <returns>A point on the Bezier curve that is t from the start point.</returns>
+        public static (double, double) GetPointOnQuadraticBezier((double, double) point1,
+            (double, double) point2, (double, double) point3, double t)
+        {
+            double x = (1 - t) * ((1 - t) * point1.Item1 + t * point2.Item1) + t * ((1 - t) * point2.Item1 + t + point3.Item1);
+            double y = (1 - t) * ((1 - t) * point1.Item2 + t * point2.Item2) + t * ((1 - t) * point2.Item2 + t + point3.Item2);
+            return (x, y);
+        }
+
+        public static (double, double) GetQuadraticCriticalPoints((double, double) point1,
+            (double, double) point2, (double, double) point3)
+        {
+            double xDenom = point1.Item1 - 2 * point2.Item1 + point3.Item1;
+            double xCritical = 0;
+            double yCritical = 0;
+
+            if (xDenom == 0)
+            {
+                xCritical = Double.MaxValue;
+            }
+            else
+            {
+                xCritical = (point1.Item1 - point2.Item2) / xDenom;
+            }
+
+            double yDenom = point1.Item2 - 2 * point2.Item2 + point3.Item2;
+            if (yDenom == 0)
+            {
+                yCritical = Double.MaxValue;
+            }
+            else
+            {
+                yCritical = (point1.Item1 - point2.Item2) / yDenom;
+            }
+
+            return (xCritical, yCritical);
+        }
+
+        /// <summary>
+        /// Gets the bounding box of a quadratic Bezier curve.
+        /// </summary>
+        /// <param name="point1">Start point of Bezier curve.</param>
+        /// <param name="controlPoint">Control point of Beizer curve.</param>
+        /// <param name="point3">End point of Bezier curve.</param>
+        /// <returns>Bounding box assoicated with a quadratic Bezier curve.</returns>
+        public static Rectangle GetQuadraticBoundingBox ((double, double) point1,
+            (double, double) controlPoint, (double, double) point2)
+        {
+            (double, double) criticalPoints = GetQuadraticCriticalPoints(point1, controlPoint, point2);
+            (double, double) point3, point4;
+            
+            if(criticalPoints.Item1 > 0 && criticalPoints.Item1 < 1)
+            {
+                point3 = GetPointOnQuadraticBezier(point1, controlPoint, point2, criticalPoints.Item1);
+            }
+            else
+            {
+                // Pick either the start or the end of the curve arbitrarily so it doesn't affect
+                // the max/min point calculation
+                point3 = point1;
+            }
+
+            if(criticalPoints.Item2 > 0 && criticalPoints.Item2 < 1)
+            {
+                point4 = GetPointOnQuadraticBezier(point1, controlPoint, point2, criticalPoints.Item2);
+            }
+            else
+            {
+                // Pick either the start or the end of the curve arbitrarily so it doesn't affect
+                // the max/min point calculation
+                point4 = point1;
+            }
+
+            // The way that rectangles are stored is left = x of left side, top = y of top side, right = x of right side
+            // bottom = y of bottom side
+            // min x = left, max y = top, max x = right, min y = bottom
+
+            double minX = Math.Min(Math.Min(point1.Item1, point2.Item1), Math.Min(point3.Item1, point4.Item1));
+            double maxY = Math.Max(Math.Max(point1.Item2, point2.Item2), Math.Max(point3.Item2, point4.Item2));
+            double maxX = Math.Min(Math.Min(point1.Item2, point2.Item2), Math.Min(point3.Item2, point4.Item2));
+            double minY = Math.Max(Math.Max(point1.Item1, point2.Item1), Math.Max(point3.Item1, point4.Item1));
+
+            Rectangle boundingBox = new Rectangle(minX, maxY, maxX, minY);
+            return boundingBox;
+        }
+
         //Point Format: "x y" string, "quadto" command control (start) point- "[x y]"
 
         //Point List Format:
@@ -81,7 +223,7 @@ namespace Rendering
         /// </summary>
         /// <param name="edges">The "edges" attribute of an Edge XFL element.</param>
         /// <returns>An enumerable of lists of string points in "x y" format- each list of points is a segment of the "edges" attribute.</returns>
-        public static IEnumerable<List<string>> ConvertEdgeFormatToPointLists(string edges)
+        public static IEnumerable<(List<string>, Rectangle?)> ConvertEdgeFormatToPointLists(string edges)
         {
             // As MatchCollection was written before .NET 2, it uses IEnumerable for iteration rather
             // than IEnumerable<T>, meaning it defaults to an enumerable of objects.
@@ -96,22 +238,23 @@ namespace Rendering
             }
 
             // Using local delegate versus function for better performance
-            Func<string> nextPoint = () =>
+            Func<(double, double)> nextPoint = () =>
             {
                 matchTokens.MoveNext();
-                string x = ParseNumber(matchTokens.Current).ToString();
+                double x = ParseNumber(matchTokens.Current);
                 matchTokens.MoveNext();
-                string y = ParseNumber(matchTokens.Current).ToString();
-                return $"{x} {y}";
+                double y = ParseNumber(matchTokens.Current);
+                return (x, y);
             };
+            List<string> pointList = new List<string>();
 
-            string prevPoint = nextPoint();
-            List<string> pointList = new List<string> { prevPoint };
+            (double, double) prevPoint = nextPoint();
+            Rectangle? boundingBox = new Rectangle(prevPoint.Item1, prevPoint.Item2, prevPoint.Item1, prevPoint.Item2);
 
             while(matchTokens.MoveNext())
             {
                 string command = matchTokens.Current;
-                string currPoint = nextPoint();
+                (double, double) currPoint = nextPoint();
 
                 // "moveto" command
                 if(command == "!")
@@ -120,30 +263,39 @@ namespace Rendering
                     if(currPoint != prevPoint)
                     {
                         // Otherwise, a new segment is starting, so we must yield the current point list and begin a new one.
-                        yield return pointList;
-                        pointList = new List<string> { currPoint };
+                        yield return (pointList, boundingBox);
+                        pointList = new List<string>();
                         prevPoint = currPoint;
+                        boundingBox = null;
                     }
                 }
                 // "lineto" command
                 else if(command == "|" || command == "/")
                 {
-                    pointList.Add(currPoint);
+                    pointList.Add($"{prevPoint.Item1} {prevPoint.Item2}");
+                    pointList.Add($"{currPoint.Item1} {currPoint.Item2}");
+                    boundingBox = MergeBoundingBoxes(boundingBox, GetLineBoundingBox(prevPoint, currPoint));
+
                     prevPoint = currPoint;
                 }
                 // "quadto" command
                 else if(command == "[" || command == "]")
                 {
-                    // Previous point (the point before this in list) is the start of the quadratic Bézier curve
+                    // prevPoint (the point before this in list) is the start of the quadratic Bézier curve
                     // currPoint is control point- this is denoted as a point string surrounded by []
                     // nextPoint() is destination point of curve
-                    pointList.Add($"[{currPoint}]");
-                    prevPoint = nextPoint();
-                    pointList.Add($"{prevPoint}");
+                    (double, double) endPoint = nextPoint();
+
+                    pointList.Add($"{prevPoint.Item1} {prevPoint.Item2}");
+                    pointList.Add($"[{currPoint.Item1} {currPoint.Item2}]");
+                    pointList.Add($"{endPoint.Item1} {endPoint.Item2}");
+                    boundingBox = MergeBoundingBoxes(boundingBox, GetQuadraticBoundingBox(prevPoint, currPoint, endPoint));
+                    prevPoint = endPoint; // As we called nextPoint() prior- that's what the current Point atm is
                 }
             }
 
-            yield return pointList;
+            yield return (pointList, boundingBox);
+            boundingBox = null;
         }
 
         /// <summary>
@@ -360,21 +512,20 @@ namespace Rendering
         // "edges" attribute = refers to "edges" string of coordinates associated with Edge element
 
         /// <summary>
-        /// Converts XFL edges element into SVG path elements.
+        /// Calculates and returns the point lists and bounding boxes of XFL edges element.
         /// </summary>
         /// <remarks>
         /// <para>
-        /// Idea of this method is that it converts point lists into a SVG path string and associates it
-        /// with a specific fill/strokeStyle index. After this is done, for each fill/strokeIndex,
-        /// create the proper SVG path element.
+        /// Idea of this method is that pairs each fillStyle/strokeStyle with its respective point lists and
+        /// bounding box.
         /// </para>
         /// <para>
         /// For point lists representing Edges with fills, they are merged into shapes first (list of point lists)
-        /// and then converted to SVG path string (converting each point list into a SVG path string and merging it
-        /// together into one large string).
-        /// This string is associated with a fillStyle index (index = key, path = value).
-        /// For point lists representing Edges with strokes, it is just converted into a SVG path string and
-        /// associated with a strokeStyle index (index = key, path = value).
+        /// and then their bounding box is calculated.
+        /// This (list of point lists, bounding box) is associatd with a fillStyle index.
+        /// For point lists representing Edges with strokes, their point lists are added to a list, calculating the proper
+        /// bounding box after each addition.
+        /// This (list of point lists, bounding box) is associatd with a strokeStyle index.
         /// </para>
         /// <para>
         /// For each fill/strokeStyle index, create the proper SVG path element (setting "d" attribute to
@@ -382,13 +533,11 @@ namespace Rendering
         /// </para>
         /// </remarks>
         /// <param name="edgesElement">The edges element of a DOMShape element.</param>
-        /// <param name="fillStyleAttributes">The SVG attributes of each fillStyle element of a DOMShape.</param>
         /// <param name="strokeStyleAttributes">The SVG attributes of each strokeStyle element of a DOMShape.</param>
-        /// <returns>A tuple consisting of a list of SVG path elements for fillStyle shapes and a list of
-        /// SVG path elements for strokeStyle shapes.</returns>
-        /// <seealso cref="https://github.com/PluieElectrique/xfl2svg/blob/master/xfl2svg/shape/edge.py#L244"/>
-        public static (List<XElement>?, List<XElement>?) ConvertEdgesToSvgPath(List<Edge> edgesElement,
-            Dictionary<string, Dictionary<string, string>> fillStylesAttributes,
+        /// <returns>A tuple consisting of Dictionary of fillStyle indexes mapped to their respective pointLists and bounding box,
+        /// a Dictionary of strokeStyle indexes mapped to their respective pointLists and bounding box.</returns>
+        public static (Dictionary<int, (List<List<string>>, Rectangle?)>,
+            Dictionary<int, (List<List<string>>, Rectangle?)>) ConvertEdgesToShapes(List<Edge> edgesElement,
             Dictionary<string, Dictionary<string, string>> strokeStylesAttributes)
         {
             // When associating point lists to their fillstyle/strokestyle, using their
@@ -396,12 +545,14 @@ namespace Rendering
             // fillStyle/strokeStyle index in CSXFL Shape list: XFL "index" attribute - 1
 
             // List of point lists with their associated fillStyle stored as pairs
-            // Used syntax sugar version of new as variable type is very verbose
-            List<(List<string>, int?)> fillEdges = new();
-
-            // Should StrokeStyle object be used as key or just its index?
-            // StrokePaths = refers to all converted SVG path strings associated with a strokeStyle
-            Dictionary<int, List<string>> strokePathStrings = new Dictionary<int, List<string>>();
+            List<(List<string>, int?)> fillEdges = new List<(List<string>, int?)>();
+            // Maps strokeStyle id to associated pointLists
+            // For any key, default value is list
+            Dictionary<int, List<List<string>>> strokePointLists = new Dictionary<int, List<List<string>>>();
+            // For any key, default value is null
+            Dictionary<int, Rectangle?> fillBoxes = new Dictionary<int, Rectangle?>();
+            // For any key, default value is null
+            Dictionary<int, Rectangle?> strokeBoxes = new Dictionary<int, Rectangle?>();
 
             foreach (Edge edgeElement in edgesElement)
             {
@@ -411,105 +562,106 @@ namespace Rendering
                 int? fillStyleRightIndex = edgeElement.FillStyle1;
                 int? strokeStyleIndex = edgeElement.StrokeStyle;
 
-                IEnumerable<List<string>> edgesPointLists = (edgesString is null) ? new List<List<string>>() : ConvertEdgeFormatToPointLists(edgesString);
+                IEnumerable<(List<string>, Rectangle?)> edgesPointLists = (edgesString is null) 
+                    ? new List<(List<string>, Rectangle?)>() : ConvertEdgeFormatToPointLists(edgesString);
 
-                // Associate point lists to appropriate fillStyle index and strokeStyle
+                // Associate point lists with appropriate fillStyle/strokeStyle index in tuples
+                // Map bounding boxes to proper fillStyle/strokeStyle indexes
 
-                foreach (List<string> pointList in edgesPointLists)
+                foreach ((List<string>, Rectangle?) pointListTuple in edgesPointLists)
                 {
+                    List<string> tuplePointList = pointListTuple.Item1;
+                    Rectangle? tupleBoundingBox = pointListTuple.Item2;
+
                     if (fillStyleLeftIndex != null)
                     {
-                        (List<string>, int?) tupleToAdd = new(pointList, fillStyleLeftIndex);
+
+                        (List<string>, int?) tupleToAdd = new(pointListTuple.Item1, fillStyleLeftIndex);
                         fillEdges.Add(tupleToAdd);
+
+                        if(!fillBoxes.TryGetValue((int)fillStyleLeftIndex, out Rectangle? existingBox))
+                        {
+                            existingBox = null;
+                            fillBoxes[(int)fillStyleLeftIndex] = existingBox;
+                        }
+
+                        fillBoxes[(int)fillStyleLeftIndex] = MergeBoundingBoxes(existingBox, tupleBoundingBox);
                     }
 
                     if (fillStyleRightIndex != null)
                     {
-                        // First reverse point list in order to fill it from the left, then add it
+                        // Reverse point lists so that fill is always to the left
                         // Python code does not change original pointList, so get reverse of Enumerable
-                        // and covert that to a list
-                        List<string> reversedList = pointList.AsEnumerable().Reverse().ToList();
+                        // and convert that to a list
+                        List<string> reversedList = tuplePointList.AsEnumerable().Reverse().ToList();
                         (List<string>, int?) tupleToAdd = new(reversedList, fillStyleRightIndex);
                         fillEdges.Add(tupleToAdd);
+
+                        if (!fillBoxes.TryGetValue((int)fillStyleRightIndex, out Rectangle? existingBox))
+                        {
+                            existingBox = null;
+                            fillBoxes[(int)fillStyleRightIndex] = existingBox;
+                        }
+
+                        fillBoxes[(int)fillStyleRightIndex] = MergeBoundingBoxes(existingBox, tupleBoundingBox);
                     }
 
                     // Do I need to check if strokeStyle exists? (Outside of checking for null)
                     // Is there a scenario where an Edge element references a strokeStyle that is not in the
                     // strokes element of the DOMShape that the said Edge is a part of?
 
-                    // If strokeStyle exists for Edge, convert immediately as no shape needs to be joined
+                    // If strokeStyle exists for Edge, process immediately as no shape needs to be joined
                     if (strokeStyleIndex != null)
                     {
                         // Check if strokeStyle has associated SVG attributes created for it
+                        // Do I really need to check this here? Seems a bit out of place
                         string? index = strokeStyleIndex.ToString();
 
                         if (index != null && strokeStylesAttributes.ContainsKey(index))
                         {
-                            // First get converted path format for this Edge, then add it to
-                            // associated strokeStyle
-                            string svgPathString = ConvertPointListToPathString(pointList);
-
                             // defaultdict(list)- For any key, default value is empty list
                             // Is used to create a list of size 1 when first creating stroke path list
-
                             // Idea- ensuring that list exists for key (either existing one or an empty one)
-                            if (!strokePathStrings.TryGetValue((int)strokeStyleIndex, out var strokePathList))
+
+                            if (!strokePointLists.TryGetValue((int)strokeStyleIndex, out var strokePathList))
                             {
                                 // Setting this reference so item can be added to it afterwards
-                                strokePathList = new List<string>();
-                                strokePathStrings[(int)strokeStyleIndex] = strokePathList;
+                                strokePathList = new List<List<string>>();
+                                strokePointLists[(int)strokeStyleIndex] = strokePathList;
+                            }
+                            strokePathList.Add(tuplePointList);
+
+                            if (!strokeBoxes.TryGetValue((int)strokeStyleIndex, out Rectangle? existingBox))
+                            {
+                                existingBox = null;
+                                fillBoxes[(int)strokeStyleIndex] = existingBox;
                             }
 
-                            strokePathList.Add(svgPathString);
+                            fillBoxes[(int)strokeStyleIndex] = MergeBoundingBoxes(existingBox, tupleBoundingBox);
                         }
                     }
                 }
             }
 
-            List<XElement> fillsPathElements = new List<XElement>();
-            List<XElement> strokePathElements = new List<XElement>();
             Dictionary<int, List<List<string>>> shapes = ConvertPointListsToShapes(fillEdges);
-
             // At this point, we have fillStyle indexes associated with various shapes
-            // (a list of point lists) and strokeStyle indexes associated with a
-            // list of SVG path strings.
-            // Now we have to create the SVG path elements from each using the SVG attributes
-            // that were passed in
+            // (a list of point lists) and strokeStyle indexes associated with a list of point lists.
+            // Now package the final point lists and bounding box in tuple for shape class to use to build proper SVG element
 
-            foreach (var (fillIndex, pointLists) in shapes)
+            Dictionary<int, (List<List<string>>, Rectangle?)> fillResults = new Dictionary<int, (List<List<string>>, Rectangle?)>();
+            Dictionary<int, (List<List<string>>, Rectangle?)> strokeResults = new Dictionary<int, (List<List<string>>, Rectangle?)>();
+
+            foreach(var fillShapeTuple in shapes)
             {
-                // Convert each point list associated with this fillStyleIndex and merge it into one large
-                // SVG path string
-                string svgPathString = string.Join(" ", pointLists.ConvertAll(ConvertPointListToPathString));
-                Dictionary<string, string> attributeDict = fillStylesAttributes[fillIndex.ToString()];
-                attributeDict["d"] = svgPathString;
-
-                XElement newSKPath = CreatePathElement(attributeDict);
-                fillsPathElements.Add(newSKPath);
+                fillResults[fillShapeTuple.Key] = (fillShapeTuple.Value, fillBoxes[fillShapeTuple.Key]);
             }
 
-            foreach (var (strokeIndex, pathString) in strokePathStrings)
+            foreach (var strokeTuple in shapes)
             {
-                string svgPathString = string.Join(" ", pathString);
-                Dictionary<string, string> attributeDict = strokeStylesAttributes[strokeIndex.ToString()];
-                attributeDict["d"] = svgPathString;
-
-                XElement newSKPath = CreatePathElement(attributeDict);
-                strokePathElements.Add(newSKPath);
+                strokeResults[strokeTuple.Key] = (strokeTuple.Value, strokeBoxes[strokeTuple.Key]);
             }
 
-            return (fillsPathElements, strokePathElements);
-        }
-
-        public static XElement CreatePathElement(Dictionary<string, string> attributes)
-        {
-            XElement newPathElement = new XElement("path");
-            foreach(var attribute in attributes)
-            {
-                newPathElement.SetAttributeValue(attribute.Key, attribute.Value);
-            }
-
-            return newPathElement;
+            return (fillResults, strokeResults);
         }
     }
 }
