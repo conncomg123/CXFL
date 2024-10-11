@@ -502,7 +502,7 @@ public abstract class Stroke
         public const string Caps = "round";
         public const bool PixelHinting = false;
         public const string Joints = "round";
-        public const int MiterLimit = 0;
+        public const int MiterLimit = 3;
         public const double Weight = 1.0;
         public const string ScaleMode = "none";
 

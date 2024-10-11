@@ -164,10 +164,14 @@ public class SVGRenderer
 
             string href = child.Attribute(HREF)!.Value;
             XElement usedElement = defs[href.StartsWith("#") ? href.Substring(1) : href];
-            XElement? pathElement = usedElement.Element(svgNs + "path") is null ? null : new XElement(usedElement.Element(svgNs + "path")!);
-            if (pathElement is null) continue;
-            pathElement.SetAttributeValue("transform", TransformMatrixToString(useMatrix));
-            newElements.Add(pathElement);
+            List<XElement>? pathElements = usedElement.Elements(svgNs + "path")?.ToList();
+            if (pathElements is null) continue;
+            for(int i = 0; i < pathElements.Count; i++) 
+            {
+                pathElements[i] = new XElement(pathElements[i]);
+                pathElements[i].SetAttributeValue("transform", TransformMatrixToString(useMatrix));
+            }
+            newElements.AddRange(pathElements);
         }
 
         return (newElements, curMatrix);
