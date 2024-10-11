@@ -99,6 +99,23 @@ namespace Rendering
         }
 
         /// <summary>
+        /// Expands a bounding box on all four sides by width.
+        /// </summary>
+        /// <param name="rectangle">The Rectangle that is being expanded.</param>
+        /// <param name="width">The amount that this Rectangle will be expanded by on all four sides.</param>
+        /// <returns>An new expanded Rectangle.</returns>
+        public static Rectangle ExpandBoundingBox(Rectangle rectangle, double width)
+        {
+            //box[0] = minx, box[1] = miny, box[2] = maxx, box[3] = maxy
+            // min x = left, max y = top, max x = right, min y = bottom
+
+            // Create new object to separate Rectangle instances
+            Rectangle newRectangle = new Rectangle(rectangle.Left - width / 2,
+                rectangle.Top + width / 2, rectangle.Right + width / 2, rectangle.Bottom - width / 2);
+            return newRectangle;
+        }
+
+        /// <summary>
         /// Gets the bounding box of a line segment.
         /// </summary>
         /// <param name="point1">First point of line segment.</param>
@@ -137,8 +154,8 @@ namespace Rendering
             (double, double) point2, (double, double) point3)
         {
             double xDenom = point1.Item1 - 2 * point2.Item1 + point3.Item1;
-            double xCritical = 0;
-            double yCritical = 0;
+            double xCritical;
+            double yCritical;
 
             if (xDenom == 0)
             {
@@ -300,70 +317,6 @@ namespace Rendering
 
             yield return (pointList, boundingBox);
             boundingBox = null;
-        }
-
-        /// <summary>
-        /// Converts a point list into a SVG path string.
-        /// </summary>
-        /// <remarks>
-        /// This method converts a point list into the "d" attribute of a path element,
-        /// NOT into an entire path element itself (with proper opening and closing path tags,
-        /// d=, style= etc).
-        /// </remarks>
-        /// <param name="pointList">The point list that is being converted.</param>
-        /// <returns>The equivalent "d" string for the given point list.</returns>
-        public static string ConvertPointListToPathString(List<string> pointList)
-        {
-            // Using iterator to match previous method as well as Python implementation
-            IEnumerator<string> pointEnumerator = pointList.GetEnumerator();
-            // Start SVG path with M command and first point
-            pointEnumerator.MoveNext();
-
-            List<string> svgPath = new List<string> { "M", pointEnumerator.Current};
-            string lastCommand = "M";
-
-            while(pointEnumerator.MoveNext())
-            {
-                string currentPoint = pointEnumerator.Current;
-                string currentCommand = currentPoint.Contains('[') && currentPoint.Contains(']') ? "Q" : "L";
-                
-                // SVG path element allows us to omit command letter if same command is used
-                // multiple times in a row, so only add it to svgPath string if new command is found
-                if(currentCommand != lastCommand)
-                {
-                    svgPath.Add(currentCommand);
-                    lastCommand = currentCommand;
-                }
-
-                if(currentCommand == "Q")
-                {
-                    // As this is a "quadTo" command, control point is formatted as "[x y]"- need to remove []
-                    // add said point, and then add end point (next point)
-                    currentPoint = currentPoint.Replace("[", "").Replace("]", "");
-
-                    svgPath.Add(currentPoint);
-                    pointEnumerator.MoveNext();
-                    svgPath.Add(pointEnumerator.Current);
-                }
-                else
-                {
-                    svgPath.Add(currentPoint);
-                }
-            }
-
-            // Animate adds a "closepath" (Z) command to every filled shape and
-            // closed stroke. For shapes, it makes no difference, but for closed
-            // strokes, it turns two overlapping line caps into a bevel, miter,
-            // or round join, which does make a difference.
-            if (pointList[0] == pointList[pointList.Count - 1])
-            {
-                // If starting point == ending point i.e completes a closed shape/stroke,
-                // Add Z command
-                svgPath.Add("Z");
-            }
-
-            // Combine list into space separated string to create SVG path string
-            return string.Join(" ", svgPath);
         }
 
         private static List<string>? Walk(string currentPoint, HashSet<string> usedPoints, string originPoint,
