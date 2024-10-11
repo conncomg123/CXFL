@@ -219,8 +219,11 @@ namespace Rendering
         // in the standard point format
 
         /// <summary>
-        /// Converts an XML Edge element's "edges" string into a list of (point lists (segments), bounding box) tuples.
+        /// Converts an XML Edge element's "edges" string into a list of (point lists, bounding box) tuples.
         /// </summary>
+        /// <remarks>
+        /// Each segment of an "edge" is parsed into a point list and a bounding box.
+        /// </remarks>
         /// <param name="edges">The "edges" attribute of an Edge XFL element.</param>
         /// <returns>An enumerable of (list of string points in "x y" format,
         /// bounding box of said point list) tuples.</returns>
