@@ -15,6 +15,70 @@ namespace Rendering
     internal class ShapeUtils
     {
         /// <summary>
+        /// Converts a point list into a SVG path string.
+        /// </summary>
+        /// <remarks>
+        /// This method converts a point list into the "d" attribute of a path element,
+        /// NOT into an entire path element itself (with proper opening and closing path tags,
+        /// d=, style= etc).
+        /// </remarks>
+        /// <param name="pointList">The point list that is being converted.</param>
+        /// <returns>The equivalent "d" string for the given point list.</returns>
+        public static string ConvertPointListToPathString(List<string> pointList)
+        {
+            // Using iterator to match previous method as well as Python implementation
+            IEnumerator<string> pointEnumerator = pointList.GetEnumerator();
+            // Start SVG path with M command and first point
+            pointEnumerator.MoveNext();
+
+            List<string> svgPath = new List<string> { "M", pointEnumerator.Current };
+            string lastCommand = "M";
+
+            while (pointEnumerator.MoveNext())
+            {
+                string currentPoint = pointEnumerator.Current;
+                string currentCommand = currentPoint.Contains('[') && currentPoint.Contains(']') ? "Q" : "L";
+
+                // SVG path element allows us to omit command letter if same command is used
+                // multiple times in a row, so only add it to svgPath string if new command is found
+                if (currentCommand != lastCommand)
+                {
+                    svgPath.Add(currentCommand);
+                    lastCommand = currentCommand;
+                }
+
+                if (currentCommand == "Q")
+                {
+                    // As this is a "quadTo" command, control point is formatted as "[x y]"- need to remove []
+                    // add said point, and then add end point (next point)
+                    currentPoint = currentPoint.Replace("[", "").Replace("]", "");
+
+                    svgPath.Add(currentPoint);
+                    pointEnumerator.MoveNext();
+                    svgPath.Add(pointEnumerator.Current);
+                }
+                else
+                {
+                    svgPath.Add(currentPoint);
+                }
+            }
+
+            // Animate adds a "closepath" (Z) command to every filled shape and
+            // closed stroke. For shapes, it makes no difference, but for closed
+            // strokes, it turns two overlapping line caps into a bevel, miter,
+            // or round join, which does make a difference.
+            if (pointList[0] == pointList[pointList.Count - 1])
+            {
+                // If starting point == ending point i.e completes a closed shape/stroke,
+                // Add Z command
+                svgPath.Add("Z");
+            }
+
+            // Combine list into space separated string to create SVG path string
+            return string.Join(" ", svgPath);
+        }
+
+        /// <summary>
         /// Converts XFL DOMShape element into its equivalent SVG path elements.
         /// </summary>
         /// <param name="shapeElement">The XFL DOMShape being converted.</param>
@@ -72,7 +136,7 @@ namespace Rendering
             }
 
             (List<XElement>?, List<XElement>?) pathElements = 
-                EdgeUtils.ConvertEdgesToSvgPath(shapeElement.Edges, fillStylesAttributes, strokeStylesAttributes);
+                ConvertEdgesToSvgPath(shapeElement.Edges, fillStylesAttributes, strokeStylesAttributes);
 
             XElement? fillsG = null;
             XElement? strokesG = null;
