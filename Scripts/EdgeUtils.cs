@@ -219,10 +219,11 @@ namespace Rendering
         // in the standard point format
 
         /// <summary>
-        /// Converts an XML Edge element's "edges" string into a list of points (segments).
+        /// Converts an XML Edge element's "edges" string into a list of (point lists (segments), bounding box) tuples.
         /// </summary>
         /// <param name="edges">The "edges" attribute of an Edge XFL element.</param>
-        /// <returns>An enumerable of lists of string points in "x y" format- each list of points is a segment of the "edges" attribute.</returns>
+        /// <returns>An enumerable of (list of string points in "x y" format,
+        /// bounding box of said point list) tuples.</returns>
         public static IEnumerable<(List<string>, Rectangle?)> ConvertEdgeFormatToPointLists(string edges)
         {
             // As MatchCollection was written before .NET 2, it uses IEnumerable for iteration rather
