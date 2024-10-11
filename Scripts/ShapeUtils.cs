@@ -135,8 +135,8 @@ namespace Rendering
                 strokeStylesAttributes[index.ToString()] = StyleUtils.ParseStrokeStyle(strokeStyle);
             }
 
-            (List<XElement>?, List<XElement>?) pathElements = 
-                ConvertEdgesToSvgPath(shapeElement.Edges, fillStylesAttributes, strokeStylesAttributes);
+            (List<XElement>?, List<XElement>?) pathElements = (null, null);
+                //ConvertEdgesToSvgPath(shapeElement.Edges, fillStylesAttributes, strokeStylesAttributes);
 
             XElement? fillsG = null;
             XElement? strokesG = null;
