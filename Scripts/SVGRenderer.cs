@@ -18,13 +18,16 @@ public class SVGRenderer
     public bool RepalceMasksWithClipPaths { get; set; }
     ConcurrentDictionary<Shape, (XElement?, XElement?, Dictionary<string, XElement>?)> ShapeCache = new(),
     MaskCache = new();
+    private ConcurrentDictionary<BitmapItem, string> ImageCache = new();
+    public string? ImageFolder;
 
-    public SVGRenderer(Document document, bool repalceMasksWithClipPaths = true)
+    public SVGRenderer(Document document, string? imageFolder = null, bool repalceMasksWithClipPaths = true)
     {
         Document = document;
         RepalceMasksWithClipPaths = repalceMasksWithClipPaths;
         HREF = XName.Get("href", xlink.ToString());
         nsmgr.AddNamespace("xlink", xlink.ToString());
+        ImageFolder = imageFolder;
     }
     private static bool IsColorIdentity(Color color)
     {
@@ -166,7 +169,7 @@ public class SVGRenderer
             XElement usedElement = defs[href.StartsWith("#") ? href.Substring(1) : href];
             List<XElement>? pathElements = usedElement.Elements(svgNs + "path")?.ToList();
             if (pathElements is null) continue;
-            for(int i = 0; i < pathElements.Count; i++) 
+            for (int i = 0; i < pathElements.Count; i++)
             {
                 pathElements[i] = new XElement(pathElements[i]);
                 pathElements[i].SetAttributeValue("transform", TransformMatrixToString(useMatrix));
@@ -222,7 +225,7 @@ public class SVGRenderer
                 {
                     mask.Add(e);
                 }
-                if(RepalceMasksWithClipPaths) mask = ConvertMaskToClipPath(mask, defs);
+                if (RepalceMasksWithClipPaths) mask = ConvertMaskToClipPath(mask, defs);
                 defs[maskId] = mask;
                 continue;
             }
@@ -405,16 +408,33 @@ public class SVGRenderer
 
     private XElement HandleBitmap(BitmapInstance bitmap)
     {
-        string dataUrl = GetBitmapData(bitmap);
-
+        BitmapItem correspondingItem = (BitmapItem)bitmap.CorrespondingItem!;
+        string dataUrl;
+        lock (correspondingItem)
+        {
+            if (ImageCache.TryGetValue(correspondingItem, out var result))
+            {
+                dataUrl = result;
+            }
+            else
+            {
+                dataUrl = GetBitmapData(bitmap);
+                if (ImageFolder is not null)
+                {
+                    // now copy that data to a file that can be pointed to
+                    string imgPath = Path.Combine(ImageFolder, Path.GetFileName(correspondingItem.Href));
+                    if(!Directory.Exists(Path.GetDirectoryName(imgPath)!)) Directory.CreateDirectory(Path.GetDirectoryName(imgPath)!);
+                    File.WriteAllBytes(imgPath, Convert.FromBase64String(dataUrl[(dataUrl.IndexOf(',') + 1)..]));
+                    dataUrl = "file:///" + imgPath;
+                }
+                ImageCache[correspondingItem] = dataUrl;
+            }
+        }
         XNamespace xlinkNs = "http://www.w3.org/1999/xlink";
-        // x and y handled by the matrix
         XElement imageElement = new XElement(svgNs + "image",
-            new XAttribute(xlinkNs + "href", dataUrl),
-            new XAttribute("width", bitmap.HPixels.ToString()),
-            new XAttribute("height", bitmap.VPixels.ToString())
-        );
-
+        new XAttribute(xlinkNs + "href", dataUrl),
+        new XAttribute("width", bitmap.HPixels.ToString()),
+        new XAttribute("height", bitmap.VPixels.ToString()));
         return imageElement;
     }
 
