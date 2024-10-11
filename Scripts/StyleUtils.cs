@@ -46,7 +46,6 @@ namespace Rendering
             }
             else if(fillStyle.RadialGradient != null)
             {
-                double radius = BoxUtils.GetBoundingBoxRadius(boundingBox);
                 XElement gradientElement = GradientUtils.ConvertRadialGradientToSVG(fillStyle.RadialGradient);
                 attributes["fill"] = $"url(#{gradientElement.Attribute("id")!.Value})";
                 extraDefElements[gradientElement.Attribute("id")!.Value] = gradientElement;
@@ -128,7 +127,6 @@ namespace Rendering
 
             if(strokeStyle.Stroke.RadialGradient != null)
             {
-                double radius = BoxUtils.GetBoundingBoxRadius(boundingBox);
                 XElement gradientElement = GradientUtils.ConvertRadialGradientToSVG(strokeStyle.Stroke.RadialGradient);
                 attributes["stroke"] = $"url(#{gradientElement.Attribute("id")!.Value})";
                 extraDefElements[gradientElement.Attribute("id")!.Value] = gradientElement;

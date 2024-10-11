@@ -56,15 +56,6 @@ namespace Rendering
             return newRectangle;
         }
 
-        public static double GetBoundingBoxRadius(Rectangle boundingBox)
-        {
-            double width = boundingBox.Right - boundingBox.Left;
-            double height = boundingBox.Top - boundingBox.Bottom;
-            double sum = Math.Pow(width, 2) + Math.Pow(height, 2);
-
-            return Math.Pow(sum, 0.5) / 2;
-        }
-
         /// <summary>
         /// Gets the bounding box of a line segment.
         /// </summary>
