@@ -522,8 +522,8 @@ public static class TweenUtils
     public static (double, double) GetStartPoint(Shape shape)
     {
         string edges = shape.Edges[0].Edges!;
-        var points = EdgeUtils.ConvertEdgeFormatToPointLists(edges);
-        return (double.Parse(points.First()[0].Split(' ')[0]), double.Parse(points.First()[0].Split(' ')[1]));
+        var points = EdgeUtils.ConvertEdgesFormatToPointLists(edges);
+        return (double.Parse(points.First().Item1[0].Split(' ')[0]), double.Parse(points.First().Item1[0].Split(' ')[1]));
     }
     public class KDMap<T>
     {
@@ -559,10 +559,11 @@ public static class TweenUtils
         {
             var edges = edge.Edges;
             if (edges is null) continue;
-            var points = EdgeUtils.ConvertEdgeFormatToPointLists(edges);
-            foreach (var pl in points)
+            var points = EdgeUtils.ConvertEdgesFormatToPointLists(edges);
+            foreach (var pointListTuple in points)
             {
-                foreach (var pt in pl)
+                List<string> currentPointList = pointListTuple.Item1;
+                foreach (var pt in currentPointList)
                 {
                     if(pt.StartsWith('[')) continue;
                     double x = 20.0 * double.Parse(pt.Split(' ')[0]);
