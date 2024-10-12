@@ -81,85 +81,142 @@ namespace Rendering
         /// <summary>
         /// Converts XFL DOMShape element into its equivalent SVG path elements.
         /// </summary>
+        /// <remarks>
+        /// This method performs three actions:
+        /// 1. Gather fill and stroke ids
+        /// 2. Uses EdgeUtils to get the fill and stroke path lists- list of pointList, boundingBox tuples
+        /// 3. Generates the SVG, including style information.
+        /// </remarks>
         /// <param name="shapeElement">The XFL DOMShape being converted.</param>
         /// <param name="mask">If true, all fill colors will be set to #FFFFFF. This ensures
         /// that the resulting mask is fully transparent.</param>
-        /// <returns>A 3-tuple consisting of: SVG g element containing filled paths elements,
+        /// <returns>A 4-tuple consisting of: SVG g element containing filled paths elements,
         /// SVG g element containing stroked path elements, and
-        /// dict of extra elements to put in SVG defs element (e.g.filters and gradients)</returns>
-        public static (XElement?, XElement?, Dictionary<string, XElement>?) 
+        /// dict of extra elements to put in SVG defs element (e.g.filters and gradients),
+        /// bounding box of entire shape.</returns>
+        public static (XElement?, XElement?, Dictionary<string, XElement>?, Rectangle?) 
             ConvertShapeToSVG(Shape shapeElement, bool mask = false)
         {
-            // Dictionary that keeps track of style attributes associated with SVG equivalent of fillStyle with specific
-            // fillStyle index
-            Dictionary<string, Dictionary<string, string>> fillStylesAttributes = new();
-            
-            // Dictionary that keeps track of style attributes associated with SVG equivalent of StrokeStyle with specific
-            // strokeStyle index
-            Dictionary<string, Dictionary<string, string>> strokeStylesAttributes = new();
 
+            Dictionary<int, FillStyle> fillStyles = new Dictionary<int, FillStyle>();
+            Dictionary<int, StrokeStyle> strokeStyles = new Dictionary<int, StrokeStyle>();
+            
+            // The python code stores the styles directly into Dictionary, do the same here
+            foreach(FillStyle style in shapeElement.Fills)
+            {
+                int fillIndex = style.Index;
+                fillStyles[fillIndex] = style;
+            }
+
+            foreach(StrokeStyle style in shapeElement.Strokes)
+            {
+                int strokeIndex = style.Index;
+                strokeStyles[strokeIndex] = style;
+            }
+
+            Rectangle? boundingBox = null;
+            List<XElement> fillPathElements = new List<XElement>();
+            List<XElement> strokePathElements = new List<XElement>();
             Dictionary<string, XElement> extraDefElements = new Dictionary<string, XElement>();
 
-            // For each FillStyle of DOMShape, create SVG attributes of its SVG equivalent
-            foreach (FillStyle fillStyle in shapeElement.Fills)
+            (var fillShapes, var strokes) = EdgeUtils.ConvertXFLEdgesToShapes(shapeElement.Edges, fillStyles, strokeStyles);
+
+            foreach(KeyValuePair<int, (List<List<string>>, Rectangle?)> fillShapeEntry in fillShapes)
             {
-                int index = fillStyle.Index;
+                List<List<string>> currentPointLists = fillShapeEntry.Value.Item1;
+                Rectangle? currentBoundingBox = fillShapeEntry.Value.Item2;
+                FillStyle currentStyle = fillStyles[fillShapeEntry.Key];
+
+                Dictionary<string, string> fillStyleSVGAttributes = new Dictionary<string, string>();
+
                 if(mask)
                 {
                     // Set the fill to white so that the mask is fully transparent
-                    Dictionary<string, string> attributes = new Dictionary<string, string>()
-                    {
-                        {"fill", "#FFFFFF" },
-                        {"stroke", "none" }
-                    };
-                    fillStylesAttributes[index.ToString()] = attributes;
+                    fillStyleSVGAttributes["fill"] = "#FFFFFF";
+                    fillStyleSVGAttributes["stroke"] = "none";
                 }
                 else
                 {
-                    (Dictionary<string, string>, Dictionary<string, XElement>)
-                        svgAttributeElements = StyleUtils.ParseFillStyle(fillStyle);
-                    fillStylesAttributes[index.ToString()] = svgAttributeElements.Item1;
+                    (fillStyleSVGAttributes, Dictionary<string, XElement> fillStyleExtraElements) = StyleUtils.ParseFillStyle(currentStyle);
                     
-                    // Add any elements that need to be added to SVG <defs>
-                    foreach(KeyValuePair<string, XElement> defElementPair in svgAttributeElements.Item2)
+                    // Add or update any extra SVG elements that are created to be stored in def
+                    foreach(KeyValuePair<string, XElement> extraElement in fillStyleExtraElements)
                     {
-                        extraDefElements[defElementPair.Key] = defElementPair.Value;
+                        extraDefElements[extraElement.Key] = extraElement.Value;
                     }
                 }
+
+                fillStyleSVGAttributes["d"] = string.Join(" ", currentPointLists.Select(ConvertPointListToPathString));
+                XElement pathElement =  CreateSVGPathElement(fillStyleSVGAttributes);
+                fillPathElements.Add(pathElement);
+                boundingBox = BoxUtils.MergeBoundingBoxes(boundingBox, currentBoundingBox);
             }
 
-            // For each StrokeStyle of DOMShape, create SVG attributes of its SVG equivalent
-            foreach (StrokeStyle strokeStyle in shapeElement.Strokes)
+            foreach(KeyValuePair<int, (List<List<string>>, Rectangle?)> strokeEntry in strokes)
             {
-                int index = strokeStyle.Index;
-                strokeStylesAttributes[index.ToString()] = StyleUtils.ParseStrokeStyle(strokeStyle);
+                List<List<string>> currentPointLists = strokeEntry.Value.Item1;
+                Rectangle currentBoundingBox = strokeEntry.Value.Item2!;
+                StrokeStyle currentStyle = strokeStyles[strokeEntry.Key];
+                
+                Dictionary<string, string> strokeStyleSVGAttributes = new Dictionary<string, string>();
+                if(mask)
+                {
+                    //Insert warning here
+                }
+
+                (strokeStyleSVGAttributes, Dictionary<string, XElement> strokeStyleExtraElements) = StyleUtils.ParseStrokeStyle(currentStyle);
+                
+                // Add or update any extra SVG elements that are created to be stored in def
+                foreach(KeyValuePair<string, XElement> extraElement in strokeStyleExtraElements)
+                {
+                    extraDefElements[extraElement.Key] = extraElement.Value;
+                }
+
+                double strokeWidth = strokeStyleSVGAttributes.ContainsKey("stroke-width") ? 
+                    Convert.ToDouble(strokeStyleSVGAttributes["stroke-width"]) : 1;
+
+                currentBoundingBox = BoxUtils.ExpandBoundingBox(currentBoundingBox, strokeWidth);
+                strokeStyleSVGAttributes["d"] = string.Join(" ", currentPointLists.Select(ConvertPointListToPathString));
+                
+                XElement pathElement =  CreateSVGPathElement(strokeStyleSVGAttributes);
+                strokePathElements.Add(pathElement);
+                boundingBox = BoxUtils.MergeBoundingBoxes(boundingBox, currentBoundingBox);
             }
 
-            (List<XElement>?, List<XElement>?) pathElements = (null, null);
-                //ConvertEdgesToSvgPath(shapeElement.Edges, fillStylesAttributes, strokeStylesAttributes);
-
+            // Create SVG group elements to store both fill SVG path elements and stroke SVG path elements
             XElement? fillsG = null;
             XElement? strokesG = null;
-
-            if (pathElements.Item1 != null)
+            
+            if(fillPathElements.Count != 0)
             {
                 fillsG = new XElement("g");
-                foreach(XElement fillPathElement in pathElements.Item1)
+                foreach(XElement fillPathElement in fillPathElements)
                 {
                     fillsG.Add(fillPathElement);
                 }
             }
 
-            if (pathElements.Item2 != null)
+            if(strokePathElements.Count != 0)
             {
                 strokesG = new XElement("g");
-                foreach (XElement strokePathElement in pathElements.Item2)
+                foreach(XElement strokePathElement in strokePathElements)
                 {
                     strokesG.Add(strokePathElement);
                 }
             }
 
-            return (fillsG, strokesG, extraDefElements);
+            return (fillsG, strokesG, extraDefElements, boundingBox);
+        }
+
+        public static XElement CreateSVGPathElement(Dictionary<string, string> attributes)
+        {
+            XElement newPathElement = new XElement("path");
+            foreach(var attribute in attributes)
+            {
+                newPathElement.SetAttributeValue(attribute.Key, attribute.Value);
+            }
+
+            return newPathElement;
         }
     }
 }
