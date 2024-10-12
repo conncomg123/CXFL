@@ -84,7 +84,7 @@ namespace Rendering
         /// <param name="edges">The "edges" attribute of an Edge XFL element.</param>
         /// <returns>An enumerable of (list of string points in "x y" format,
         /// bounding box of said point list) tuples.</returns>
-        public static IEnumerable<(List<string>, Rectangle?)> ConvertEdgeFormatToPointLists(string edges)
+        public static IEnumerable<(List<string>, Rectangle?)> ConvertEdgesFormatToPointLists(string edges)
         {
             // As MatchCollection was written before .NET 2, it uses IEnumerable for iteration rather
             // than IEnumerable<T>, meaning it defaults to an enumerable of objects.
@@ -324,18 +324,14 @@ namespace Rendering
         /// bounding box after each addition.
         /// This (list of point lists, bounding box) is associatd with a strokeStyle index.
         /// </para>
-        /// <para>
-        /// For each fill/strokeStyle index, create the proper SVG path element (setting "d" attribute to
-        /// SVG path string, setting "fill" attributes to the properly converted FillStyle/StrokeStyles
-        /// </para>
         /// </remarks>
-        /// <param name="edgesElement">The edges element of a DOMShape element.</param>
+        /// <param name="edgesElement">The XFL edges element of a DOMShape element.</param>
         /// <param name="strokeStyleAttributes">The SVG attributes of each strokeStyle element of a DOMShape.</param>
         /// <returns>A tuple consisting of Dictionary of fillStyle indexes mapped to their respective pointLists and bounding box,
         /// a Dictionary of strokeStyle indexes mapped to their respective pointLists and bounding box.</returns>
         public static (Dictionary<int, (List<List<string>>, Rectangle?)>,
-            Dictionary<int, (List<List<string>>, Rectangle?)>) ConvertEdgesToShapes(List<Edge> edgesElement,
-            Dictionary<string, Dictionary<string, string>> strokeStylesAttributes)
+            Dictionary<int, (List<List<string>>, Rectangle?)>) ConvertXFLEdgesToShapes(List<Edge> edgesElement,
+            Dictionary<int, FillStyle> fillStyles, Dictionary<int, StrokeStyle> strokeStyles)
         {
             // When associating point lists to their fillstyle/strokestyle, using their
             // index" attribute- NOT their index in lists
@@ -360,7 +356,7 @@ namespace Rendering
                 int? strokeStyleIndex = edgeElement.StrokeStyle;
 
                 IEnumerable<(List<string>, Rectangle?)> edgesPointLists = (edgesString is null) 
-                    ? new List<(List<string>, Rectangle?)>() : ConvertEdgeFormatToPointLists(edgesString);
+                    ? new List<(List<string>, Rectangle?)>() : ConvertEdgesFormatToPointLists(edgesString);
 
                 // Associate point lists with appropriate fillStyle/strokeStyle index in tuples
                 // Map bounding boxes to proper fillStyle/strokeStyle indexes
@@ -410,11 +406,7 @@ namespace Rendering
                     // If strokeStyle exists for Edge, process immediately as no shape needs to be joined
                     if (strokeStyleIndex != null)
                     {
-                        // Check if strokeStyle has associated SVG attributes created for it
-                        // Do I really need to check this here? Seems a bit out of place
-                        string? index = strokeStyleIndex.ToString();
-
-                        if (index != null && strokeStylesAttributes.ContainsKey(index))
+                        if (strokeStyles.ContainsKey((int)strokeStyleIndex))
                         {
                             // defaultdict(list)- For any key, default value is empty list
                             // Is used to create a list of size 1 when first creating stroke path list
