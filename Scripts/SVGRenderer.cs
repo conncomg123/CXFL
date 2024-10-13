@@ -20,7 +20,29 @@ public class SVGRenderer
     MaskCache = new();
     private ConcurrentDictionary<BitmapItem, string> ImageCache = new();
     public string? ImageFolder;
+    public ConcurrentDictionary<(Timeline, Frame), (string actionscript, bool isOnMainTimeline)> ActionscriptCache = new();
+    private void LoadActionscriptCache()
+    {
+        void ParseTimelines(List<Timeline> timelines, bool isOnMainTimeline)
+        {
+            foreach (Timeline t in timelines)
+            {
+                foreach (Layer l in t.Layers)
+                {
+                    foreach (Frame f in l.KeyFrames)
+                    {
+                        if (f.ActionScript is not null)
+                        {
+                            ActionscriptCache.TryAdd((t, f), (f.ActionScript, isOnMainTimeline));
+                        }
+                    }
+                }
+            }
 
+        }
+        ParseTimelines(Document.Timelines, true);
+        ParseTimelines(Document.Library.Items.Values.Select(x => x is SymbolItem symbol ? symbol.Timeline : null).Where(x => x is not null).Cast<Timeline>().ToList(), false);
+    }
     public SVGRenderer(Document document, string? imageFolder = null, bool repalceMasksWithClipPaths = true)
     {
         Document = document;
@@ -28,6 +50,7 @@ public class SVGRenderer
         HREF = XName.Get("href", xlink.ToString());
         nsmgr.AddNamespace("xlink", xlink.ToString());
         ImageFolder = imageFolder;
+        LoadActionscriptCache();
     }
     private static bool IsColorIdentity(Color color)
     {
@@ -423,7 +446,7 @@ public class SVGRenderer
                 {
                     // now copy that data to a file that can be pointed to
                     string imgPath = Path.Combine(ImageFolder, Path.GetFileName(correspondingItem.Href));
-                    if(!Directory.Exists(Path.GetDirectoryName(imgPath)!)) Directory.CreateDirectory(Path.GetDirectoryName(imgPath)!);
+                    if (!Directory.Exists(Path.GetDirectoryName(imgPath)!)) Directory.CreateDirectory(Path.GetDirectoryName(imgPath)!);
                     File.WriteAllBytes(imgPath, Convert.FromBase64String(dataUrl[(dataUrl.IndexOf(',') + 1)..]));
                     dataUrl = "file:///" + imgPath;
                 }
