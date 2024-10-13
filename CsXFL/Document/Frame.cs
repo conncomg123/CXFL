@@ -6,7 +6,9 @@ using System.Xml.Linq;
 public class Frame : ILibraryEventReceiver, IDisposable
 {
     internal const string FRAME_NODE_IDENTIFIER = "DOMFrame",
-    FRAMES_NODEGROUP_IDENTIFIER = "frames";
+    FRAMES_NODEGROUP_IDENTIFIER = "frames",
+    ACTIONSCRIPT_NODE_IDENTIFIER = "Actionscript",
+    SCRIPT_NODE_IDENTIFIER = "script";
     private static readonly HashSet<string> AcceptableLabelTypes = new HashSet<string> { "none", "name", "comment", "anchor" };
     public enum KeyModes : int
     {
@@ -44,8 +46,9 @@ public class Frame : ILibraryEventReceiver, IDisposable
     private bool registeredForSoundItem, motionTweenSnap, hasCustomEase, bookmark, useSingleEaseCurve;
     private MorphShape? morphShape;
     private Library? library;
+    private string? actionScript;
     internal XElement? Root { get { return root; } }
-    public string Ns { get { return ns.ToString(); } }
+    public XNamespace Ns { get { return ns.ToString(); } }
     public int StartFrame { get { return startFrame; } set { startFrame = value; root?.SetAttributeValue("index", value); } }
     public int Duration { get { return duration; } set { duration = value; root?.SetOrRemoveAttribute("duration", value, DefaultValues.Duration); } }
     public int KeyMode { get { return keyMode; } set { keyMode = value; root?.SetOrRemoveAttribute("keyMode", value, DefaultValues.KeyMode); } }
@@ -106,6 +109,34 @@ public class Frame : ILibraryEventReceiver, IDisposable
     private static readonly HashSet<string> AcceptableSoundSyncs = new HashSet<string> { "event", "start", "stop", "stream" };
     public ReadOnlyCollection<Element> Elements { get { return elements.AsReadOnly(); } }
     public MorphShape? MorphShape { get { return morphShape; } }
+    public string? ActionScript { get { return actionScript; } set { SetActionscript(value); } }
+    private void SetActionscript(string? value)
+    {
+        if (actionScript is null && value is not null)
+        {
+            // create <Actionscript> node with <script> tag 
+            XElement actionScriptNode = new XElement(ns + ACTIONSCRIPT_NODE_IDENTIFIER);
+            XElement scriptNode = new XElement(ns + SCRIPT_NODE_IDENTIFIER);
+            XCData data = new XCData(value);
+            scriptNode.Add(data);
+            actionScriptNode.Add(scriptNode);
+            root?.Add(actionScriptNode);
+        }
+        else if (actionScript is not null && value is null)
+        {
+            // remove <Actionscript> node
+            root?.Element(ns + ACTIONSCRIPT_NODE_IDENTIFIER)?.Remove();
+        }
+        else if (actionScript is not null && value is not null)
+        {
+            // update <Actionscript> node
+            XElement actionScriptNode = root?.Element(ns + ACTIONSCRIPT_NODE_IDENTIFIER)!;
+            XElement scriptNode = actionScriptNode.Element(ns + SCRIPT_NODE_IDENTIFIER)!;
+            XCData data = new XCData(value);
+            scriptNode.ReplaceAll(data);
+        }
+        actionScript = value;
+    }
     private void LoadElements(in XElement frameNode)
     {
         List<XElement>? elementNodes = frameNode.Element(ns + Element.ELEMENTS_NODEGROUP_IDENTIFIER)?.Elements().ToList();
@@ -194,6 +225,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
             LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingSoundItem!, this);
             CorrespondingSoundItem!.UseCount++;
         }
+        actionScript = frameNode.Element(ns + ACTIONSCRIPT_NODE_IDENTIFIER)?.Value;
     }
 
     internal Frame(Frame other, bool isBlank = false)
@@ -229,6 +261,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
             LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingSoundItem!, this);
             CorrespondingSoundItem!.UseCount++;
         }
+        actionScript = other.actionScript;
     }
 
     public void Dispose()
