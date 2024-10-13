@@ -1,6 +1,7 @@
 using CsXFL;
 using System.Collections.Concurrent;
 using System.IO.Compression;
+using System.Numerics;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
@@ -14,14 +15,42 @@ public class SVGRenderer
     XName HREF;
     XmlNamespaceManager nsmgr = new XmlNamespaceManager(new NameTable());
     Document Document { get; set; }
+    public bool RepalceMasksWithClipPaths { get; set; }
     ConcurrentDictionary<Shape, (XElement?, XElement?, Dictionary<string, XElement>?)> ShapeCache = new(),
     MaskCache = new();
+    private ConcurrentDictionary<BitmapItem, string> ImageCache = new();
+    public string? ImageFolder;
+    public ConcurrentDictionary<(Timeline, Frame), (string actionscript, bool isOnMainTimeline)> ActionscriptCache = new();
+    private void LoadActionscriptCache()
+    {
+        void ParseTimelines(List<Timeline> timelines, bool isOnMainTimeline)
+        {
+            foreach (Timeline t in timelines)
+            {
+                foreach (Layer l in t.Layers)
+                {
+                    foreach (Frame f in l.KeyFrames)
+                    {
+                        if (f.ActionScript is not null)
+                        {
+                            ActionscriptCache.TryAdd((t, f), (f.ActionScript, isOnMainTimeline));
+                        }
+                    }
+                }
+            }
 
-    public SVGRenderer(Document document)
+        }
+        ParseTimelines(Document.Timelines, true);
+        ParseTimelines(Document.Library.Items.Values.Select(x => x is SymbolItem symbol ? symbol.Timeline : null).Where(x => x is not null).Cast<Timeline>().ToList(), false);
+    }
+    public SVGRenderer(Document document, string? imageFolder = null, bool repalceMasksWithClipPaths = true)
     {
         Document = document;
+        RepalceMasksWithClipPaths = repalceMasksWithClipPaths;
         HREF = XName.Get("href", xlink.ToString());
         nsmgr.AddNamespace("xlink", xlink.ToString());
+        ImageFolder = imageFolder;
+        LoadActionscriptCache();
     }
     private static bool IsColorIdentity(Color color)
     {
@@ -110,6 +139,79 @@ public class SVGRenderer
         svg.Add(body);
         return new XDocument(svg);
     }
+    private static Matrix4x4 TransformStringToMatrix(string transform)
+    {
+        string[] parts = transform.Replace("matrix(", "").Replace(")", "").Split(',');
+        float[] values = parts.Select(float.Parse).ToArray();
+        Matrix4x4 matrix = new Matrix4x4
+        {
+            M11 = values[0],
+            M12 = values[1],
+            M21 = values[2],
+            M22 = values[3],
+            M41 = values[4],
+            M42 = values[5],
+            M33 = 1,
+            M44 = 1
+        };
+        return matrix;
+    }
+    private static string TransformMatrixToString(Matrix4x4 matrix)
+    {
+        return $"matrix({matrix.M11},{matrix.M12},{matrix.M21},{matrix.M22},{matrix.M41},{matrix.M42})";
+    }
+    private (List<XElement>, Matrix4x4) ParseMaskGAndUseNodes(XElement element, Matrix4x4 matrix, Dictionary<string, XElement> defs)
+    {
+        List<XElement> newElements = new List<XElement>();
+        Matrix4x4 curMatrix = Matrix4x4.Multiply(matrix, Matrix4x4.Identity);
+        foreach (XElement child in element.Elements(svgNs + "g"))
+        {
+            if (child.Attribute("transform") is not null)
+            {
+                string transform = child.Attribute("transform")!.Value;
+                Matrix4x4 childMatrix = TransformStringToMatrix(transform);
+                curMatrix = Matrix4x4.Multiply(childMatrix, curMatrix);
+            }
+
+            (List<XElement> newElement, Matrix4x4 newMatrix) = ParseMaskGAndUseNodes(child, curMatrix, defs);
+            newElements.AddRange(newElement);
+            curMatrix = newMatrix;
+        }
+
+        foreach (XElement child in element.Elements(svgNs + "use"))
+        {
+            Matrix4x4 useMatrix = Matrix4x4.Multiply(curMatrix, Matrix4x4.Identity);
+            if (child.Attribute("transform") is not null)
+            {
+                string transform = child.Attribute("transform")!.Value;
+                Matrix4x4 childMatrix = TransformStringToMatrix(transform);
+                useMatrix = Matrix4x4.Multiply(childMatrix, curMatrix);
+            }
+
+            string href = child.Attribute(HREF)!.Value;
+            XElement usedElement = defs[href.StartsWith("#") ? href.Substring(1) : href];
+            List<XElement>? pathElements = usedElement.Elements(svgNs + "path")?.ToList();
+            if (pathElements is null) continue;
+            for (int i = 0; i < pathElements.Count; i++)
+            {
+                pathElements[i] = new XElement(pathElements[i]);
+                pathElements[i].SetAttributeValue("transform", TransformMatrixToString(useMatrix));
+            }
+            newElements.AddRange(pathElements);
+        }
+
+        return (newElements, curMatrix);
+    }
+    private XElement ConvertMaskToClipPath(XElement maskElement, Dictionary<string, XElement> defs)
+    {
+        maskElement.Name = svgNs + "clipPath";
+        string? maskMatrix = maskElement.Attribute("transform")?.Value;
+        Matrix4x4 matrix = maskMatrix is null ? Matrix4x4.Identity : TransformStringToMatrix(maskMatrix);
+        (List<XElement> paths, _) = ParseMaskGAndUseNodes(maskElement, matrix, defs);
+        maskElement.RemoveNodes();
+        maskElement.Add(paths);
+        return maskElement;
+    }
     private (Dictionary<string, XElement>, List<XElement>) RenderTimeline(Timeline timeline, int frameIndex, Color colorEffect, bool insideMask, string type = "symbol", bool isMaskLayer = false)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
@@ -146,6 +248,7 @@ public class SVGRenderer
                 {
                     mask.Add(e);
                 }
+                if (RepalceMasksWithClipPaths) mask = ConvertMaskToClipPath(mask, defs);
                 defs[maskId] = mask;
                 continue;
             }
@@ -206,7 +309,7 @@ public class SVGRenderer
         Shape firstShape = shape;
         Shape lastShape = destFrame.Elements.OfType<Shape>().First();
         Shape interpShape = TweenUtils.ShapeInterpolation(firstShape, lastShape, srcFrame, frameOffset);
-        return interpShape; 
+        return interpShape;
     }
     private (Dictionary<string, XElement>, List<XElement>) RenderLayer(Layer layer, int frameIndex, string id, Color colorEffect, bool insideMask, string? maskId = null, bool isMaskLayer = false)
     {
@@ -246,7 +349,7 @@ public class SVGRenderer
             }
             // add b to a new XElement g for organization and give it a name attribute
             XElement g = new XElement(svgNs + "g", new XAttribute("name", $"{id}_{i}"));
-            if (insideMask && !isMaskLayer) g.SetAttributeValue("mask", $"url(#{maskId})");
+            if (insideMask && !isMaskLayer) g.SetAttributeValue(RepalceMasksWithClipPaths ? "clip-path" : "mask", $"url(#{maskId})");
             foreach (XElement e in b)
             {
                 g.Add(e);
@@ -328,16 +431,33 @@ public class SVGRenderer
 
     private XElement HandleBitmap(BitmapInstance bitmap)
     {
-        string dataUrl = GetBitmapData(bitmap);
-
+        BitmapItem correspondingItem = (BitmapItem)bitmap.CorrespondingItem!;
+        string dataUrl;
+        lock (correspondingItem)
+        {
+            if (ImageCache.TryGetValue(correspondingItem, out var result))
+            {
+                dataUrl = result;
+            }
+            else
+            {
+                dataUrl = GetBitmapData(bitmap);
+                if (ImageFolder is not null)
+                {
+                    // now copy that data to a file that can be pointed to
+                    string imgPath = Path.Combine(ImageFolder, Path.GetFileName(correspondingItem.Href));
+                    if (!Directory.Exists(Path.GetDirectoryName(imgPath)!)) Directory.CreateDirectory(Path.GetDirectoryName(imgPath)!);
+                    File.WriteAllBytes(imgPath, Convert.FromBase64String(dataUrl[(dataUrl.IndexOf(',') + 1)..]));
+                    dataUrl = "file:///" + imgPath;
+                }
+                ImageCache[correspondingItem] = dataUrl;
+            }
+        }
         XNamespace xlinkNs = "http://www.w3.org/1999/xlink";
-        // x and y handled by the matrix
         XElement imageElement = new XElement(svgNs + "image",
-            new XAttribute(xlinkNs + "href", dataUrl),
-            new XAttribute("width", bitmap.HPixels.ToString()),
-            new XAttribute("height", bitmap.VPixels.ToString())
-        );
-
+        new XAttribute(xlinkNs + "href", dataUrl),
+        new XAttribute("width", bitmap.HPixels.ToString()),
+        new XAttribute("height", bitmap.VPixels.ToString()));
         return imageElement;
     }
 
