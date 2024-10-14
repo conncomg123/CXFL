@@ -41,7 +41,7 @@ public class SVGRenderer
 
         }
         ParseTimelines(Document.Timelines, true);
-        ParseTimelines(Document.Library.Items.Values.Select(x => x is SymbolItem symbol ? symbol.Timeline : null).Where(x => x is not null).Cast<Timeline>().ToList(), false);
+        ParseTimelines(Document.Library.Items.Values.OfType<SymbolItem>().Select(si => si.Timeline).ToList(), false);
     }
     public SVGRenderer(Document document, string? imageFolder = null, bool repalceMasksWithClipPaths = true)
     {
