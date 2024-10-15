@@ -27,10 +27,29 @@ namespace Rendering
                     new FilterUtils.FeGaussianBlur(5, 25),
                     new FilterUtils.FeBlend("SourceGraphic", "overlay"),
                     new FilterUtils.FeColorMatrix("0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0", "matrix"),
+                    new FilterUtils.FeColorMatrix("0.5", "saturate"),
                     new FilterUtils.FeComposite("xor", "SourceGraphic"),
                     new FilterUtils.FeTurbulence("turbulence", 0.5, 5, 0, true),
-                    new FilterUtils.FeDisplacementMap("turbulence", "SourceGraphic", 0.5, "R", "G"),
-                    new FilterUtils.FeDropShadow(10, 20, 5, "red", 0.5)
+                    new FilterUtils.FeDisplacementMap("FeTurbulence", "SourceGraphic", 0.5, "R", "G"),
+                    new FilterUtils.FeDropShadow(10, 20, 5, "red", 0.5),
+                    new FilterUtils.FeComponentTransfer 
+                    { 
+                        Functions = 
+                        { 
+                            new FilterUtils.FeFuncImpl("A") 
+                            { 
+                                Operation = "linear"
+                            },
+                            new FilterUtils.FeFuncImpl("R")
+                            { 
+                                Operation = "gamma"
+                            },
+                            new FilterUtils.FeFuncImpl("G")
+                            { 
+                                Operation = "table"
+                            } 
+                        }
+                    },
                 }
             };
 
