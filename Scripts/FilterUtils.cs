@@ -9,7 +9,7 @@ namespace Rendering
 {
     // https://developer.mozilla.org/en-US/docs/Web/SVG/Element/filter
 
-    public class FilterUtils
+    public static class FilterUtils
     {
         public class AtomicFilter
         {
@@ -41,7 +41,7 @@ namespace Rendering
         public class FeFlood : AtomicFilter
         {
             public FeFlood(string floodColor = "black", string floodOpacity = "1")
-                : base("FeFlood", ("flood-color", floodColor), ("flood-opacity", floodOpacity))
+                : base("feFlood", ("flood-color", floodColor), ("flood-opacity", floodOpacity))
             {
             }
         }
@@ -49,7 +49,7 @@ namespace Rendering
         public class FeOffset : AtomicFilter
         {
             public FeOffset(double dx = 0, double dy = 0)
-                : base("FeOffset", ("dx", dx.ToString()), ("dy", dy.ToString()))
+                : base("feOffset", ("dx", dx.ToString()), ("dy", dy.ToString()))
             {
             }
         }
@@ -57,7 +57,7 @@ namespace Rendering
         public class FeGaussianBlur : AtomicFilter
         {
             public FeGaussianBlur(double stdX = 0, double stdY = 0)
-                : base("FeGaussianBlur", ("stdDeviation", stdX.ToString() + " " + stdY.ToString()))
+                : base("feGaussianBlur", ("stdDeviation", stdX.ToString() + " " + stdY.ToString()))
             {
             }
         }
@@ -72,7 +72,7 @@ namespace Rendering
             };
 
             public FeBlend(string in2 = "SourceGraphic", string mode = "normal")
-                : base("FeBlend", ("in2", in2), ("mode", mode))
+                : base("feBlend", ("in2", in2), ("mode", mode))
             {
                 if (!AllowedModes.Contains(mode))
                 {
@@ -85,7 +85,7 @@ namespace Rendering
         {
             public List<FeFunc> Functions { get; set; }
 
-            public FeComponentTransfer() : base("FeComponentTransfer")
+            public FeComponentTransfer() : base("feComponentTransfer")
             {
                 Functions = new List<FeFunc>();
             }
@@ -233,7 +233,7 @@ namespace Rendering
             };
 
             public FeColorMatrix(string value, string type = "matrix")
-                : base("FeColorMatrix", ("values", type == "matrix" ? ValidateValues(value) : value), ("type", type))
+                : base("feColorMatrix", ("values", type == "matrix" ? ValidateValues(value) : value), ("type", type))
             {
                 if (!AllowedTypes.Contains(type))
                 {
@@ -257,7 +257,7 @@ namespace Rendering
             private static readonly string[] AllowedOperators = { "over", "in", "out", "atop", "xor", "lighter", "arithmetic" };
 
             public FeComposite(string operatorValue, string input2)
-                : base("FeComposite", ("in2", input2), ("operator", ValidateOperator(operatorValue)))
+                : base("feComposite", ("in2", input2), ("operator", ValidateOperator(operatorValue)))
             {
             }
 
@@ -274,7 +274,7 @@ namespace Rendering
         public class FeTurbulence : AtomicFilter
         {
             public FeTurbulence(string type, double baseFrequency, int numOctaves, int? seed = null, bool? stitchTiles = null)
-                : base("FeTurbulence",
+                : base("feTurbulence",
                     ("type", type),
                     ("baseFrequency", baseFrequency.ToString()),
                     ("numOctaves", numOctaves.ToString()),
@@ -292,7 +292,7 @@ namespace Rendering
         public class FeDisplacementMap : AtomicFilter
         {
             public FeDisplacementMap(object inChannel, object in2Channel, double scale, string xChannelSelector = "R", string yChannelSelector = "G")
-                : base("FeDisplacementMap",
+                : base("feDisplacementMap",
                     ("in", inChannel.ToString()),
                     ("in2", in2Channel.ToString()),
                     ("scale", scale.ToString()),
@@ -313,7 +313,7 @@ namespace Rendering
         public class FeDropShadow : AtomicFilter
         {
             public FeDropShadow(double dx, double dy, double stdDeviation, string floodColor, double floodOpacity)
-                : base("DropShadow",
+                : base("feDropShadow",
                     ("dx", dx.ToString()),
                     ("dy", dy.ToString()),
                     ("stdDeviation", stdDeviation.ToString()),
@@ -357,18 +357,18 @@ namespace Rendering
 
             public XElement ToXElement()
             {
-                var filterDef = new XElement("filter",
+                var filterDef = new XElement(SVGRenderer.svgNs + "filter",
                     new XAttribute("id", Name),
                     new XAttribute("x", "-50%"),
                     new XAttribute("y", "-50%"),
                     new XAttribute("width", "200%"),
                     new XAttribute("height", "200%"));
 
-                string lastResult = "SourceAlpha";
+                string lastResult = "SourceGraphic";
 
                 foreach (var svgFilter in Filters)
                 {
-                    var filterElement = new XElement(svgFilter.FilterType);
+                    var filterElement = new XElement(SVGRenderer.svgNs + svgFilter.FilterType);
 
                     if (svgFilter is FeComponentTransfer feComponentTransfer)
                     {
@@ -413,8 +413,11 @@ namespace Rendering
 
         }
 
-        public (XElement defs, XElement filteredGroup) ApplyFilter(XElement group, CompoundFilter filter)
+        public static (XElement defs, XElement filteredGroup) ApplyFilter(XElement group, CompoundFilter filter)
         {
+            // Clone the group element
+            XElement groupClone = new XElement(group);
+
             // Add the filter definition to the <defs> element
             var filterElement = filter.ToXElement(); // Assuming Filter has a ToXElement() method
 
@@ -422,9 +425,9 @@ namespace Rendering
             var filterAttr = new XAttribute("filter", $"url(#{filter.Name})");
 
             // Add the filter attribute to the cloned group element
-            group.Add(filterAttr);
+            groupClone.Add(filterAttr);
 
-            return (filterElement, group);
+            return (filterElement, groupClone);
         }
     }
 }

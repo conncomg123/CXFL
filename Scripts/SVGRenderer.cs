@@ -273,13 +273,42 @@ public class SVGRenderer
                 }
             }
 
-
+            XElement g = new XElement(svgNs + "g", new XAttribute("name", $"{id}_Layer{layerIdx}"));
             (d, b) = RenderLayer(layer, frameIndex, $"{id}_Layer{layerIdx}", colorEffect, maskIsActive, maskId, isMaskLayer);
+
+            foreach (XElement e in b)
+            {
+                g.Add(e);
+            }
+
+            var frame = layer.GetFrame(frameIndex);
+
+            if (frame.Filters.Count > 0)
+            {
+                var compoundFilter = new FilterUtils.CompoundFilter
+                {
+                    Name = $"Filter_{id}_Layer{layerIdx}",
+                    Filters = new List<FilterUtils.AtomicFilter>
+                    {
+                        new FilterUtils.FeDropShadow(10, 20, 5, "red", 0.5)
+                    }
+                };
+
+                (var fDefs, g) = FilterUtils.ApplyFilter(g, compoundFilter);
+                defs[compoundFilter.Name] = fDefs;
+            }
+
+            foreach (var e in b)
+            {
+                g.Add(e);
+            }
+
             foreach (var def in d)
             {
                 defs[def.Key] = def.Value;
             }
-            body.AddRange(b);
+            
+            body.Add(g);
 
         }
 
