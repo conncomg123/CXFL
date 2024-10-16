@@ -4,7 +4,8 @@ using System.Xml.Linq;
 namespace CsXFL;
 public abstract class Filter
 {
-    public const string FILTER_NODEGROUP_IDENTIFIER = "filters";
+    public const string FILTER_NODEGROUP_IDENTIFIER = "filters",
+    FRAME_FILTER_NODEGROUP_IDENTIFIER = "frameFilters";
     protected XElement? root;
     protected XNamespace ns;
     public XElement? Root { get { return root; } }
