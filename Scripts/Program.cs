@@ -1,5 +1,4 @@
-using SkiaRendering;
-
+namespace Rendering;
 class Program
 {
     static void Main(string[] args)
