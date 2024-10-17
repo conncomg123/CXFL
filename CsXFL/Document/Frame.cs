@@ -41,6 +41,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
     private readonly XNamespace ns;
     private readonly List<Element> elements;
     private readonly List<IEase> eases;
+    private readonly List<Filter> frameFilters;
     private int startFrame, duration, keyMode, inPoint44, motionTweenRotateTimes;
     private string labelType, name, soundName, soundSync, tweenType, easeMethodName, motionTweenRotate;
     private bool registeredForSoundItem, motionTweenSnap, hasCustomEase, bookmark, useSingleEaseCurve;
@@ -110,6 +111,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
     public ReadOnlyCollection<Element> Elements { get { return elements.AsReadOnly(); } }
     public MorphShape? MorphShape { get { return morphShape; } }
     public string? ActionScript { get { return actionScript; } set { SetActionscript(value); } }
+    public ReadOnlyCollection<Filter> Filters { get { return frameFilters.AsReadOnly(); } }
     private void SetActionscript(string? value)
     {
         if (actionScript is null && value is not null)
@@ -190,6 +192,40 @@ public class Frame : ILibraryEventReceiver, IDisposable
             }
         }
     }
+    private void LoadFilters(in XElement frameNode)
+    {
+        List<XElement>? filterNodes = frameNode.Element(ns + Filter.FRAME_FILTER_NODEGROUP_IDENTIFIER)?.Elements().ToList();
+        if (filterNodes is null) return;
+        foreach (XElement filterNode in filterNodes)
+        {
+            switch (filterNode.Name.LocalName)
+            {
+                case DropShadowFilter.DROPSHADOWFILTER_NODE_IDENTIFIER:
+                    frameFilters.Add(new DropShadowFilter(filterNode));
+                    break;
+                case BlurFilter.BLURFILTER_NODE_IDENTIFIER:
+                    frameFilters.Add(new BlurFilter(filterNode));
+                    break;
+                case GlowFilter.GLOWFILTER_NODE_IDENTIFIER:
+                    frameFilters.Add(new GlowFilter(filterNode));
+                    break;
+                case BevelFilter.BEVELFILTER_NODE_IDENTIFIER:
+                    frameFilters.Add(new BevelFilter(filterNode));
+                    break;
+                case GradientBevelFilter.GRADIENTBEVELFILTER_NODE_IDENTIFIER:
+                    frameFilters.Add(new GradientBevelFilter(filterNode));
+                    break;
+                case GradientGlowFilter.GRADIENTGLOWFILTER_NODE_IDENTIFIER:
+                    frameFilters.Add(new GradientGlowFilter(filterNode));
+                    break;
+                case AdjustColorFilter.ADJUSTCOLORFILTER_NODE_IDENTIFIER:
+                    frameFilters.Add(new AdjustColorFilter(filterNode));
+                    break;
+                default:
+                    throw new ArgumentException("Invalid filter type: " + filterNode.Name.LocalName);
+            }
+        }
+    }
     internal Frame(in XElement frameNode, Library? library, bool isBlank = false)
     {
         root = frameNode;
@@ -214,10 +250,12 @@ public class Frame : ILibraryEventReceiver, IDisposable
         this.library = library;
         elements = new List<Element>();
         eases = new List<IEase>();
+        frameFilters = new List<Filter>();
         if (!isBlank)
         {
             LoadElements(root);
             LoadEases(root);
+            LoadFilters(root);
         }
         registeredForSoundItem = SoundName != DefaultValues.SoundName;
         if (registeredForSoundItem && library is not null)
@@ -250,10 +288,12 @@ public class Frame : ILibraryEventReceiver, IDisposable
         library = other.library;
         elements = new List<Element>();
         eases = new List<IEase>();
+        frameFilters = new List<Filter>();
         if (root is not null && !isBlank)
         {
             LoadElements(root);
             LoadEases(root);
+            LoadFilters(root);
         }
         registeredForSoundItem = SoundName != DefaultValues.SoundName;
         if (registeredForSoundItem)
