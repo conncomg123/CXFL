@@ -21,17 +21,25 @@ namespace Rendering
                 FilterType = filterType;
                 Attributes = new Dictionary<string, string>();
 
-                Attributes.Add("result", filterType); // Add this line
-
-                foreach (var (key, value) in attributes)
+                if (attributes != null)
                 {
-                    Attributes[key] = value;
+                    foreach (var (key, value) in attributes)
+                    {
+                        Attributes[key] = value;
+                    }
                 }
+
+                Attributes.Add("result", filterType);
             }
 
             public virtual XElement ToXElement()
             {
-                var filterElement = new XElement(this.GetType().Name);
+                var filterElement = new XElement(SVGRenderer.svgNs + this.FilterType);
+
+                foreach (var attribute in Attributes)
+                {
+                    filterElement.Add(new XAttribute(attribute.Key, attribute.Value));
+                }
 
                 // Add child filters here, if any
                 return filterElement;
@@ -41,7 +49,7 @@ namespace Rendering
         public class FeFlood : AtomicFilter
         {
             public FeFlood(string floodColor = "black", string floodOpacity = "1")
-                : base("feFlood", ("flood-color", floodColor), ("flood-opacity", floodOpacity))
+                : base("feFlood", ("flood-color", floodColor))
             {
             }
         }
@@ -349,8 +357,8 @@ namespace Rendering
 
         public class CompoundFilter
         {
-            public required string Name { get; set; }
-            public required List<AtomicFilter> Filters { get; set; }
+            public string Name { get; set; }
+            public List<AtomicFilter> Filters { get; set; }
             public int Width { get; set; } = 100;
             public int Height { get; set; } = 100;
             public string LastResult { get; set; } = "SourceGraphic";
@@ -372,11 +380,17 @@ namespace Rendering
 
                     if (svgFilter is FeComponentTransfer feComponentTransfer)
                     {
-                        // Special handling for FeComponentTransfer
-                        // You can access feComponentTransfer's properties and methods here
                         foreach (var func in feComponentTransfer.Functions)
                         {
                             filterElement.Add(func.ToXElement());
+                        }
+                    }
+
+                    if (svgFilter is FeMerge feMerge)
+                    {
+                        foreach (var node in feMerge.Nodes)
+                        {
+                            filterElement.Add(node.ToXElement());
                         }
                     }
                     
@@ -411,6 +425,332 @@ namespace Rendering
                 return filterDef;
             }
 
+        }
+
+        // Q: Hey what gives this doesn't look anything like Animate's AdjustColor
+        // A: Go fuck yourself you limp dick monkey
+
+        // Animate's AdjustColor is weird as shit and changing brightness/contrast will change the hue. Saturation works as expected
+        // on vector content but there is a discrepancy on BITMAP content. Why? No fucking reason, probably unscrutinizable malicious matrix code.
+
+        // This implementation is quite different but actually does what you ask it to do.
+        public class AnAdjustColor : CompoundFilter
+        {
+            public AnAdjustColor(double brightness, double contrast, double saturation, double hue)
+                : base()
+                {
+                    brightness/=100;
+                    contrast/=100;
+                    saturation/=100;
+                    saturation++;
+
+                    double cosHue = Math.Cos(hue * Math.PI / 180.0);
+                    double sinHue = Math.Sin(hue * Math.PI / 180.0);
+
+                    double[,] brightness_matrix = new double[5, 5] {
+                        {1, 0, 0, 0, brightness},
+                        {0, 1, 0, 0, brightness},
+                        {0, 0, 1, 0, brightness},
+                        {0, 0, 0, 1, 0},
+                        {0, 0, 0, 0, 1}
+                    };
+
+                    double[,] contrast_matrix = new double[5, 5] {
+                        {contrast, 0, 0, 0, 0},
+                        {0, contrast, 0, 0, 0},
+                        {0, 0, contrast, 0, 0},
+                        {0, 0, 0, 1, 0},
+                        {0, 0, 0, 0, 1}
+                    };
+
+                    double[,] saturation_matrix = new double[5, 5] {
+                        {0.2127 + 0.7873 * saturation, 0.7152 - 0.7152 * saturation, 0.0722 - 0.0722 * saturation, 0, 0},
+                        {0.2127 - 0.2127 * saturation, 0.7152 + 0.2848 * saturation, 0.0722 - 0.0722 * saturation, 0, 0},
+                        {0.2127 - 0.2127 * saturation, 0.7152 - 0.7152 * saturation, 0.0722 + 0.9278 * saturation, 0, 0},
+                        {0, 0, 0, 1, 0},
+                        {0, 0, 0, 0, 1}
+                    };
+
+                    double[,] hueMatrix = new double[,] {
+                        { +0.2127, +0.7152, +0.0722 },
+                        { +0.2127, +0.7152, +0.0722 },
+                        { +0.2127, +0.7152, +0.0722 }
+                    };
+
+                    double[,] cosMatrix = new double[,] {
+                        { +0.7873, -0.7152, -0.0722 },
+                        { -0.2127, +0.2848, -0.0722 },
+                        { -0.2127, -0.7152, +0.9278 }
+                    };
+
+                    double[,] sinMatrix = new double[,] {
+                        { -0.2127, -0.7152, +0.9278 },
+                        { +0.143, +0.140, -0.283 },
+                        { -0.7873, +0.7152, +0.0722 }
+                    };
+
+                    hueMatrix = Add(hueMatrix, Multiply(cosMatrix, cosHue));
+                    hueMatrix = Add(hueMatrix, Multiply(sinMatrix, sinHue));
+
+                    hueMatrix = new double[,] {
+                        {hueMatrix[0, 0], hueMatrix[0, 1], hueMatrix[0, 2], 0, 0},
+                        {hueMatrix[1, 0], hueMatrix[1, 1], hueMatrix[1, 2], 0, 0},
+                        {hueMatrix[2, 0], hueMatrix[2, 1], hueMatrix[2, 2], 0, 0},
+                        {0, 0, 0, 1, 0},
+                        {0, 0, 0, 0, 1}
+                    };
+
+                    double[][] finalMatrix = ToJaggedArray(CalculateDotProduct(CalculateDotProduct(CalculateDotProduct(brightness_matrix, contrast_matrix), saturation_matrix), hueMatrix));
+                    finalMatrix = finalMatrix.Where((x, i) => i != finalMatrix.Length - 1).ToArray();
+
+                    var colorFilter = new FeColorMatrix(string.Join(" ", finalMatrix.SelectMany(x => x).Select(x => x.ToString())), "matrix");
+                    
+                    Filters = new List<AtomicFilter>();
+                    Filters.Add(colorFilter);
+                }
+
+            public static double[,] CalculateDotProduct(double[,] matrixA, double[,] matrixB)
+            {
+                // Check if the matrices can be multiplied
+                if (matrixA.GetLength(1) != matrixB.GetLength(0))
+                {
+                    throw new ArgumentException("Matrices cannot be multiplied");
+                }
+
+                // Create a new matrix to store the result
+                double[,] result = new double[matrixA.GetLength(0), matrixB.GetLength(1)];
+
+                // Calculate the dot product
+                for (int i = 0; i < matrixA.GetLength(0); i++)
+                {
+                    for (int j = 0; j < matrixB.GetLength(1); j++)
+                    {
+                        for (int k = 0; k < matrixA.GetLength(1); k++)
+                        {
+                            result[i, j] += matrixA[i, k] * matrixB[k, j];
+                        }
+                    }
+                }
+
+                return result;
+            }
+
+            private static double[][] ToJaggedArray(double[,] array)
+            {
+                int rows = array.GetLength(0);
+                int cols = array.GetLength(1);
+                double[][] jaggedArray = new double[rows][];
+
+                for (int i = 0; i < rows; i++)
+                {
+                    jaggedArray[i] = new double[cols];
+                    for (int j = 0; j < cols; j++)
+                    {
+                        jaggedArray[i][j] = array[i, j];
+                    }
+                }
+
+                return jaggedArray;
+            }
+
+            public static double[][] MultiplyElementWise(params double[][][] matrices)
+            {
+                if (matrices.Length == 0)
+                {
+                    throw new ArgumentException("At least one matrix is required.");
+                }
+
+                int rows = matrices[0].Length;
+                int cols = matrices[0][0].Length;
+
+                for (int i = 1; i < matrices.Length; i++)
+                {
+                    if (matrices[i].Length != rows || matrices[i][0].Length != cols)
+                    {
+                        throw new ArgumentException("All matrices must have the same dimensions.");
+                    }
+                }
+
+                double[][] result = new double[rows][];
+
+                for (int i = 0; i < rows; i++)
+                {
+                    result[i] = new double[cols];
+
+                    for (int j = 0; j < cols; j++)
+                    {
+                        double currentValue = matrices[0][i][j];
+
+                        for (int k = 1; k < matrices.Length; k++)
+                        {
+                            if (currentValue == 0 || matrices[k][i][j] == 0)
+                            {
+                                break;
+                            }
+
+                            currentValue *= matrices[k][i][j];
+                        }
+
+                        result[i][j] = currentValue;
+                    }
+                }
+
+                return result;
+            }
+
+            public static double[,] Add(double[,] matrix1, double[,] matrix2)
+                {
+                    int rows = matrix1.GetLength(0);
+                    int cols = matrix1.GetLength(1);
+                    double[,] result = new double[rows, cols];
+
+                    for (int i = 0; i < rows; i++)
+                    {
+                        for (int j = 0; j < cols; j++)
+                        {
+                            result[i, j] = matrix1[i, j] + matrix2[i, j];
+                        }
+                    }
+
+                    return result;
+                }
+
+            public static double[,] Multiply(double[,] matrix, double scalar)
+                {
+                    int rows = matrix.GetLength(0);
+                    int cols = matrix.GetLength(1);
+                    double[,] result = new double[rows, cols];
+
+                    for (int i = 0; i < rows; i++)
+                    {
+                        for (int j = 0; j < cols; j++)
+                        {
+                            result[i, j] = matrix[i, j] * scalar;
+                        }
+                    }
+
+                    return result;
+                }
+        }
+
+        public class AnDropShadow : CompoundFilter
+        {
+            public AnDropShadow(double blurX, double blurY, double distance, double rotation, double opacity, string color, bool knockout = false, bool innerShadow = false, bool hideObject = false)
+                : base()
+            {
+                this.BlurX = blurX/2;
+                this.BlurY = blurY/2;
+                this.Distance = distance * 2;
+                this.Rotation = rotation;
+                this.Opacity = opacity;
+                this.Color = color;
+                this.Knockout = knockout;
+                this.InnerShadow = innerShadow;
+                this.HideObject = hideObject;
+
+                double dx = Math.Round(distance * Math.Cos(rotation * Math.PI / 180), 4);
+                double dy = Math.Round(distance * Math.Sin(rotation * Math.PI / 180), 4);
+
+                Filters = new List<AtomicFilter>();
+
+                FeGaussianBlur gaussianBlur = null;
+                FeComponentTransfer componentTransfer = null;
+                FeComposite compositeFilter1, compositeFilter2, compositeFilter3, compositeFilter4, compositeFilter5, compositeFilter = null;
+
+                var offsetFilter = new FeOffset(dx, dy);
+
+                if (!innerShadow && !knockout) {
+                    Filters.Add(offsetFilter);
+                } else {
+                    offsetFilter.Attributes["in"] = "SourceAlpha";
+                    Filters.Add(offsetFilter);
+                }
+
+                gaussianBlur = new FeGaussianBlur(BlurX, BlurY);
+                Filters.Add(gaussianBlur);
+
+                if (InnerShadow) {
+                    compositeFilter = new FeComposite("out", gaussianBlur.Attributes["result"]);
+                    compositeFilter.Attributes["in"] = "SourceGraphic";
+                    Filters.Add(compositeFilter);
+                }
+
+                var floodFilter = new FeFlood(this.HexToRgba(color.ToString(), opacity));
+                Filters.Add(floodFilter);
+
+                var mergeFilter = new FeMerge();
+
+                if (!Knockout && !InnerShadow) {
+                    compositeFilter1 = new FeComposite("in", gaussianBlur.Attributes["result"]);
+                    compositeFilter1.Attributes["in"] = floodFilter.Attributes["result"];
+                    compositeFilter1.Attributes["result"] = "compositeFilter1";
+                    Filters.Add(compositeFilter1);
+                    mergeFilter.AddNode(new FeMergeNode(compositeFilter1.Attributes["result"]));
+                }
+
+                if (InnerShadow) {
+                    compositeFilter2 = new FeComposite("in", compositeFilter.Attributes["result"]);
+                    compositeFilter2.Attributes["result"] = "compositeFilter2";
+                    Filters.Add(compositeFilter2);
+                    componentTransfer = new FeComponentTransfer 
+                    { 
+                        Functions = 
+                        { 
+                            new FeFuncImpl("A") 
+                            { 
+                                Operation = "linear"
+                            }
+                        }
+                    };
+                    Filters.Add(componentTransfer);
+                }
+
+                if (!InnerShadow && Knockout) {
+                    compositeFilter3 = new FeComposite("out", "SourceAlpha");
+                    compositeFilter3.Attributes["in"] = gaussianBlur.Attributes["result"];
+                    compositeFilter3.Attributes["result"] = "compositeFilter3";
+                    Filters.Add(compositeFilter3);
+                    compositeFilter4 = new FeComposite("in", compositeFilter3.Attributes["result"]);
+                    compositeFilter4.Attributes["in"] = floodFilter.Attributes["result"];
+                    compositeFilter4.Attributes["result"] = "compositeFilter4";
+                    Filters.Add(compositeFilter4);
+                    mergeFilter.AddNode(new FeMergeNode(compositeFilter4.Attributes["result"]));
+                }
+
+                if (!HideObject && !Knockout) { mergeFilter.AddNode(new FeMergeNode("SourceGraphic")); };
+
+                if (InnerShadow && !Knockout && !HideObject)     {
+                    mergeFilter.AddNode(new FeMergeNode("SourceGraphic"));
+                    mergeFilter.AddNode(new FeMergeNode(componentTransfer.Attributes["result"]));
+                } else if (InnerShadow) {
+                    mergeFilter.AddNode(new FeMergeNode(componentTransfer.Attributes["result"]));
+
+                }
+
+                Filters.Add(mergeFilter);
+
+            }
+
+            private string HexToRgba(string hexColor, double opacity)
+            {
+                hexColor = hexColor.TrimStart('#');
+                var rgba = new int[3];
+                for (int i = 0; i < 3; i++)
+                {
+                    rgba[i] = Convert.ToInt32(hexColor.Substring(i * 2, 2), 16);
+                }
+                return $"rgba({rgba[0]}, {rgba[1]}, {rgba[2]}, {opacity / 1.0})";
+            }
+
+            public double BlurX { get; set; }
+            public double BlurY { get; set; }
+            public double Distance { get; set; }
+            public double Rotation { get; set; }
+            public double Opacity { get; set; }
+            public string Color { get; set; }
+            public bool Knockout { get; set; }
+            public bool InnerShadow { get; set; }
+            public bool HideObject { get; set; }
         }
 
         public static (XElement defs, XElement filteredGroup) ApplyFilter(XElement group, CompoundFilter filter)

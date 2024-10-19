@@ -285,17 +285,83 @@ public class SVGRenderer
 
             if (frame.Filters.Count > 0)
             {
+                var filter = frame.Filters[0];
+                var filterName = $"Filter_{id}_Layer{layerIdx}";
+
                 var compoundFilter = new FilterUtils.CompoundFilter
                 {
-                    Name = $"Filter_{id}_Layer{layerIdx}",
-                    Filters = new List<FilterUtils.AtomicFilter>
-                    {
-                        new FilterUtils.FeDropShadow(10, 20, 5, "red", 0.5)
-                    }
+                    Name = filterName,
+                    Filters = new List<FilterUtils.AtomicFilter>()
                 };
 
+                switch (filter)
+                {
+                    case DropShadowFilter dropShadowFilter:
+                        var anDropShadow = new FilterUtils.AnDropShadow(
+                            dropShadowFilter.BlurX,
+                            dropShadowFilter.BlurY,
+                            dropShadowFilter.Distance,
+                            dropShadowFilter.Angle,
+                            dropShadowFilter.Strength,
+                            dropShadowFilter.Color,
+                            dropShadowFilter.Knockout,
+                            dropShadowFilter.Inner,
+                            dropShadowFilter.HideObject
+                        );
+                        
+                        foreach (var _filter in anDropShadow.Filters)
+                        {
+                            compoundFilter.Filters.Add(_filter);
+                        }
+
+                        break;
+                    case AdjustColorFilter adjustColorFilter:
+                        // Process AnAdjustColor
+                        var anAdjustColor = new FilterUtils.AnAdjustColor(
+                            adjustColorFilter.Brightness,
+                            adjustColorFilter.Contrast,
+                            adjustColorFilter.Saturation,
+                            adjustColorFilter.Hue
+                        );
+
+                        foreach (var _filter in anAdjustColor.Filters)
+                        {
+                            compoundFilter.Filters.Add(_filter);
+                        }
+
+                        break;
+                    case BlurFilter blurFilter:
+                        // Process BlurFilter
+                        Console.WriteLine("BlurFilter");
+                        break;
+                    // <!> This is different lol
+                    case GlowFilter glowFilter:
+                        // Process GlowFilter
+                        var anGlow = new FilterUtils.AnDropShadow(
+                            glowFilter.BlurX,
+                            glowFilter.BlurY,
+                            0,
+                            0,
+                            glowFilter.Strength,
+                            glowFilter.Color,
+                            glowFilter.Knockout,
+                            glowFilter.Inner,
+                            false
+                        );
+                        
+                        foreach (var _filter in anGlow.Filters)
+                        {
+                            compoundFilter.Filters.Add(_filter);
+                        };
+
+                        break;
+                    // Add more cases for other filter types
+                    default:
+                        throw new ArgumentException($"Unknown filter type {filter}");
+                }
+
                 (var fDefs, g) = FilterUtils.ApplyFilter(g, compoundFilter);
-                defs[compoundFilter.Name] = fDefs;
+                defs[filterName] = fDefs;
             }
 
             foreach (var e in b)
