@@ -21,7 +21,8 @@ public class SVGRenderer
     private ConcurrentDictionary<BitmapItem, string> ImageCache = new();
     public string? ImageFolder;
     public ConcurrentDictionary<(Timeline, Frame), (string actionscript, bool isOnMainTimeline)> ActionscriptCache = new();
-    private void LoadActionscriptCache()
+    public ConcurrentDictionary<SymbolInstance, (Timeline timeline, Layer layer, Frame frame)> SymbolCache = new();
+    private void LoadDocumentCaches()
     {
         void ParseTimelines(List<Timeline> timelines, bool isOnMainTimeline)
         {
@@ -35,10 +36,10 @@ public class SVGRenderer
                         {
                             ActionscriptCache.TryAdd((t, f), (f.ActionScript, isOnMainTimeline));
                         }
+                        foreach(SymbolInstance si in f.Elements.OfType<SymbolInstance>()) SymbolCache.TryAdd(si, (t, l, f));
                     }
                 }
             }
-
         }
         ParseTimelines(Document.Timelines, true);
         ParseTimelines(Document.Library.Items.Values.OfType<SymbolItem>().Select(si => si.Timeline).ToList(), false);
@@ -50,7 +51,7 @@ public class SVGRenderer
         HREF = XName.Get("href", xlink.ToString());
         nsmgr.AddNamespace("xlink", xlink.ToString());
         ImageFolder = imageFolder;
-        LoadActionscriptCache();
+        LoadDocumentCaches();
     }
     private static bool IsColorIdentity(Color color)
     {
@@ -212,7 +213,7 @@ public class SVGRenderer
         maskElement.Add(paths);
         return maskElement;
     }
-    private (Dictionary<string, XElement>, List<XElement>) RenderTimeline(Timeline timeline, int frameIndex, Color colorEffect, bool insideMask, string type = "symbol", bool isMaskLayer = false)
+    private (Dictionary<string, XElement>, List<XElement>) RenderTimeline(Timeline timeline, int frameIndex, Color colorEffect, bool insideMask, string type = "symbol", bool isMaskLayer = false, Queue<(SymbolInstance, int)>? symbolHierarchy = null)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
         List<XElement> body = new List<XElement>();
@@ -235,7 +236,7 @@ public class SVGRenderer
             }
             else if (layerType == "mask")
             {
-                (d, b) = RenderLayer(layer, frameIndex, maskId + "_MASK", colorEffect, maskIsActive, maskId, true);
+                (d, b) = RenderLayer(layer, frameIndex, maskId + "_MASK", colorEffect, maskIsActive, maskId, true, symbolHierarchy);
                 // End the mask we started earlier
                 maskIsActive = false;
                 maskId = $"Mask_{id}_{layerIdx}";
@@ -274,7 +275,7 @@ public class SVGRenderer
             }
 
 
-            (d, b) = RenderLayer(layer, frameIndex, $"{id}_Layer{layerIdx}", colorEffect, maskIsActive, maskId, isMaskLayer);
+            (d, b) = RenderLayer(layer, frameIndex, $"{id}_Layer{layerIdx}", colorEffect, maskIsActive, maskId, isMaskLayer, symbolHierarchy);
             foreach (var def in d)
             {
                 defs[def.Key] = def.Value;
@@ -311,7 +312,7 @@ public class SVGRenderer
         Shape interpShape = TweenUtils.ShapeInterpolation(firstShape, lastShape, srcFrame, frameOffset);
         return interpShape;
     }
-    private (Dictionary<string, XElement>, List<XElement>) RenderLayer(Layer layer, int frameIndex, string id, Color colorEffect, bool insideMask, string? maskId = null, bool isMaskLayer = false)
+    private (Dictionary<string, XElement>, List<XElement>) RenderLayer(Layer layer, int frameIndex, string id, Color colorEffect, bool insideMask, string? maskId = null, bool isMaskLayer = false, Queue<(SymbolInstance, int)>? symbolHierarchy = null)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
         List<XElement> body = new List<XElement>();
@@ -342,7 +343,7 @@ public class SVGRenderer
                 interpShape = ParseShapeTween(frame, nextFrame, frameOffset, i);
             }
             colorEffect = (frame.Elements[i] as SymbolInstance)?.Color ?? colorEffect;
-            (d, b) = RenderElement(frame.Elements[i], $"{id}_{i}", frameOffset, interpColor ?? colorEffect, insideMask, isMaskLayer, interpMat, interpShape);
+            (d, b) = RenderElement(frame.Elements[i], $"{id}_{i}", frameOffset, interpColor ?? colorEffect, insideMask, isMaskLayer, interpMat, interpShape, symbolHierarchy);
             foreach (var def in d)
             {
                 defs[def.Key] = def.Value;
@@ -358,14 +359,21 @@ public class SVGRenderer
         }
         return (defs, body);
     }
-    private (Dictionary<string, XElement>, List<XElement>) RenderElement(Element element, string id, int frameOffset, Color colorEffect, bool insideMask, bool isMaskShape = false, Matrix? interpMat = null, Shape? interpShape = null)
+    private (Dictionary<string, XElement>, List<XElement>) RenderElement(Element element, string id, int frameOffset, Color colorEffect, bool insideMask, bool isMaskShape = false, Matrix? interpMat = null, Shape? interpShape = null, Queue<(SymbolInstance, int)>? symbolHierarchy = null)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
         List<XElement> body = new List<XElement>();
         if (element is SymbolInstance si)
         {
-            if (si.SymbolType != "graphic") return (defs, body);
-            (defs, body) = RenderTimeline((si.CorrespondingItem as SymbolItem)!.Timeline, GetLoopFrame(si, frameOffset), Color.DefaultColor(), insideMask, "symbol", isMaskShape);
+            symbolHierarchy ??= new Queue<(SymbolInstance, int)>();
+            symbolHierarchy.Enqueue((si, frameOffset));
+            int loopFrame = default;
+            if(si.SymbolType == "graphic") loopFrame = GetLoopFrame(si, frameOffset);
+            else if(si.SymbolType == "movie clip") 
+            {
+                loopFrame = GetMovieClipLoopFrame(si, symbolHierarchy);
+            }
+            (defs, body) = RenderTimeline((si.CorrespondingItem as SymbolItem)!.Timeline, loopFrame, Color.DefaultColor(), insideMask, "symbol", isMaskShape, symbolHierarchy);
         }
         else if (element is Text text)
         {
@@ -383,7 +391,7 @@ public class SVGRenderer
             for (int i = 0; i < children.Count; i++)
             {
                 string memId = hasMoreThanOneChild ? $"{id}_MEMBER_{i}" : id;
-                var (d, b) = RenderElement(children[i], memId, frameOffset, colorEffect, insideMask, isMaskShape);
+                var (d, b) = RenderElement(children[i], memId, frameOffset, colorEffect, insideMask, isMaskShape, null, null, symbolHierarchy);
                 foreach (var def in d)
                 {
                     defs[def.Key] = def.Value;
@@ -605,10 +613,79 @@ public class SVGRenderer
         else loopLength = int.IsNegative(lastFrame.Value) ? numFrames - firstFrame : lastFrame.Value - firstFrame + 1;
         string loopType = instance.Loop;
         if (loopType == "single frame") return firstFrame;
-        if (loopType == "loop") return firstFrame + (frameOffset % loopLength);
+        if (loopType == "loop") return (firstFrame + frameOffset) % loopLength;
         if (loopType == "play once") return Math.Min(firstFrame + frameOffset, lastFrame.Value);
         if (loopType == "loop reverse") return firstFrame + loopLength - (frameOffset % loopLength);
         if (loopType == "play once reverse") return Math.Max(firstFrame - frameOffset, 0);
         else throw new Exception("Invalid loop type: " + loopType);
+    }
+    private bool IsInstanceVisible(SymbolInstance instance, Frame targetFrame, int frameOffset, Queue<(SymbolInstance, int)> containersAndOffsets, int depth = 0)
+    {
+        // TODO: return whether or not instance is visible (at the end of the queue) within the targetFrame 
+        // at the frameOffset by going through the containersAndOffsets queue
+        if (containersAndOffsets.Count == depth + 1)
+        {
+            // base case: we're at the end of the queue, so we can just check if the targetFrame contains the instance
+            if(targetFrame.Elements.OfType<SymbolInstance>().Where(x => x.CorrespondingItem == instance.CorrespondingItem && x.SymbolType == "movie clip").Any()) return true;
+            return false;
+        }
+        // recursive case: need to change targetFrame, frameOffset, and containersAndOffsets
+        Queue<(SymbolInstance, int)> containersAndOffsetsCopy = new Queue<(SymbolInstance, int)>(containersAndOffsets);
+        for(int i = 0; i < depth; i++) containersAndOffsetsCopy.Dequeue();
+        (var container, _) = containersAndOffsetsCopy.Dequeue();
+        // first, verify that the targetFrame contains the container (comparing SymbolItems cuz it persists across keyframes as long as it's the same one)
+        if (!targetFrame.Elements.OfType<SymbolInstance>().Where(x => x.CorrespondingItem == container.CorrespondingItem).Any()) return false;
+        if(container.SymbolType == "graphic") frameOffset = GetLoopFrame(container, frameOffset);
+        else if(container.SymbolType == "movie clip") 
+        {
+            Queue<(SymbolInstance, int)> containersAndOffsetsTruncated = new Queue<(SymbolInstance, int)>(),
+                containersAndOffsetsCopy2 = new Queue<(SymbolInstance, int)>(containersAndOffsets);
+            // enqueue only up to the container
+            containersAndOffsetsTruncated.Enqueue(containersAndOffsetsCopy2.Peek());
+            while (containersAndOffsetsCopy2.Peek().Item1 != container) containersAndOffsetsTruncated.Enqueue(containersAndOffsetsCopy2.Dequeue());
+            frameOffset = GetMovieClipLoopFrame(container, containersAndOffsetsTruncated);
+        }
+        Timeline containerTimeline = (container.CorrespondingItem as SymbolItem)!.Timeline;
+        Layer targetLayer = SymbolCache[containersAndOffsetsCopy.Peek().Item1].layer;
+        // verify that containerTimeline contains targetLayer
+        if (!containerTimeline.Layers.Contains(targetLayer)) return false;
+        targetFrame = targetLayer.GetFrame(frameOffset);
+        return IsInstanceVisible(instance, targetFrame, frameOffset, containersAndOffsets, depth + 1);
+    }
+    private int GetMovieClipLoopFrame(SymbolInstance instance, Queue<(SymbolInstance, int)> containersAndOffsets)
+    {
+        // TODO: instance is a movie clip either on the main timeline or within a container
+        // regardless, we need to find how long the movie clip has been visible on the main timeline
+        // and that modulo the loop length will be our offset
+        // Idea 1: on the main timeline, propogate backwards to see what the first frame the movie clip is not visible is
+        // then use the difference as the offset
+        int loopLength = (instance.CorrespondingItem as SymbolItem)!.Timeline.GetFrameCount();
+        Queue<(SymbolInstance, int)> containersAndOffsetsCopy = new Queue<(SymbolInstance, int)>(containersAndOffsets);
+        (var mainTimelineInstance, var mainTimelineOffset) = containersAndOffsetsCopy.Dequeue();
+        bool instanceIsVisible = true; // guaranteed to be visible on the frame this is called
+        Layer layer = SymbolCache[mainTimelineInstance].layer;
+        Frame frame = SymbolCache[mainTimelineInstance].frame;
+        int curFrameIndex = frame.StartFrame + mainTimelineOffset - 1;
+        if(curFrameIndex < 0) return 0; // first frame of the main timeline and the first frame it's visible, so no offset
+        int numFramesVisible = 0, numContiguousFrames = 0;
+        while(curFrameIndex >= 0)
+        {
+            Frame curFrame = layer.GetFrame(curFrameIndex);
+            if(!curFrame.Elements.OfType<SymbolInstance>().Where(x => x.CorrespondingItem == instance.CorrespondingItem && x.SymbolType == "movie clip").Any()) break;
+            numContiguousFrames++;
+            curFrameIndex--;
+        }
+        curFrameIndex = frame.StartFrame + mainTimelineOffset - 1;
+        while(instanceIsVisible && curFrameIndex >= 0)
+        {
+            Frame curFrame = layer.GetFrame(curFrameIndex);
+            // edge case: if it's the same symbol but going from movie clip to graphic or vice versa, then consider it no longer visible because Adobe said so
+            if(curFrame.Elements.OfType<SymbolInstance>().Where(x => x.CorrespondingItem == mainTimelineInstance.CorrespondingItem && x.SymbolType != mainTimelineInstance.SymbolType).Any()) break;
+            instanceIsVisible = IsInstanceVisible(instance, curFrame, curFrameIndex - curFrame.StartFrame + numContiguousFrames, containersAndOffsets);
+            if(!instanceIsVisible) break;
+            curFrameIndex--;
+            numFramesVisible++;
+        }
+        return numFramesVisible % loopLength;
     }
 }
