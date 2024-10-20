@@ -36,7 +36,7 @@ public class SVGRenderer
                         {
                             ActionscriptCache.TryAdd((t, f), (f.ActionScript, isOnMainTimeline));
                         }
-                        foreach(SymbolInstance si in f.Elements.OfType<SymbolInstance>()) SymbolCache.TryAdd(si, (t, l, f));
+                        foreach (SymbolInstance si in f.Elements.OfType<SymbolInstance>()) SymbolCache.TryAdd(si, (t, l, f));
                     }
                 }
             }
@@ -213,7 +213,7 @@ public class SVGRenderer
         maskElement.Add(paths);
         return maskElement;
     }
-    private (Dictionary<string, XElement>, List<XElement>) RenderTimeline(Timeline timeline, int frameIndex, Color colorEffect, bool insideMask, string type = "symbol", bool isMaskLayer = false, Queue<(SymbolInstance, int)>? symbolHierarchy = null)
+    private (Dictionary<string, XElement>, List<XElement>) RenderTimeline(Timeline timeline, int frameIndex, Color colorEffect, bool insideMask, string type = "symbol", bool isMaskLayer = false, List<(SymbolInstance, int)>? symbolHierarchy = null)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
         List<XElement> body = new List<XElement>();
@@ -312,7 +312,7 @@ public class SVGRenderer
         Shape interpShape = TweenUtils.ShapeInterpolation(firstShape, lastShape, srcFrame, frameOffset);
         return interpShape;
     }
-    private (Dictionary<string, XElement>, List<XElement>) RenderLayer(Layer layer, int frameIndex, string id, Color colorEffect, bool insideMask, string? maskId = null, bool isMaskLayer = false, Queue<(SymbolInstance, int)>? symbolHierarchy = null)
+    private (Dictionary<string, XElement>, List<XElement>) RenderLayer(Layer layer, int frameIndex, string id, Color colorEffect, bool insideMask, string? maskId = null, bool isMaskLayer = false, List<(SymbolInstance, int)>? symbolHierarchy = null)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
         List<XElement> body = new List<XElement>();
@@ -359,21 +359,22 @@ public class SVGRenderer
         }
         return (defs, body);
     }
-    private (Dictionary<string, XElement>, List<XElement>) RenderElement(Element element, string id, int frameOffset, Color colorEffect, bool insideMask, bool isMaskShape = false, Matrix? interpMat = null, Shape? interpShape = null, Queue<(SymbolInstance, int)>? symbolHierarchy = null)
+    private (Dictionary<string, XElement>, List<XElement>) RenderElement(Element element, string id, int frameOffset, Color colorEffect, bool insideMask, bool isMaskShape = false, Matrix? interpMat = null, Shape? interpShape = null, List<(SymbolInstance, int)>? symbolHierarchy = null)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
         List<XElement> body = new List<XElement>();
         if (element is SymbolInstance si)
         {
-            symbolHierarchy ??= new Queue<(SymbolInstance, int)>();
-            symbolHierarchy.Enqueue((si, frameOffset));
+            symbolHierarchy ??= new List<(SymbolInstance, int)>();
+            symbolHierarchy.Add((si, frameOffset)); // push
             int loopFrame = default;
-            if(si.SymbolType == "graphic") loopFrame = GetLoopFrame(si, frameOffset);
-            else if(si.SymbolType == "movie clip") 
+            if (si.SymbolType == "graphic") loopFrame = GetLoopFrame(si, frameOffset);
+            else if (si.SymbolType == "movie clip")
             {
                 loopFrame = GetMovieClipLoopFrame(si, symbolHierarchy);
             }
             (defs, body) = RenderTimeline((si.CorrespondingItem as SymbolItem)!.Timeline, loopFrame, Color.DefaultColor(), insideMask, "symbol", isMaskShape, symbolHierarchy);
+            symbolHierarchy.RemoveAt(symbolHierarchy.Count - 1); // pop
         }
         else if (element is Text text)
         {
@@ -432,7 +433,6 @@ public class SVGRenderer
                 body = new List<XElement> { g };
             }
         }
-
         return (defs, body);
     }
 
@@ -599,7 +599,7 @@ public class SVGRenderer
 
         return (defs, body);
     }
-    private int GetLoopFrame(SymbolInstance instance, int frameOffset)
+    private static int GetLoopFrame(SymbolInstance instance, int frameOffset)
     {
         int firstFrame = instance.FirstFrame;
         int? lastFrame = instance.LastFrame;
@@ -610,82 +610,101 @@ public class SVGRenderer
             lastFrame = numFrames - 1;
             loopLength = lastFrame.Value + 1;
         }
-        else loopLength = int.IsNegative(lastFrame.Value) ? numFrames - firstFrame : lastFrame.Value - firstFrame + 1;
+        else loopLength = int.IsNegative(lastFrame.Value) ? numFrames : lastFrame.Value - firstFrame + 1;
+        if (loopLength < 0) loopLength += numFrames;
         string loopType = instance.Loop;
         if (loopType == "single frame") return firstFrame;
-        if (loopType == "loop") return (firstFrame + frameOffset) % loopLength;
-        if (loopType == "play once") return Math.Min(firstFrame + frameOffset, lastFrame.Value);
-        if (loopType == "loop reverse") return firstFrame + loopLength - (frameOffset % loopLength);
-        if (loopType == "play once reverse") return Math.Max(firstFrame - frameOffset, 0);
+        if (loopType == "loop")
+        {
+            return (firstFrame + (frameOffset % loopLength)) % numFrames;
+        }
+        if (loopType == "play once")
+        {
+            if (lastFrame >= firstFrame) return Math.Min(firstFrame + frameOffset, lastFrame.Value);
+            else return firstFrame + frameOffset < numFrames ? (firstFrame + frameOffset) : Math.Min(lastFrame.Value, (firstFrame + frameOffset) % numFrames);
+        }
+        if (loopType == "loop reverse")
+        {
+            if (lastFrame >= firstFrame) loopLength = numFrames - lastFrame.Value + firstFrame;
+            else loopLength = firstFrame - lastFrame.Value;
+            int result = (firstFrame - (frameOffset % loopLength)) % numFrames;
+            if (result < 0) result += numFrames;
+            return result;
+        }
+        if (loopType == "play once reverse")
+        {
+            if (lastFrame >= firstFrame) loopLength = numFrames - lastFrame.Value + firstFrame;
+            else loopLength = firstFrame - lastFrame.Value;
+            if (frameOffset >= loopLength) return lastFrame.Value;
+            int result = (firstFrame - (frameOffset % loopLength)) % numFrames;
+            if (result < 0) result += numFrames;
+            return result;
+        }
         else throw new Exception("Invalid loop type: " + loopType);
     }
-    private bool IsInstanceVisible(SymbolInstance instance, Frame targetFrame, int frameOffset, Queue<(SymbolInstance, int)> containersAndOffsets, int depth = 0)
+    private bool IsInstanceVisible(SymbolInstance instance, Frame targetFrame, int frameOffset, List<(SymbolInstance, int)> containersAndOffsets, int depth = 0)
     {
         // TODO: return whether or not instance is visible (at the end of the queue) within the targetFrame 
         // at the frameOffset by going through the containersAndOffsets queue
         if (containersAndOffsets.Count == depth + 1)
         {
             // base case: we're at the end of the queue, so we can just check if the targetFrame contains the instance
-            if(targetFrame.Elements.OfType<SymbolInstance>().Where(x => x.CorrespondingItem == instance.CorrespondingItem && x.SymbolType == "movie clip").Any()) return true;
+            if (targetFrame.Elements.OfType<SymbolInstance>().Where(x => x.CorrespondingItem == instance.CorrespondingItem && x.SymbolType == "movie clip").Any()) return true;
             return false;
         }
         // recursive case: need to change targetFrame, frameOffset, and containersAndOffsets
-        Queue<(SymbolInstance, int)> containersAndOffsetsCopy = new Queue<(SymbolInstance, int)>(containersAndOffsets);
-        for(int i = 0; i < depth; i++) containersAndOffsetsCopy.Dequeue();
-        (var container, _) = containersAndOffsetsCopy.Dequeue();
+        (var container, _) = containersAndOffsets[depth];
         // first, verify that the targetFrame contains the container (comparing SymbolItems cuz it persists across keyframes as long as it's the same one)
         if (!targetFrame.Elements.OfType<SymbolInstance>().Where(x => x.CorrespondingItem == container.CorrespondingItem).Any()) return false;
-        if(container.SymbolType == "graphic") frameOffset = GetLoopFrame(container, frameOffset);
-        else if(container.SymbolType == "movie clip") 
+        if (container.SymbolType == "graphic") frameOffset = GetLoopFrame(container, frameOffset);
+        else if (container.SymbolType == "movie clip")
         {
-            Queue<(SymbolInstance, int)> containersAndOffsetsTruncated = new Queue<(SymbolInstance, int)>(),
-                containersAndOffsetsCopy2 = new Queue<(SymbolInstance, int)>(containersAndOffsets);
-            // enqueue only up to the container
-            containersAndOffsetsTruncated.Enqueue(containersAndOffsetsCopy2.Peek());
-            while (containersAndOffsetsCopy2.Peek().Item1 != container) containersAndOffsetsTruncated.Enqueue(containersAndOffsetsCopy2.Dequeue());
-            frameOffset = GetMovieClipLoopFrame(container, containersAndOffsetsTruncated);
+            // only pass in up to the container
+            frameOffset = GetMovieClipLoopFrame(container, containersAndOffsets.Take(depth + 1).ToList());
         }
         Timeline containerTimeline = (container.CorrespondingItem as SymbolItem)!.Timeline;
-        Layer targetLayer = SymbolCache[containersAndOffsetsCopy.Peek().Item1].layer;
+        Layer targetLayer = SymbolCache[containersAndOffsets[depth + 1].Item1].layer;
         // verify that containerTimeline contains targetLayer
         if (!containerTimeline.Layers.Contains(targetLayer)) return false;
         targetFrame = targetLayer.GetFrame(frameOffset);
-        return IsInstanceVisible(instance, targetFrame, frameOffset, containersAndOffsets, depth + 1);
+        return IsInstanceVisible(instance, targetFrame, frameOffset - targetFrame.StartFrame, containersAndOffsets, depth + 1);
     }
-    private int GetMovieClipLoopFrame(SymbolInstance instance, Queue<(SymbolInstance, int)> containersAndOffsets)
+    private int GetMovieClipLoopFrame(SymbolInstance instance, List<(SymbolInstance, int)> containersAndOffsets)
     {
         // TODO: instance is a movie clip either on the main timeline or within a container
         // regardless, we need to find how long the movie clip has been visible on the main timeline
         // and that modulo the loop length will be our offset
         // Idea 1: on the main timeline, propogate backwards to see what the first frame the movie clip is not visible is
         // then use the difference as the offset
+        // TODO: this is already pretty fast but can be improved with caching and memoization
         int loopLength = (instance.CorrespondingItem as SymbolItem)!.Timeline.GetFrameCount();
-        Queue<(SymbolInstance, int)> containersAndOffsetsCopy = new Queue<(SymbolInstance, int)>(containersAndOffsets);
-        (var mainTimelineInstance, var mainTimelineOffset) = containersAndOffsetsCopy.Dequeue();
+        (var mainTimelineInstance, var mainTimelineOffset) = containersAndOffsets[0];
         bool instanceIsVisible = true; // guaranteed to be visible on the frame this is called
         Layer layer = SymbolCache[mainTimelineInstance].layer;
         Frame frame = SymbolCache[mainTimelineInstance].frame;
         int curFrameIndex = frame.StartFrame + mainTimelineOffset - 1;
-        if(curFrameIndex < 0) return 0; // first frame of the main timeline and the first frame it's visible, so no offset
-        int numFramesVisible = 0, numContiguousFrames = 0;
-        while(curFrameIndex >= 0)
+        if (curFrameIndex < 0) return 0; // first frame of the main timeline and the first frame it's visible, so no offset
+        int numContiguousFrames = 0;
+        while (curFrameIndex >= 0)
         {
             Frame curFrame = layer.GetFrame(curFrameIndex);
-            if(!curFrame.Elements.OfType<SymbolInstance>().Where(x => x.CorrespondingItem == instance.CorrespondingItem && x.SymbolType == "movie clip").Any()) break;
-            numContiguousFrames++;
-            curFrameIndex--;
+            if (!curFrame.Elements.OfType<SymbolInstance>().Where(x => x.CorrespondingItem == mainTimelineInstance.CorrespondingItem && x.SymbolType == mainTimelineInstance.SymbolType).Any()) break;
+            int remainingFrames = curFrameIndex - curFrame.StartFrame + 1;
+            curFrameIndex -= remainingFrames;
+            numContiguousFrames += remainingFrames;
         }
-        curFrameIndex = frame.StartFrame + mainTimelineOffset - 1;
-        while(instanceIsVisible && curFrameIndex >= 0)
+        curFrameIndex = frame.StartFrame + mainTimelineOffset;
+        int high = curFrameIndex;
+        int low = curFrameIndex - numContiguousFrames;
+        while (high > low)
         {
-            Frame curFrame = layer.GetFrame(curFrameIndex);
-            // edge case: if it's the same symbol but going from movie clip to graphic or vice versa, then consider it no longer visible because Adobe said so
-            if(curFrame.Elements.OfType<SymbolInstance>().Where(x => x.CorrespondingItem == mainTimelineInstance.CorrespondingItem && x.SymbolType != mainTimelineInstance.SymbolType).Any()) break;
-            instanceIsVisible = IsInstanceVisible(instance, curFrame, curFrameIndex - curFrame.StartFrame + numContiguousFrames, containersAndOffsets);
-            if(!instanceIsVisible) break;
-            curFrameIndex--;
-            numFramesVisible++;
+            int mid = (high + low) / 2;
+            Frame curFrame = layer.GetFrame(mid);
+            instanceIsVisible = IsInstanceVisible(instance, curFrame, mid - curFrame.StartFrame, containersAndOffsets);
+            if (instanceIsVisible) high = mid;
+            else low = mid + 1;
         }
-        return numFramesVisible % loopLength;
+        int loopFrame = (curFrameIndex - high) % loopLength;
+        return loopFrame;
     }
 }
