@@ -379,7 +379,7 @@ public class SVGRenderer
         else if (element is Text text)
         {
             // <!> Hi Soundman!
-            body.Add(HandleText((Text)element));
+            body.Add(HandleText(text));
         }
         else if (element is Shape shape)
         {
@@ -487,12 +487,13 @@ public class SVGRenderer
             double carriage_y = 1;
             double anticipated_x = textRun.TextAttrs.LeftMargin + textRun.TextAttrs.Indent;
             double anticipated_y = textRun.TextAttrs.Size;
-
+            string face = textRun.TextAttrs.Face;
+            if(face.EndsWith("Regular")) face = face[..^"Regular".Length]; // why does animate do this to me :(
             for (int j = 0; j < characters.Length; j++)
             {
                 var tspan = new XElement("tspan",
                     new XAttribute("baseline-shift", "0%"),
-                    new XAttribute("font-family", textRun.TextAttrs.Face),
+                    new XAttribute("font-family", face),
                     new XAttribute("font-size", textRun.TextAttrs.Size),
                     new XAttribute("fill", textRun.TextAttrs.FillColor),
                     new XAttribute("letter-spacing", textRun.TextAttrs.LetterSpacing),
