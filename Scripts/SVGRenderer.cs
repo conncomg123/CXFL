@@ -559,7 +559,7 @@ public class SVGRenderer
         }
         else
         {
-            (fill_g, stroke_g, extra_defs) = ShapeUtils.ConvertShapeToSVG(shape, isMaskShape);
+            (fill_g, stroke_g, extra_defs, _) = ShapeUtils.ConvertShapeToSVG(shape, isMaskShape);
             if (!isMaskShape) ShapeCache[shape] = (fill_g, stroke_g, extra_defs);
             else MaskCache[shape] = (fill_g, stroke_g, extra_defs);
         }
