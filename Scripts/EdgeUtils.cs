@@ -18,7 +18,8 @@ namespace Rendering
 
         // outline is broken into pieces called segments- represented here as "point lists"
         // This outline will then be filled in using <fills> elements
-        // Process: "edges" strings -> list of points -> SVG path elements -> render SVG as bitmap
+
+        // Process: "edges" strings -> (point list, bounding box) tuples -> SVG path elements -> render SVG as bitmap
 
 
         //"edges" string format:
@@ -76,10 +77,10 @@ namespace Rendering
         // in the standard point format
 
         /// <summary>
-        /// Converts an XML Edge element's "edges" string into a list of (point lists, bounding box) tuples.
+        /// Converts an XML Edge element's "edges" string into a list of (point list, bounding box) tuples.
         /// </summary>
         /// <remarks>
-        /// Each segment of an "edge" is parsed into a point list and a bounding box.
+        /// Each segment of an "edge" is parsed into a point list and its associated bounding box.
         /// </remarks>
         /// <param name="edges">The "edges" attribute of an Edge XFL element.</param>
         /// <returns>An enumerable of (list of string points in "x y" format,
@@ -319,10 +320,10 @@ namespace Rendering
         /// <para>
         /// For point lists representing Edges with fills, they are merged into shapes first (list of point lists)
         /// and then their bounding box is calculated.
-        /// This (list of point lists, bounding box) is associatd with a fillStyle index.
+        /// This (list of point lists, bounding box) tuple is associatd with a fillStyle index.
         /// For point lists representing Edges with strokes, their point lists are added to a list, calculating the proper
         /// bounding box after each addition.
-        /// This (list of point lists, bounding box) is associatd with a strokeStyle index.
+        /// This (list of point lists, bounding box) tuple is associatd with a strokeStyle index.
         /// </para>
         /// </remarks>
         /// <param name="edgesElement">The XFL edges element of a DOMShape element.</param>
