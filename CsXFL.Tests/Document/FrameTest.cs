@@ -33,4 +33,48 @@ public class FrameTest
 
     }
 
+    [Fact]
+    public void GetTweenMultiplier_Should()
+    {
+         // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Timeline timeline = doc.GetTimeline(0);
+        Layer layer = timeline.Layers[1];
+        int startFrame = 69;
+
+        // Act
+        layer.CreateMotionTween(startFrame);
+        double value = layer.GetFrame(69).GetTweenMultiplier(startFrame);
+
+        // Assert
+        Assert.True(value == 0.018321826872012746);
+
+    }
+
+        [Fact]
+        public void RemoveTween_Should()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Timeline timeline = doc.GetTimeline(0);
+        Layer layer = timeline.Layers[1];
+        int startFrame = 69;
+
+
+        // Act
+        // layer.ConvertToKeyframes(400, 718);
+        layer.CreateMotionTween(startFrame);
+        layer.GetFrame(startFrame).RemoveTween();
+        
+
+        // Assert
+        Assert.False(layer.GetFrame(startFrame).TweenType == "motion");
+
+        Assert.False(layer.GetFrame(startFrame).MotionTweenSnap);
+
+        Assert.False(layer.GetFrame(startFrame).EaseMethodName == "none");
+
+
+    }
+
 }
