@@ -2,7 +2,7 @@ using System.Xml.Linq;
 
 namespace CsXFL;
 // encompasses all types of text: static, dynamic, and input
-public class Text : Element
+public abstract class Text : Element
 {
     internal const string STATIC_TEXT_NODE_IDENTIFIER = "DOMStaticText",
     DYNAMIC_TEXT_NODE_IDENTIFIER = "DOMDynamicText",
@@ -159,7 +159,33 @@ public class Text : Element
         }
     }
 }
-
+public class StaticText : Text
+{
+    public StaticText(XElement textNode) : base(textNode) { }
+    public StaticText(Rectangle boundingRect, string characters, XNamespace ns) : base(boundingRect, characters, ns)
+    {
+        if (root is not null) root.Name = ns + STATIC_TEXT_NODE_IDENTIFIER;
+    }
+    public StaticText(in Text other) : base(other) { }
+}
+public class DynamicText : Text
+{
+    public DynamicText(XElement textNode) : base(textNode) { }
+    public DynamicText(Rectangle boundingRect, string characters, XNamespace ns) : base(boundingRect, characters, ns)
+    {
+        if (root is not null) root.Name = ns + DYNAMIC_TEXT_NODE_IDENTIFIER;
+    }
+    public DynamicText(in Text other) : base(other) { }
+}
+public class InputText : Text
+{
+    public InputText(XElement textNode) : base(textNode) { }
+    public InputText(Rectangle boundingRect, string characters, XNamespace ns) : base(boundingRect, characters, ns)
+    {
+        if (root is not null) root.Name = ns + INPUT_TEXT_NODE_IDENTIFIER;
+    }
+    public InputText(in Text other) : base(other) { }
+}
 public class Rectangle
 {
     private double left, right, top, bottom;
