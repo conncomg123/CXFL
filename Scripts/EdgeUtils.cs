@@ -320,7 +320,7 @@ namespace Rendering
         /// <para>
         /// For point lists representing Edges with fills, they are merged into shapes first (list of point lists)
         /// and then their bounding box is calculated.
-        /// This (list of point lists, bounding box) tuple is associatd with a fillStyle index.
+        /// This (list of point lists, bounding box) tuple is associated with a fillStyle index.
         /// For point lists representing Edges with strokes, their point lists are added to a list, calculating the proper
         /// bounding box after each addition.
         /// This (list of point lists, bounding box) tuple is associatd with a strokeStyle index.
@@ -356,13 +356,13 @@ namespace Rendering
                 int? fillStyleRightIndex = edgeElement.FillStyle1;
                 int? strokeStyleIndex = edgeElement.StrokeStyle;
 
-                IEnumerable<(List<string>, Rectangle?)> edgesPointLists = (edgesString is null) 
+                IEnumerable<(List<string>, Rectangle?)> edgesPointListTuples = (edgesString is null) 
                     ? new List<(List<string>, Rectangle?)>() : ConvertEdgesFormatToPointLists(edgesString);
 
                 // Associate point lists with appropriate fillStyle/strokeStyle index in tuples
                 // Map bounding boxes to proper fillStyle/strokeStyle indexes
 
-                foreach ((List<string>, Rectangle?) pointListTuple in edgesPointLists)
+                foreach ((List<string>, Rectangle?) pointListTuple in edgesPointListTuples)
                 {
                     List<string> tuplePointList = pointListTuple.Item1;
                     Rectangle? tupleBoundingBox = pointListTuple.Item2;
@@ -424,10 +424,10 @@ namespace Rendering
                             if (!strokeBoxes.TryGetValue((int)strokeStyleIndex, out Rectangle? existingBox))
                             {
                                 existingBox = null;
-                                fillBoxes[(int)strokeStyleIndex] = existingBox;
+                                strokeBoxes[(int)strokeStyleIndex] = existingBox;
                             }
 
-                            fillBoxes[(int)strokeStyleIndex] = BoxUtils.MergeBoundingBoxes(existingBox, tupleBoundingBox);
+                            strokeBoxes[(int)strokeStyleIndex] = BoxUtils.MergeBoundingBoxes(existingBox, tupleBoundingBox);
                         }
                     }
                 }
@@ -446,7 +446,7 @@ namespace Rendering
                 fillResults[fillShapeTuple.Key] = (fillShapeTuple.Value, fillBoxes[fillShapeTuple.Key]);
             }
 
-            foreach (var strokeTuple in shapes)
+            foreach (var strokeTuple in strokePointLists)
             {
                 strokeResults[strokeTuple.Key] = (strokeTuple.Value, strokeBoxes[strokeTuple.Key]);
             }
