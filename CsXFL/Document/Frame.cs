@@ -161,9 +161,13 @@ public class Frame : ILibraryEventReceiver, IDisposable
                         LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingItem, this);
                     break;
                 case Text.STATIC_TEXT_NODE_IDENTIFIER:
+                    elements.Add(new StaticText(elementNode));
+                    break;
                 case Text.DYNAMIC_TEXT_NODE_IDENTIFIER:
+                    elements.Add(new DynamicText(elementNode));
+                    break;
                 case Text.INPUT_TEXT_NODE_IDENTIFIER:
-                    elements.Add(new Text(elementNode));
+                    elements.Add(new InputText(elementNode));
                     break;
                 case Shape.SHAPE_NODE_IDENTIFIER:
                     elements.Add(new Shape(elementNode));
@@ -342,7 +346,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
     }
     public Text AddNewText(Rectangle boundingRect, string characters = "")
     {
-        Text text = new(boundingRect, characters, ns);
+        Text text = new StaticText(boundingRect, characters, ns);
         elements.Add(text);
         root?.Element(ns + Element.ELEMENTS_NODEGROUP_IDENTIFIER)?.Add(text.Root);
         return text;
