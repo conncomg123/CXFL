@@ -31,9 +31,13 @@ public class Group : Element, ILibraryEventReceiver
                         LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingItem, this);
                     break;
                 case Text.STATIC_TEXT_NODE_IDENTIFIER:
+                    members.Add(new StaticText(memberNode));
+                    break;
                 case Text.DYNAMIC_TEXT_NODE_IDENTIFIER:
+                    members.Add(new DynamicText(memberNode));
+                    break;
                 case Text.INPUT_TEXT_NODE_IDENTIFIER:
-                    members.Add(new Text(memberNode));
+                    members.Add(new InputText(memberNode));
                     break;
                 case Shape.SHAPE_NODE_IDENTIFIER:
                     members.Add(new Shape(memberNode));
