@@ -284,6 +284,83 @@ public class SVGRenderer
 
             var frame = layer.GetFrame(frameIndex);
 
+            if (frame.BlendMode != "normal")
+            {
+                string[] allowedBlendModes = { "multiply", "screen", "overlay", "darken", "lighten", "hard-light", "difference" };
+
+                if (allowedBlendModes.Contains(frame.BlendMode)) { g.SetAttributeValue("style", $"mix-blend-mode: {frame.BlendMode};");};
+                if (frame.BlendMode == "hardlight") g.SetAttributeValue("style", $"mix-blend-mode: hard-light;");
+                if (frame.BlendMode == "add") g.SetAttributeValue("style", $"mix-blend-mode: color-dodge;");
+
+                // Requires dedicated invert ComponentTransfer + sRGB color space
+                if (frame.BlendMode == "subtract") {
+                    string filterName = "genericFilter_InvertColors";
+                    var f_InvertColors = new FilterUtils.CompoundFilter
+                    {
+                        Name = filterName,
+                        Filters = new List<FilterUtils.AtomicFilter>()
+                    };
+                    f_InvertColors.Filters.Add(new FilterUtils.FeComponentTransfer
+                    {
+                        Functions = new List<FilterUtils.FeFunc>
+                        {
+                            new FilterUtils.FeFuncImpl("R")
+                            {
+                                Operation = "table",
+                                TableValues = "1 0"
+                            },
+                            new FilterUtils.FeFuncImpl("G")
+                            {
+                                Operation = "table",
+                                TableValues = "1 0"
+                            },
+                            new FilterUtils.FeFuncImpl("B")
+                            {
+                                Operation = "table",
+                                TableValues = "1 0"
+                            }
+                        }
+                    });
+                    (var fDefs, g) = FilterUtils.ApplyFilter(g, f_InvertColors);
+                    defs[filterName] = fDefs;
+                    g.SetAttributeValue("style", $"mix-blend-mode: multiply;");
+                };
+
+                // This is Difference, but flooded white
+                if (frame.BlendMode == "invert") {
+                    string filterName = "genericFilter_FloodWhite";
+                    var f_FloodWhite = new FilterUtils.CompoundFilter
+                    {
+                        Name = filterName,
+                        Filters = new List<FilterUtils.AtomicFilter>()
+                    };
+                    f_FloodWhite.Filters.Add(new FilterUtils.FeColorMatrix("1 0 0 0 255 0 1 0 0 255 0 0 1 0 255 0 0 0 1 0", "matrix"));
+                    (var fDefs, g) = FilterUtils.ApplyFilter(g, f_FloodWhite);
+                    defs[filterName] = fDefs;
+                    g.SetAttributeValue("style", $"mix-blend-mode: difference;");
+                };
+
+                // Erase & Alpha & Layer will be weird
+
+                // SWF documentation for BlendMode logic
+                // https://www.m2osw.com/mo_references_view/libsswf/classsswf_1_1BlendMode
+
+                // SVG Porter-Duff operations
+                // https://drafts.fxtf.org/compositing-2/#ltblendmodegt
+
+                // Erase appears to be Destination-Out, between SourceGraphic and Backdrop. However, I know of no way to reference the Backdrop other than the CSS mix-blend-mode styling.
+                // A shitty way to do this would be to make an SVG filter and provide the Backdrop as an SVG group manually, but I imagine there's some obscure tech to do this proper.
+
+                if (frame.BlendMode == "erase") {
+                    
+                };
+
+                if (frame.BlendMode == "alpha") {
+                    
+                }
+
+            }
+
             if (frame.Filters.Count > 0)
             {
                 var filter = frame.Filters[0];

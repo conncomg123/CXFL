@@ -4,7 +4,6 @@ using System.Xml.Linq;
 using System.Text;
 
 // Missing a lot of Atomics
-// FeMerge & MergeNode is unintuitive and bad
 namespace Rendering
 {
     // https://developer.mozilla.org/en-US/docs/Web/SVG/Element/filter
@@ -370,7 +369,8 @@ namespace Rendering
                     new XAttribute("x", "-50%"),
                     new XAttribute("y", "-50%"),
                     new XAttribute("width", "200%"),
-                    new XAttribute("height", "200%"));
+                    new XAttribute("height", "200%"),
+                    new XAttribute("color-interpolation-filters", "sRGB"));
 
                 string lastResult = "SourceGraphic";
 
@@ -382,7 +382,10 @@ namespace Rendering
                     {
                         foreach (var func in feComponentTransfer.Functions)
                         {
-                            filterElement.Add(func.ToXElement());
+                            // svgNs Shenanigans
+                            var funcElement = func.ToXElement();
+                            var newFuncElement = new XElement(SVGRenderer.svgNs + funcElement.Name.LocalName, funcElement.Attributes(), funcElement.Elements());
+                            filterElement.Add(newFuncElement);
                         }
                     }
 
@@ -427,87 +430,251 @@ namespace Rendering
 
         }
 
-        // Q: Hey what gives this doesn't look anything like Animate's AdjustColor
-        // A: Go fuck yourself you limp dick monkey
+        public class AnColorEffects : CompoundFilter
+        {
+            public AnColorEffects(double brightness, double contrast, double saturation, double hue)
+                : base()
+            {
+                
 
-        // Animate's AdjustColor is weird as shit and changing brightness/contrast will change the hue. Saturation works as expected
-        // on vector content but there is a discrepancy on BITMAP content. Why? No fucking reason, probably unscrutinizable malicious matrix code.
+                
+            }
+        }
 
-        // This implementation is quite different but actually does what you ask it to do.
+        // Fix Contrast
         public class AnAdjustColor : CompoundFilter
         {
             public AnAdjustColor(double brightness, double contrast, double saturation, double hue)
                 : base()
                 {
-                    brightness/=100;
-                    contrast/=100;
-                    saturation/=100;
-                    saturation++;
+                    // Brightness starts at 1.0 / 3
+                    brightness = 1.1666;
 
+                    // -1 should yield rgb 64^3
+                    contrast = 0;
+
+                    // Saturation starts at 0 to 1 * 2
+                    saturation = 2;
+
+                    // Hue
+                    hue = 130;
+
+                    double s = saturation;
                     double cosHue = Math.Cos(hue * Math.PI / 180.0);
                     double sinHue = Math.Sin(hue * Math.PI / 180.0);
 
-                    double[,] brightness_matrix = new double[5, 5] {
-                        {1, 0, 0, 0, brightness},
-                        {0, 1, 0, 0, brightness},
-                        {0, 0, 1, 0, brightness},
-                        {0, 0, 0, 1, 0},
-                        {0, 0, 0, 0, 1}
+                    // Linear gamma coefficients
+                    double r_w = 0.3086;
+                    double g_w = 0.6094;
+                    double b_w = 0.0820;
+
+                    double[,] matrix_brightness = new double[,] {
+                        {brightness, 0, 0, 0},
+                        {0, brightness, 0, 0},
+                        {0, 0, brightness, 0},
+                        {0, 0, 0, 1}
                     };
 
-                    double[,] contrast_matrix = new double[5, 5] {
-                        {contrast, 0, 0, 0, 0},
-                        {0, contrast, 0, 0, 0},
-                        {0, 0, contrast, 0, 0},
-                        {0, 0, 0, 1, 0},
-                        {0, 0, 0, 0, 1}
+                    double[,] matrix_contrast = new double[,] {
+                        {1, 0, 0, 0},
+                        {0, 1, 0, 0},
+                        {0, 0, 1, 0},
+                        {0, 0, 0, 1}
                     };
 
-                    double[,] saturation_matrix = new double[5, 5] {
-                        {0.2127 + 0.7873 * saturation, 0.7152 - 0.7152 * saturation, 0.0722 - 0.0722 * saturation, 0, 0},
-                        {0.2127 - 0.2127 * saturation, 0.7152 + 0.2848 * saturation, 0.0722 - 0.0722 * saturation, 0, 0},
-                        {0.2127 - 0.2127 * saturation, 0.7152 - 0.7152 * saturation, 0.0722 + 0.9278 * saturation, 0, 0},
-                        {0, 0, 0, 1, 0},
-                        {0, 0, 0, 0, 1}
+                    double[,] matrix_translation = new double[,] {
+                        {1, 0, 0, 0.5},
+                        {0, 1, 0, 0.5},
+                        {0, 0, 1, 0.5},
+                        {0, 0, 0, 1}
                     };
 
-                    double[,] hueMatrix = new double[,] {
-                        { +0.2127, +0.7152, +0.0722 },
-                        { +0.2127, +0.7152, +0.0722 },
-                        { +0.2127, +0.7152, +0.0722 }
+                    double[,] matrix_negative_translation = new double[,] {
+                        {-1, 0, 0, -0.5},
+                        {0, -1, 0, -0.5},
+                        {0, 0, -1, -0.5},
+                        {0, 0, 0, 1}
                     };
 
-                    double[,] cosMatrix = new double[,] {
-                        { +0.7873, -0.7152, -0.0722 },
-                        { -0.2127, +0.2848, -0.0722 },
-                        { -0.2127, -0.7152, +0.9278 }
+                    double[,] matrix1 = new double[3, 3] {
+                        { 0.2127, 0.7152, 0.0722 },
+                        { 0.2127, 0.7152, 0.0722 },
+                        { 0.2127, 0.7152, 0.0722 }
                     };
 
-                    double[,] sinMatrix = new double[,] {
-                        { -0.2127, -0.7152, +0.9278 },
-                        { +0.143, +0.140, -0.283 },
-                        { -0.7873, +0.7152, +0.0722 }
+                    double[,] matrix2 = new double[3, 3] {
+                        { 0.7873, -0.7152, -0.0722 },
+                        { -0.2127, 0.2848, -0.0722 },
+                        { -0.2127, -0.7152, 0.9278 }
                     };
 
-                    hueMatrix = Add(hueMatrix, Multiply(cosMatrix, cosHue));
-                    hueMatrix = Add(hueMatrix, Multiply(sinMatrix, sinHue));
-
-                    hueMatrix = new double[,] {
-                        {hueMatrix[0, 0], hueMatrix[0, 1], hueMatrix[0, 2], 0, 0},
-                        {hueMatrix[1, 0], hueMatrix[1, 1], hueMatrix[1, 2], 0, 0},
-                        {hueMatrix[2, 0], hueMatrix[2, 1], hueMatrix[2, 2], 0, 0},
-                        {0, 0, 0, 1, 0},
-                        {0, 0, 0, 0, 1}
+                    double[,] matrix3 = new double[3, 3] {
+                        { -0.2127, -0.7152, 0.9278 },
+                        { 0.143, 0.140, -0.283 },
+                        { -0.7873, 0.7152, 0.0722 }
                     };
 
-                    double[][] finalMatrix = ToJaggedArray(CalculateDotProduct(CalculateDotProduct(CalculateDotProduct(brightness_matrix, contrast_matrix), saturation_matrix), hueMatrix));
-                    finalMatrix = finalMatrix.Where((x, i) => i != finalMatrix.Length - 1).ToArray();
+                    double[,] scaledMatrix2 = MultiplyMatrixByScalar(matrix2, cosHue);
+                    double[,] scaledMatrix3 = MultiplyMatrixByScalar(matrix3, sinHue);
 
-                    var colorFilter = new FeColorMatrix(string.Join(" ", finalMatrix.SelectMany(x => x).Select(x => x.ToString())), "matrix");
+                    double[,] hueMatrix = AddMatrices(matrix1, scaledMatrix2, scaledMatrix3);
+
+                    var matrix_hue = new double[,] {
+                        {hueMatrix[0,0], hueMatrix[0,1], hueMatrix[0,2], 0},
+                        {hueMatrix[1,0], hueMatrix[1,1], hueMatrix[1,2], 0}, 
+                        {hueMatrix[2,0], hueMatrix[2,1], hueMatrix[2,2], 0},
+                        {0, 0, 0, 1}
+                    };
+
+                    double[,] matrix_saturation = new double[,] {
+                        {0.2127 + 0.7873 * saturation, 0.7152 - 0.7152 * saturation, 0.0722 - 0.0722 * saturation, 0},
+                        {0.2127 - 0.2127 * saturation, 0.7152 + 0.2848 * saturation, 0.0722 - 0.0722 * saturation, 0},
+                        {0.2127 - 0.2127 * saturation, 0.7152 - 0.7152 * saturation, 0.0722 + 0.9278 * saturation, 0},
+                        {0, 0, 0, 1},
+                    };
+
+                    double[,] matrix_rx = new double[,] {
+                        {1, 0, 0, 0},
+                        {0, 1/Math.Sqrt(2), -(1/Math.Sqrt(2)), 0},
+                        {0, 1/Math.Sqrt(2), 1/Math.Sqrt(2), 0},
+                        {0, 0, 0, 1}
+                    };
+
+                    double[,] matrix_ry = new double[,] {
+                        {Math.Sqrt(2)/Math.Sqrt(3), 0, -(1/Math.Sqrt(3)), 0},
+                        {0, 1, 0, 0},
+                        {1/Math.Sqrt(3), 0, Math.Sqrt(2)/Math.Sqrt(3), 0},
+                        {0, 0, 0, 1}
+                    };
+
+                    double[,] matrix_omega_values = { {r_w, g_w, b_w, 0} };
+                    double[,] matrix_tmp_prime_values = Multiply(Multiply(matrix_omega_values, matrix_rx), matrix_ry);
+                
+                    double r_p_w = matrix_tmp_prime_values[0,0];
+                    double g_p_w = matrix_tmp_prime_values[0,1];
+                    double b_p_w = matrix_tmp_prime_values[0,2];
+
+                    double[,] matrix_hue_shear = new double[,] {
+                        {1, 0, -(r_p_w/b_p_w), 0},
+                        {0, 1, -(g_p_w/b_p_w), 0},
+                        {0, 0, 1, 0},
+                        {0, 0, 0, 1}
+                    };
+
+                    // Theta expected to go from 0 to 2pi
+                    double[,] matrix_hue_rotation = new double[,] {
+                        {cosHue, -sinHue, 0, 0},
+                        {sinHue, cosHue, 0, 0},
+                        {0, 0, 1, 0},
+                        {0, 0, 0, 1}
+                    };
                     
+                    double[,] matrix_inv_hue_shear = new double[,] {
+                        {1, 0, (r_p_w/b_p_w), 0},
+                        {0, 1, (g_p_w/b_p_w), 0},
+                        {0, 0, 1, 0},
+                        {0, 0, 0, 1}
+                    };
+                    
+                    double[,] matrix_inv_ry = new double[,] {
+                        {Math.Sqrt(2)/Math.Sqrt(3), 0, 1/Math.Sqrt(3), 0},
+                        {0, 1, 0, 0},
+                        {-(1/Math.Sqrt(3)), 0, Math.Sqrt(2)/Math.Sqrt(3), 0},
+                        {0, 0, 0, 1}
+                    };
+
+                    double[,] matrix_inv_rx = new double[,] {
+                        {1, 0, 0, 0},
+                        {0, 1/Math.Sqrt(2), 1/Math.Sqrt(2), 0},
+                        {0, -(1/Math.Sqrt(2)), 1/Math.Sqrt(2), 0},
+                        {0, 0, 0, 1}
+                    };
+
+                    //var matrix_hue = Multiply(matrix_rx, Multiply(matrix_ry, Multiply(matrix_hue_shear, Multiply(matrix_hue_rotation, Multiply(matrix_inv_hue_shear, Multiply(matrix_inv_rx, matrix_inv_ry))))));
+
+                    double MultiplyIfNonZero(double a, double b) => a != 0 && b != 0 ? a * b : 0;
+
+                    var matrix_master = new double[,] {
+                        {matrix_hue[0,0] * matrix_saturation[0,0], matrix_hue[0,1] * matrix_saturation[0,1], matrix_hue[0,2] * matrix_saturation[0,2], matrix_hue[0,3] * matrix_saturation[0,3], 0},
+                        {matrix_hue[1,0] * matrix_saturation[1,0], matrix_hue[1,1] * matrix_saturation[1,1], matrix_hue[1,2] * matrix_saturation[1,2], matrix_hue[1,3] * matrix_saturation[1,3], 0}, 
+                        {matrix_hue[2,0] * matrix_saturation[2,0], matrix_hue[2,1] * matrix_saturation[2,1], matrix_hue[2,2] * matrix_saturation[2,2], matrix_hue[2,3] * matrix_saturation[2,3], 0},
+                        {matrix_hue[3,0] * matrix_saturation[3,0], matrix_hue[3,1] * matrix_saturation[3,1], matrix_hue[3,2] * matrix_saturation[3,2], matrix_hue[3,3] * matrix_saturation[3,3], 0}
+                    };
+
+                    // Treating luminance matrix as contrast
+                    // M = B * S * C * H
+                    //var matrix_master = Multiply(matrix_brightness, Multiply(matrix_saturation, Multiply(matrix_contrast, matrix_hue)));
+                    matrix_master = matrix_hue;
+
+                    var matrix_master_fixed = new double[,] {
+                        {matrix_master[0,0], matrix_master[0,1], matrix_master[0,2], matrix_master[0,3], 0},
+                        {matrix_master[1,0], matrix_master[1,1], matrix_master[1,2], matrix_master[1,3], 0}, 
+                        {matrix_master[2,0], matrix_master[2,1], matrix_master[2,2], matrix_master[2,3], 0},
+                        {matrix_master[3,0], matrix_master[3,1], matrix_master[3,2], matrix_master[3,3], 0}
+                    };
+
+                    var master_matrix_string = string.Join(" ", matrix_master_fixed.Cast<double>());
+
+                    Console.WriteLine(matrix_master_fixed);
+                    Console.WriteLine(master_matrix_string);
+
                     Filters = new List<AtomicFilter>();
+
+                    var colorFilter = new FeColorMatrix(master_matrix_string, "matrix");
                     Filters.Add(colorFilter);
                 }
+
+            public static double[,] AddMatrices(double[,] matrix1, double[,] matrix2, double[,] matrix3)
+            {
+                int rows = matrix1.GetLength(0);
+                int cols = matrix1.GetLength(1);
+                double[,] result = new double[rows, cols];
+
+                for (int i = 0; i < rows; i++)
+                {
+                    for (int j = 0; j < cols; j++)
+                    {
+                        result[i, j] = matrix1[i, j] + matrix2[i, j] + matrix3[i, j];
+                    }
+                }
+
+                return result;
+            }
+
+            public static double[,] PadMatrix(double[,] matrix)
+            {
+                double[,] paddedMatrix = new double[5, 5];
+
+                for (int i = 0; i < 3; i++)
+                {
+                    for (int j = 0; j < 3; j++)
+                    {
+                        paddedMatrix[i, j] = matrix[i, j];
+                    }
+                }
+
+                paddedMatrix[3, 3] = 1;
+                paddedMatrix[4, 4] = 1;
+
+                return paddedMatrix;
+            }
+
+            public static double[,] MultiplyMatrixByScalar(double[,] matrix, double scalar)
+            {
+                int rows = matrix.GetLength(0);
+                int cols = matrix.GetLength(1);
+                double[,] result = new double[rows, cols];
+
+                for (int i = 0; i < rows; i++)
+                {
+                    for (int j = 0; j < cols; j++)
+                    {
+                        result[i, j] = matrix[i, j] * scalar;
+                    }
+                }
+
+                return result;
+            }
 
             public static double[,] CalculateDotProduct(double[,] matrixA, double[,] matrixB)
             {
@@ -553,51 +720,6 @@ namespace Rendering
                 return jaggedArray;
             }
 
-            public static double[][] MultiplyElementWise(params double[][][] matrices)
-            {
-                if (matrices.Length == 0)
-                {
-                    throw new ArgumentException("At least one matrix is required.");
-                }
-
-                int rows = matrices[0].Length;
-                int cols = matrices[0][0].Length;
-
-                for (int i = 1; i < matrices.Length; i++)
-                {
-                    if (matrices[i].Length != rows || matrices[i][0].Length != cols)
-                    {
-                        throw new ArgumentException("All matrices must have the same dimensions.");
-                    }
-                }
-
-                double[][] result = new double[rows][];
-
-                for (int i = 0; i < rows; i++)
-                {
-                    result[i] = new double[cols];
-
-                    for (int j = 0; j < cols; j++)
-                    {
-                        double currentValue = matrices[0][i][j];
-
-                        for (int k = 1; k < matrices.Length; k++)
-                        {
-                            if (currentValue == 0 || matrices[k][i][j] == 0)
-                            {
-                                break;
-                            }
-
-                            currentValue *= matrices[k][i][j];
-                        }
-
-                        result[i][j] = currentValue;
-                    }
-                }
-
-                return result;
-            }
-
             public static double[,] Add(double[,] matrix1, double[,] matrix2)
                 {
                     int rows = matrix1.GetLength(0);
@@ -614,18 +736,30 @@ namespace Rendering
 
                     return result;
                 }
-
-            public static double[,] Multiply(double[,] matrix, double scalar)
+            static double[,] Multiply(double[,] matrix1, double[,] matrix2)
                 {
-                    int rows = matrix.GetLength(0);
-                    int cols = matrix.GetLength(1);
+                    // Check if the matrices can be multiplied
+                    if (matrix1.GetLength(1) != matrix2.GetLength(0))
+                    {
+                        throw new ArgumentException("Matrices cannot be multiplied");
+                    }
+
+                    // Get the dimensions of the matrices
+                    int rows = matrix1.GetLength(0);
+                    int cols = matrix2.GetLength(1);
+                    int innerDim = matrix1.GetLength(1);
+
+                    // Perform matrix multiplication
                     double[,] result = new double[rows, cols];
 
                     for (int i = 0; i < rows; i++)
                     {
                         for (int j = 0; j < cols; j++)
                         {
-                            result[i, j] = matrix[i, j] * scalar;
+                            for (int k = 0; k < innerDim; k++)
+                            {
+                                result[i, j] += matrix1[i, k] * matrix2[k, j];
+                            }
                         }
                     }
 
