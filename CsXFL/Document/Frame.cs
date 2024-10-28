@@ -36,6 +36,8 @@ public class Frame : ILibraryEventReceiver, IDisposable
         public const bool HasCustomEase = false;
         public const bool Bookmark = false;
         public const bool UseSingleEaseCurve = true;
+        public const string BlendMode = "normal";
+        public const bool Visible = true;
     }
     private readonly XElement? root;
     private readonly XNamespace ns;
@@ -48,6 +50,8 @@ public class Frame : ILibraryEventReceiver, IDisposable
     private MorphShape? morphShape;
     private Library? library;
     private string? actionScript;
+    private string blendMode;
+    private bool visible;
     internal XElement? Root { get { return root; } }
     public XNamespace Ns { get { return ns.ToString(); } }
     public int StartFrame { get { return startFrame; } set { startFrame = value; root?.SetAttributeValue("index", value); } }
@@ -112,6 +116,8 @@ public class Frame : ILibraryEventReceiver, IDisposable
     public MorphShape? MorphShape { get { return morphShape; } }
     public string? ActionScript { get { return actionScript; } set { SetActionscript(value); } }
     public ReadOnlyCollection<Filter> Filters { get { return frameFilters.AsReadOnly(); } }
+    public string BlendMode { get { return blendMode; } set { blendMode = value; root?.SetOrRemoveAttribute("blendMode", value, DefaultValues.BlendMode); } }
+    public bool Visible { get { return visible; } set { visible = value; root?.SetOrRemoveAttribute("visible", value, DefaultValues.Visible); } }
     private void SetActionscript(string? value)
     {
         if (actionScript is null && value is not null)
@@ -161,9 +167,13 @@ public class Frame : ILibraryEventReceiver, IDisposable
                         LibraryEventMessenger.Instance.RegisterReceiver(CorrespondingItem, this);
                     break;
                 case Text.STATIC_TEXT_NODE_IDENTIFIER:
+                    elements.Add(new StaticText(elementNode));
+                    break;
                 case Text.DYNAMIC_TEXT_NODE_IDENTIFIER:
+                    elements.Add(new DynamicText(elementNode));
+                    break;
                 case Text.INPUT_TEXT_NODE_IDENTIFIER:
-                    elements.Add(new Text(elementNode));
+                    elements.Add(new InputText(elementNode));
                     break;
                 case Shape.SHAPE_NODE_IDENTIFIER:
                     elements.Add(new Shape(elementNode));
@@ -264,6 +274,8 @@ public class Frame : ILibraryEventReceiver, IDisposable
             CorrespondingSoundItem!.UseCount++;
         }
         actionScript = frameNode.Element(ns + ACTIONSCRIPT_NODE_IDENTIFIER)?.Value;
+        blendMode = (string?)frameNode.Attribute("blendMode") ?? DefaultValues.BlendMode;
+        visible = (bool?)frameNode.Attribute("visible") ?? DefaultValues.Visible;
     }
 
     internal Frame(Frame other, bool isBlank = false)
@@ -302,6 +314,8 @@ public class Frame : ILibraryEventReceiver, IDisposable
             CorrespondingSoundItem!.UseCount++;
         }
         actionScript = other.actionScript;
+        blendMode = other.blendMode;
+        visible = other.visible;
     }
 
     public void Dispose()
@@ -342,7 +356,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
     }
     public Text AddNewText(Rectangle boundingRect, string characters = "")
     {
-        Text text = new(boundingRect, characters, ns);
+        Text text = new StaticText(boundingRect, characters, ns);
         elements.Add(text);
         root?.Element(ns + Element.ELEMENTS_NODEGROUP_IDENTIFIER)?.Add(text.Root);
         return text;
