@@ -395,18 +395,8 @@ public class SVGRenderer
                         break;
                     case AdjustColorFilter adjustColorFilter:
                         // Process AnAdjustColor
-                        var anAdjustColor = new FilterUtils.AnAdjustColor(
-                            adjustColorFilter.Brightness,
-                            adjustColorFilter.Contrast,
-                            adjustColorFilter.Saturation,
-                            adjustColorFilter.Hue
-                        );
-
-                        foreach (var _filter in anAdjustColor.Filters)
-                        {
-                            compoundFilter.Filters.Add(_filter);
-                        }
-
+                        // Contrast zero point is wrong, order of operations is wrong. And still, you will never make a version that works better than this.
+                        g.SetAttributeValue("style", $"filter: hue-rotate({adjustColorFilter.Hue}deg) brightness({(adjustColorFilter.Brightness+100)/100}) contrast({(adjustColorFilter.Contrast+100)/100}) saturate({(adjustColorFilter.Saturation+100)/100});");
                         break;
                     case BlurFilter blurFilter:
                         // Process BlurFilter
