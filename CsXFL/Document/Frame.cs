@@ -8,7 +8,8 @@ public class Frame : ILibraryEventReceiver, IDisposable
     internal const string FRAME_NODE_IDENTIFIER = "DOMFrame",
     FRAMES_NODEGROUP_IDENTIFIER = "frames",
     ACTIONSCRIPT_NODE_IDENTIFIER = "Actionscript",
-    SCRIPT_NODE_IDENTIFIER = "script";
+    SCRIPT_NODE_IDENTIFIER = "script",
+    FRAME_COLOR_NODE_IDENTIFIER = "frameColor";
     private static readonly HashSet<string> AcceptableLabelTypes = new HashSet<string> { "none", "name", "comment", "anchor" };
     public enum KeyModes : int
     {
@@ -49,6 +50,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
     private bool registeredForSoundItem, motionTweenSnap, hasCustomEase, bookmark, useSingleEaseCurve;
     private MorphShape? morphShape;
     private Library? library;
+    private Color? frameColor;
     private string? actionScript;
     private string blendMode;
     private bool visible;
@@ -114,6 +116,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
     private static readonly HashSet<string> AcceptableSoundSyncs = new HashSet<string> { "event", "start", "stop", "stream" };
     public ReadOnlyCollection<Element> Elements { get { return elements.AsReadOnly(); } }
     public MorphShape? MorphShape { get { return morphShape; } }
+    public Color? FrameColor { get { return frameColor; } }
     public string? ActionScript { get { return actionScript; } set { SetActionscript(value); } }
     public ReadOnlyCollection<Filter> Filters { get { return frameFilters.AsReadOnly(); } }
     public string BlendMode { get { return blendMode; } set { blendMode = value; root?.SetOrRemoveAttribute("blendMode", value, DefaultValues.BlendMode); } }
@@ -257,6 +260,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         easeMethodName = (string?)frameNode.Attribute("easeMethodName") ?? DefaultValues.EaseMethodName;
         motionTweenRotate = (string?)frameNode.Attribute("motionTweenRotate") ?? DefaultValues.MotionTweenRotate;
         morphShape = (frameNode.Element(ns + MorphShape.MORPHSHAPE_NODE_IDENTIEFIER) is null) ? null : new MorphShape(frameNode.Element(ns + MorphShape.MORPHSHAPE_NODE_IDENTIEFIER)!);
+        frameColor = (frameNode.Element(ns + Frame.FRAME_COLOR_NODE_IDENTIFIER)?.Element(ns + Color.COLOR_NODE_IDENTIFIER) is null) ? null : new Color(frameNode.Element(ns + Frame.FRAME_COLOR_NODE_IDENTIFIER)!.Element(ns + Color.COLOR_NODE_IDENTIFIER)!);
         this.library = library;
         elements = new List<Element>();
         eases = new List<IEase>();
@@ -297,6 +301,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         easeMethodName = other.easeMethodName;
         motionTweenRotate = other.motionTweenRotate;
         morphShape = other.morphShape is null ? null : new MorphShape(other.morphShape);
+        frameColor = other.frameColor is null ? null : new Color(other.frameColor);
         library = other.library;
         elements = new List<Element>();
         eases = new List<IEase>();
