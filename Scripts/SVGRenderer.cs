@@ -284,11 +284,13 @@ public class SVGRenderer
 
             var frame = layer.GetFrame(frameIndex);
 
+            // Soundman's Blend Mode / Color Effect / Filter lollapalooza
+
             if (frame.BlendMode != "normal")
             {
-                string[] allowedBlendModes = { "multiply", "screen", "overlay", "darken", "lighten", "hard-light", "difference" };
+                string[] standardBlendModes = { "multiply", "screen", "overlay", "darken", "lighten", "hard-light", "difference" };
 
-                if (allowedBlendModes.Contains(frame.BlendMode)) { g.SetAttributeValue("style", $"mix-blend-mode: {frame.BlendMode};");};
+                if (standardBlendModes.Contains(frame.BlendMode)) { g.SetAttributeValue("style", $"mix-blend-mode: {frame.BlendMode};");};
                 if (frame.BlendMode == "hardlight") g.SetAttributeValue("style", $"mix-blend-mode: hard-light;");
                 if (frame.BlendMode == "add") g.SetAttributeValue("style", $"mix-blend-mode: color-dodge;");
 
@@ -340,8 +342,6 @@ public class SVGRenderer
                     g.SetAttributeValue("style", $"mix-blend-mode: difference;");
                 };
 
-                // Erase & Alpha & Layer will be weird
-
                 // SWF documentation for BlendMode logic
                 // https://www.m2osw.com/mo_references_view/libsswf/classsswf_1_1BlendMode
 
@@ -349,7 +349,12 @@ public class SVGRenderer
                 // https://drafts.fxtf.org/compositing-2/#ltblendmodegt
 
                 // Erase appears to be Destination-Out, between SourceGraphic and Backdrop. However, I know of no way to reference the Backdrop other than the CSS mix-blend-mode styling.
-                // A shitty way to do this would be to make an SVG filter and provide the Backdrop as an SVG group manually, but I imagine there's some obscure tech to do this proper.
+                // We will probably end up using an inverse clipPath or Mask to make this work instead of trying to get the backdrop.
+
+                // https://youtu.be/UBCS5EPkiQ0
+                // This is the only video I've found that cleanly explains what the Alpha blend mode does. It's bizzare and useless and I don't want to program it.
+
+                // For our purposes Layer blend mode is useless, it forces the creation of an alpha channel so erase and alpha blend modes can be used. This is stupid, we're not doing that.
 
                 if (frame.BlendMode == "erase") {
                     
@@ -361,76 +366,94 @@ public class SVGRenderer
 
             }
 
-            if (frame.Filters.Count > 0)
+            var masterFilter = new FilterUtils.CompoundFilter
             {
-                var filter = frame.Filters[0];
-                var filterName = $"Filter_{id}_Layer{layerIdx}";
+                Name = $"Filter_{id}_Layer{layerIdx}",
+                Filters = new List<FilterUtils.AtomicFilter>()
+            };
 
-                var compoundFilter = new FilterUtils.CompoundFilter
+            if (frame.Filters.Count > 0)
+            {           
+                foreach (var filter in frame.Filters.Reverse())
                 {
-                    Name = filterName,
-                    Filters = new List<FilterUtils.AtomicFilter>()
-                };
-
-                switch (filter)
-                {
-                    case DropShadowFilter dropShadowFilter:
-                        var anDropShadow = new FilterUtils.AnDropShadow(
-                            dropShadowFilter.BlurX,
-                            dropShadowFilter.BlurY,
-                            dropShadowFilter.Distance,
-                            dropShadowFilter.Angle,
-                            dropShadowFilter.Strength,
-                            dropShadowFilter.Color,
-                            dropShadowFilter.Knockout,
-                            dropShadowFilter.Inner,
-                            dropShadowFilter.HideObject
-                        );
-                        
-                        foreach (var _filter in anDropShadow.Filters)
-                        {
-                            compoundFilter.Filters.Add(_filter);
-                        }
-
-                        break;
-                    case AdjustColorFilter adjustColorFilter:
-                        // Process AnAdjustColor
-                        // Contrast zero point is wrong, order of operations is wrong. And still, you will never make a version that works better than this.
-                        g.SetAttributeValue("style", $"filter: hue-rotate({adjustColorFilter.Hue}deg) brightness({(adjustColorFilter.Brightness+100)/100}) contrast({(adjustColorFilter.Contrast+100)/100}) saturate({(adjustColorFilter.Saturation+100)/100});");
-                        break;
-                    case BlurFilter blurFilter:
-                        // Process BlurFilter
-                        Console.WriteLine("BlurFilter");
-                        break;
-                    // <!> This is different lol
-                    case GlowFilter glowFilter:
-                        // Process GlowFilter
-                        var anGlow = new FilterUtils.AnDropShadow(
-                            glowFilter.BlurX,
-                            glowFilter.BlurY,
-                            0,
-                            0,
-                            glowFilter.Strength,
-                            glowFilter.Color,
-                            glowFilter.Knockout,
-                            glowFilter.Inner,
-                            false
-                        );
-                        
-                        foreach (var _filter in anGlow.Filters)
-                        {
-                            compoundFilter.Filters.Add(_filter);
-                        };
-
-                        break;
-                    // Add more cases for other filter types
-                    default:
-                        throw new ArgumentException($"Unknown filter type {filter}");
+                    // These reimplementations of native Animate filters will always look different in some capacity because as far as I can tell, Animate internally uses a
+                    // fast box convolution blur with subpixel (twip) precision where we use a gaussian blur. I don't know of any way to get subpixel precision with a convolution matrix
+                    // in SVG, but for all intents and purposes, a gaussian blur will do just fine.
+                    switch (filter)
+                    {
+                        case DropShadowFilter dropShadowFilter:
+                            var anDropShadow = new FilterUtils.AnDropShadow(dropShadowFilter.BlurX, dropShadowFilter.BlurY, dropShadowFilter.Distance, dropShadowFilter.Angle, dropShadowFilter.Strength, dropShadowFilter.Color, dropShadowFilter.Knockout, dropShadowFilter.Inner, dropShadowFilter.HideObject);
+                            foreach (var _filter in anDropShadow.Filters) { masterFilter.Filters.Add(_filter);}
+                            break;
+                        case AdjustColorFilter adjustColorFilter:
+                            // Process AnAdjustColor
+                            // Oh boy, where to begin. HueRotation is correct, everything else is close enough. I gave it a sporting chance, but it's just too stupid trying to get this thing one-to-one.
+                            // Brightness, Contrast and Saturation are all messily interlinked in Animate and changing any of them changes the other. Bad matrix math, not my fault.
+                            var styleAttribute1 = g.Attribute("style");
+                            if (styleAttribute1 != null)
+                            {
+                                styleAttribute1.Value += $" filter: hue-rotate({adjustColorFilter.Hue}deg) brightness({(adjustColorFilter.Brightness+100)/100}) contrast({(adjustColorFilter.Contrast+100)/100}) saturate({(adjustColorFilter.Saturation+100)/100});";
+                            }
+                            else
+                            {
+                                g.SetAttributeValue("style", $"filter: hue-rotate({adjustColorFilter.Hue}deg) brightness({(adjustColorFilter.Brightness+100)/100}) contrast({(adjustColorFilter.Contrast+100)/100}) saturate({(adjustColorFilter.Saturation+100)/100});");
+                            }
+                            break;
+                        case BlurFilter blurFilter:
+                            // Process BlurFilter
+                            masterFilter.Filters.Add(new FilterUtils.FeGaussianBlur(blurFilter.BlurX/2, blurFilter.BlurY/2));
+                            break;
+                        // <!> Why does this not work when it's red?
+                        case GlowFilter glowFilter:
+                            // Process GlowFilter
+                            var anGlow = new FilterUtils.AnDropShadow(glowFilter.BlurX, glowFilter.BlurY, 0, 0, glowFilter.Strength, glowFilter.Color, glowFilter.Knockout, glowFilter.Inner, false);
+                            foreach (var _filter in anGlow.Filters)
+                            { masterFilter.Filters.Add(_filter); };
+                            break;
+                        default:
+                            throw new ArgumentException($"Unknown filter type {filter}");
+                    }
                 }
-
-                (var fDefs, g) = FilterUtils.ApplyFilter(g, compoundFilter);
-                defs[filterName] = fDefs;
             }
+
+            if (frame.FrameColor != null)
+            {
+                var multiplierList = ColorEffectUtils.GetMultipliers(frame.FrameColor);
+                    var multiplier = multiplierList[0];
+                    var offset = multiplierList[1];
+
+                    var feColorMatrix = new FilterUtils.FeColorMatrix(
+                        string.Format(
+                            "{0} 0 0 0 {4} " +
+                            "0 {1} 0 0 {5} " +
+                            "0 0 {2} 0 {6} " +
+                            "0 0 0 {3} 0",
+                            multiplier.Item1, multiplier.Item2, multiplier.Item3, multiplier.Item4,
+                            offset.Item1, offset.Item2, offset.Item3
+                        ),
+                        "matrix"
+                    );
+                    masterFilter.Filters.Add(feColorMatrix);
+            }
+            
+            // If a CSS Style exists, inject the SVG filter into the style, otherwise, apply the filter to the SVG group.
+            var styleAttribute = g.Attribute("style");
+            if (styleAttribute != null)
+            {
+                var styleValue = styleAttribute.Value;
+                var filterIndex = styleValue.IndexOf("filter: ");
+                if (filterIndex != -1)
+                {
+                    styleAttribute.Value = styleValue.Insert(filterIndex + 8, $"url(#{masterFilter.Name}) ");
+                    defs[masterFilter.Name] = masterFilter.ToXElement();
+                } else if (frame.FrameColor != null) {
+                styleAttribute.Value += $" filter: url(#{masterFilter.Name})";
+                defs[masterFilter.Name] = masterFilter.ToXElement();
+                }
+            } else if (frame.Filters.Count > 0 || frame.FrameColor != null) {
+                g.Add(new XAttribute("filter", $"url(#{masterFilter.Name})"));
+                defs[masterFilter.Name] = masterFilter.ToXElement();
+            } 
 
             foreach (var e in b)
             {
@@ -448,6 +471,7 @@ public class SVGRenderer
 
         return (defs, body);
     }
+
     private static (Matrix?, Color?) ParseClassicTween(Frame srcFrame, Frame destFrame, int frameOffset, int elementIndex)
     {
         if (srcFrame.IsEmpty() || destFrame.IsEmpty()) return (null, null);

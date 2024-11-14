@@ -563,18 +563,10 @@ namespace Rendering
 
         public static (XElement defs, XElement filteredGroup) ApplyFilter(XElement group, CompoundFilter filter)
         {
-            // Clone the group element
             XElement groupClone = new XElement(group);
-
-            // Add the filter definition to the <defs> element
             var filterElement = filter.ToXElement(); // Assuming Filter has a ToXElement() method
-
-            // Create a new filter attribute with the filter name
             var filterAttr = new XAttribute("filter", $"url(#{filter.Name})");
-
-            // Add the filter attribute to the cloned group element
             groupClone.Add(filterAttr);
-
             return (filterElement, groupClone);
         }
     }
