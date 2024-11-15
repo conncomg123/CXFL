@@ -374,7 +374,7 @@ public class SVGRenderer
 
             if (frame.Filters.Count > 0)
             {           
-                foreach (var filter in frame.Filters.Reverse())
+                foreach (var (filter, filterIndex) in frame.Filters.Select((filter, index) => (filter, index)))
                 {
                     // These reimplementations of native Animate filters will always look different in some capacity because as far as I can tell, Animate internally uses a
                     // fast box convolution blur with subpixel (twip) precision where we use a gaussian blur. I don't know of any way to get subpixel precision with a convolution matrix
@@ -383,7 +383,14 @@ public class SVGRenderer
                     {
                         case DropShadowFilter dropShadowFilter:
                             var anDropShadow = new FilterUtils.AnDropShadow(dropShadowFilter.BlurX, dropShadowFilter.BlurY, dropShadowFilter.Distance, dropShadowFilter.Angle, dropShadowFilter.Strength, dropShadowFilter.Color, dropShadowFilter.Knockout, dropShadowFilter.Inner, dropShadowFilter.HideObject);
-                            foreach (var _filter in anDropShadow.Filters) { masterFilter.Filters.Add(_filter);}
+                            foreach (var _filter in anDropShadow.Filters) 
+                            { 
+                                masterFilter.Filters.Add(_filter);
+                                if (_filter == anDropShadow.Filters.Last())
+                                {
+                                    _filter.Attributes["result"] = $"filter_output_{filterIndex}";
+                                }
+                            }
                             break;
                         case AdjustColorFilter adjustColorFilter:
                             // Process AnAdjustColor
@@ -415,6 +422,15 @@ public class SVGRenderer
                     }
                 }
             }
+
+            // Correctly merge filters lol
+            var mergeFilter = new FilterUtils.FeMerge();
+            for (int i = frame.Filters.Count - 1; i >= 0; i--)
+            {
+                mergeFilter.AddNode(new FilterUtils.FeMergeNode($"filter_output_{i}"));
+            }
+
+            masterFilter.Filters.Add(mergeFilter);
 
             if (frame.FrameColor != null)
             {
