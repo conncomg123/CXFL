@@ -274,18 +274,220 @@ public class SVGRenderer
                 }
             }
 
-
+            XElement g = new XElement(svgNs + "g", new XAttribute("name", $"{id}_Layer{layerIdx}"));
             (d, b) = RenderLayer(layer, frameIndex, $"{id}_Layer{layerIdx}", colorEffect, maskIsActive, maskId, isMaskLayer, symbolHierarchy);
+
+            foreach (XElement e in b)
+            {
+                g.Add(e);
+            }
+
+            var frame = layer.GetFrame(frameIndex);
+
+            // Soundman's Blend Mode / Color Effect / Filter lollapalooza
+
+            if (frame.BlendMode != "normal")
+            {
+                string[] standardBlendModes = { "multiply", "screen", "overlay", "darken", "lighten", "hard-light", "difference" };
+
+                if (standardBlendModes.Contains(frame.BlendMode)) { g.SetAttributeValue("style", $"mix-blend-mode: {frame.BlendMode};");};
+                if (frame.BlendMode == "hardlight") g.SetAttributeValue("style", $"mix-blend-mode: hard-light;");
+                if (frame.BlendMode == "add") g.SetAttributeValue("style", $"mix-blend-mode: color-dodge;");
+
+                // Requires dedicated invert ComponentTransfer + sRGB color space
+                if (frame.BlendMode == "subtract") {
+                    string filterName = "genericFilter_InvertColors";
+                    var f_InvertColors = new FilterUtils.CompoundFilter
+                    {
+                        Name = filterName,
+                        Filters = new List<FilterUtils.AtomicFilter>()
+                    };
+                    f_InvertColors.Filters.Add(new FilterUtils.FeComponentTransfer
+                    {
+                        Functions = new List<FilterUtils.FeFunc>
+                        {
+                            new FilterUtils.FeFuncImpl("R")
+                            {
+                                Operation = "table",
+                                TableValues = "1 0"
+                            },
+                            new FilterUtils.FeFuncImpl("G")
+                            {
+                                Operation = "table",
+                                TableValues = "1 0"
+                            },
+                            new FilterUtils.FeFuncImpl("B")
+                            {
+                                Operation = "table",
+                                TableValues = "1 0"
+                            }
+                        }
+                    });
+                    (var fDefs, g) = FilterUtils.ApplyFilter(g, f_InvertColors);
+                    defs[filterName] = fDefs;
+                    g.SetAttributeValue("style", $"mix-blend-mode: multiply;");
+                };
+
+                // This is Difference, but flooded white
+                if (frame.BlendMode == "invert") {
+                    string filterName = "genericFilter_FloodWhite";
+                    var f_FloodWhite = new FilterUtils.CompoundFilter
+                    {
+                        Name = filterName,
+                        Filters = new List<FilterUtils.AtomicFilter>()
+                    };
+                    f_FloodWhite.Filters.Add(new FilterUtils.FeColorMatrix("1 0 0 0 255 0 1 0 0 255 0 0 1 0 255 0 0 0 1 0", "matrix"));
+                    (var fDefs, g) = FilterUtils.ApplyFilter(g, f_FloodWhite);
+                    defs[filterName] = fDefs;
+                    g.SetAttributeValue("style", $"mix-blend-mode: difference;");
+                };
+
+                // SWF documentation for BlendMode logic
+                // https://www.m2osw.com/mo_references_view/libsswf/classsswf_1_1BlendMode
+
+                // SVG Porter-Duff operations
+                // https://drafts.fxtf.org/compositing-2/#ltblendmodegt
+
+                // Erase appears to be Destination-Out, between SourceGraphic and Backdrop. However, I know of no way to reference the Backdrop other than the CSS mix-blend-mode styling.
+                // We will probably end up using an inverse clipPath or Mask to make this work instead of trying to get the backdrop.
+
+                // https://youtu.be/UBCS5EPkiQ0
+                // This is the only video I've found that cleanly explains what the Alpha blend mode does. It's bizzare and useless and I don't want to program it.
+
+                // For our purposes Layer blend mode is useless, it forces the creation of an alpha channel so erase and alpha blend modes can be used. This is stupid, we're not doing that.
+
+                if (frame.BlendMode == "erase") {
+                    
+                };
+
+                if (frame.BlendMode == "alpha") {
+                    
+                }
+
+            }
+
+            var masterFilter = new FilterUtils.CompoundFilter
+            {
+                Name = $"Filter_{id}_Layer{layerIdx}",
+                Filters = new List<FilterUtils.AtomicFilter>()
+            };
+
+            if (frame.Filters.Count > 0)
+            {           
+                foreach (var (filter, filterIndex) in frame.Filters.Select((filter, index) => (filter, index)))
+                {
+                    // These reimplementations of native Animate filters will always look different in some capacity because as far as I can tell, Animate internally uses a
+                    // fast box convolution blur with subpixel (twip) precision where we use a gaussian blur. I don't know of any way to get subpixel precision with a convolution matrix
+                    // in SVG, but for all intents and purposes, a gaussian blur will do just fine.
+                    switch (filter)
+                    {
+                        case DropShadowFilter dropShadowFilter:
+                            var anDropShadow = new FilterUtils.AnDropShadow(dropShadowFilter.BlurX, dropShadowFilter.BlurY, dropShadowFilter.Distance, dropShadowFilter.Angle, dropShadowFilter.Strength, dropShadowFilter.Color, dropShadowFilter.Knockout, dropShadowFilter.Inner, dropShadowFilter.HideObject);
+                            foreach (var _filter in anDropShadow.Filters) 
+                            { 
+                                masterFilter.Filters.Add(_filter);
+                                if (_filter == anDropShadow.Filters.Last())
+                                {
+                                    _filter.Attributes["result"] = $"filter_output_{filterIndex}";
+                                }
+                            }
+                            break;
+                        case AdjustColorFilter adjustColorFilter:
+                            // Process AnAdjustColor
+                            // Oh boy, where to begin. HueRotation is correct, everything else is close enough. I gave it a sporting chance, but it's just too stupid trying to get this thing one-to-one.
+                            // Brightness, Contrast and Saturation are all messily interlinked in Animate and changing any of them changes the other. Bad matrix math, not my fault.
+                            var styleAttribute1 = g.Attribute("style");
+                            if (styleAttribute1 != null)
+                            {
+                                styleAttribute1.Value += $" filter: hue-rotate({adjustColorFilter.Hue}deg) brightness({(adjustColorFilter.Brightness+100)/100}) contrast({(adjustColorFilter.Contrast+100)/100}) saturate({(adjustColorFilter.Saturation+100)/100});";
+                            }
+                            else
+                            {
+                                g.SetAttributeValue("style", $"filter: hue-rotate({adjustColorFilter.Hue}deg) brightness({(adjustColorFilter.Brightness+100)/100}) contrast({(adjustColorFilter.Contrast+100)/100}) saturate({(adjustColorFilter.Saturation+100)/100});");
+                            }
+                            break;
+                        case BlurFilter blurFilter:
+                            // Process BlurFilter
+                            masterFilter.Filters.Add(new FilterUtils.FeGaussianBlur(blurFilter.BlurX/2, blurFilter.BlurY/2));
+                            break;
+                        // <!> Why does this not work when it's red?
+                        case GlowFilter glowFilter:
+                            // Process GlowFilter
+                            var anGlow = new FilterUtils.AnDropShadow(glowFilter.BlurX, glowFilter.BlurY, 0, 0, glowFilter.Strength, glowFilter.Color, glowFilter.Knockout, glowFilter.Inner, false);
+                            foreach (var _filter in anGlow.Filters)
+                            { masterFilter.Filters.Add(_filter); };
+                            break;
+                        default:
+                            throw new ArgumentException($"Unknown filter type {filter}");
+                    }
+                }
+            }
+
+            // Correctly merge filters lol
+            var mergeFilter = new FilterUtils.FeMerge();
+            for (int i = frame.Filters.Count - 1; i >= 0; i--)
+            {
+                mergeFilter.AddNode(new FilterUtils.FeMergeNode($"filter_output_{i}"));
+            }
+
+            masterFilter.Filters.Add(mergeFilter);
+
+            if (frame.FrameColor != null)
+            {
+                var multiplierList = ColorEffectUtils.GetMultipliers(frame.FrameColor);
+                    var multiplier = multiplierList[0];
+                    var offset = multiplierList[1];
+
+                    var feColorMatrix = new FilterUtils.FeColorMatrix(
+                        string.Format(
+                            "{0} 0 0 0 {4} " +
+                            "0 {1} 0 0 {5} " +
+                            "0 0 {2} 0 {6} " +
+                            "0 0 0 {3} 0",
+                            multiplier.Item1, multiplier.Item2, multiplier.Item3, multiplier.Item4,
+                            offset.Item1, offset.Item2, offset.Item3
+                        ),
+                        "matrix"
+                    );
+                    masterFilter.Filters.Add(feColorMatrix);
+            }
+            
+            // If a CSS Style exists, inject the SVG filter into the style, otherwise, apply the filter to the SVG group.
+            var styleAttribute = g.Attribute("style");
+            if (styleAttribute != null)
+            {
+                var styleValue = styleAttribute.Value;
+                var filterIndex = styleValue.IndexOf("filter: ");
+                if (filterIndex != -1)
+                {
+                    styleAttribute.Value = styleValue.Insert(filterIndex + 8, $"url(#{masterFilter.Name}) ");
+                    defs[masterFilter.Name] = masterFilter.ToXElement();
+                } else if (frame.FrameColor != null) {
+                styleAttribute.Value += $" filter: url(#{masterFilter.Name})";
+                defs[masterFilter.Name] = masterFilter.ToXElement();
+                }
+            } else if (frame.Filters.Count > 0 || frame.FrameColor != null) {
+                g.Add(new XAttribute("filter", $"url(#{masterFilter.Name})"));
+                defs[masterFilter.Name] = masterFilter.ToXElement();
+            } 
+
+            foreach (var e in b)
+            {
+                g.Add(e);
+            }
+
             foreach (var def in d)
             {
                 defs[def.Key] = def.Value;
             }
-            body.AddRange(b);
+            
+            body.Add(g);
 
         }
 
         return (defs, body);
     }
+
     private static (Matrix?, Color?) ParseClassicTween(Frame srcFrame, Frame destFrame, int frameOffset, int elementIndex)
     {
         if (srcFrame.IsEmpty() || destFrame.IsEmpty()) return (null, null);
@@ -493,7 +695,7 @@ public class SVGRenderer
             {
                 var tspan = new XElement("tspan",
                     new XAttribute("baseline-shift", "0%"),
-                    new XAttribute("font-family", face),
+                    new XAttribute("font-family", textRun.TextAttrs.Face),
                     new XAttribute("font-size", textRun.TextAttrs.Size),
                     new XAttribute("fill", textRun.TextAttrs.FillColor),
                     new XAttribute("letter-spacing", textRun.TextAttrs.LetterSpacing),
