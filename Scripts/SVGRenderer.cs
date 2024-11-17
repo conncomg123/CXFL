@@ -1,5 +1,6 @@
 using CsXFL;
 using System.Collections.Concurrent;
+using System.Data;
 using System.IO.Compression;
 using System.Numerics;
 using System.Text.RegularExpressions;
@@ -7,7 +8,11 @@ using System.Xml;
 using System.Xml.Linq;
 
 namespace Rendering;
-
+public partial class Regexes
+{
+    [GeneratedRegex(@"^.*\.([a-zA-Z]+)\(([0-9]+)\);$")]
+    public static partial Regex AS3CommandRegex();
+}
 public class SVGRenderer
 {
     XNamespace xlink = "http://www.w3.org/1999/xlink";
@@ -21,6 +26,7 @@ public class SVGRenderer
     private ConcurrentDictionary<BitmapItem, string> ImageCache = new();
     public string? ImageFolder;
     public ConcurrentDictionary<(Timeline, Frame), (string actionscript, bool isOnMainTimeline)> ActionscriptCache = new();
+    public ConcurrentDictionary<Timeline, ConcurrentDictionary<int, ConcurrentBag<string>>> CompiledActionscriptCache = new();
     public ConcurrentDictionary<SymbolInstance, (Timeline timeline, Layer layer, Frame frame)> SymbolCache = new();
     private void LoadDocumentCaches()
     {
@@ -28,6 +34,8 @@ public class SVGRenderer
         {
             foreach (Timeline t in timelines)
             {
+                CompiledActionscriptCache.TryAdd(t, new ConcurrentDictionary<int, ConcurrentBag<string>>());
+                var currentCompiledTimeline = CompiledActionscriptCache[t];
                 foreach (Layer l in t.Layers)
                 {
                     foreach (Frame f in l.KeyFrames)
@@ -35,6 +43,15 @@ public class SVGRenderer
                         if (f.ActionScript is not null)
                         {
                             ActionscriptCache.TryAdd((t, f), (f.ActionScript, isOnMainTimeline));
+                            if (currentCompiledTimeline.TryGetValue(f.StartFrame, out var actionscriptList))
+                            {
+                                actionscriptList.Add(f.ActionScript);
+                            }
+                            else
+                            {
+                                ConcurrentBag<string> cache = new ConcurrentBag<string> { f.ActionScript };
+                                currentCompiledTimeline.TryAdd(f.StartFrame, cache);
+                            }
                         }
                         foreach (SymbolInstance si in f.Elements.OfType<SymbolInstance>()) SymbolCache.TryAdd(si, (t, l, f));
                     }
@@ -55,8 +72,16 @@ public class SVGRenderer
     }
     private static bool IsColorIdentity(Color color)
     {
-        return color.RedMultiplier == 1 && color.GreenMultiplier == 1 && color.BlueMultiplier == 1 && color.AlphaMultiplier == 1
-        && color.RedOffset == 0 && color.GreenOffset == 0 && color.BlueOffset == 0 && color.AlphaOffset == 0;
+        return color.RedMultiplier == Color.DefaultValues.RedMultiplier
+            && color.GreenMultiplier == Color.DefaultValues.GreenMultiplier
+            && color.BlueMultiplier == Color.DefaultValues.BlueMultiplier
+            && color.AlphaMultiplier == Color.DefaultValues.AlphaMultiplier
+            && color.RedOffset == Color.DefaultValues.RedOffset
+            && color.GreenOffset == Color.DefaultValues.GreenOffset
+            && color.BlueOffset == Color.DefaultValues.BlueOffset
+            && color.AlphaOffset == Color.DefaultValues.AlphaOffset
+            && color.TintColor == Color.DefaultValues.TintColor
+            && color.TintMultiplier == Color.DefaultValues.TintMultiplier;
     }
     private static List<double> MatrixToList(Matrix matrix)
     {
@@ -276,35 +301,31 @@ public class SVGRenderer
 
             XElement g = new XElement(svgNs + "g", new XAttribute("name", $"{id}_Layer{layerIdx}"));
             (d, b) = RenderLayer(layer, frameIndex, $"{id}_Layer{layerIdx}", colorEffect, maskIsActive, maskId, isMaskLayer, symbolHierarchy);
-
-            foreach (XElement e in b)
-            {
-                g.Add(e);
-            }
-
-            var frame = layer.GetFrame(frameIndex);
+            Frame? frame = (frameIndex >= layer.GetFrameCount()) ? null : layer.GetFrame(frameIndex);
 
             // Soundman's Blend Mode / Color Effect / Filter lollapalooza
-
-            if (frame.BlendMode != "normal")
+            if (frame is not null)
             {
-                string[] standardBlendModes = { "multiply", "screen", "overlay", "darken", "lighten", "hard-light", "difference" };
+                if (frame.BlendMode != "normal")
+                {
+                    string[] standardBlendModes = { "multiply", "screen", "overlay", "darken", "lighten", "hard-light", "difference" };
 
-                if (standardBlendModes.Contains(frame.BlendMode)) { g.SetAttributeValue("style", $"mix-blend-mode: {frame.BlendMode};");};
-                if (frame.BlendMode == "hardlight") g.SetAttributeValue("style", $"mix-blend-mode: hard-light;");
-                if (frame.BlendMode == "add") g.SetAttributeValue("style", $"mix-blend-mode: color-dodge;");
+                    if (standardBlendModes.Contains(frame.BlendMode)) { g.SetAttributeValue("style", $"mix-blend-mode: {frame.BlendMode};"); };
+                    if (frame.BlendMode == "hardlight") g.SetAttributeValue("style", $"mix-blend-mode: hard-light;");
+                    if (frame.BlendMode == "add") g.SetAttributeValue("style", $"mix-blend-mode: color-dodge;");
 
-                // Requires dedicated invert ComponentTransfer + sRGB color space
-                if (frame.BlendMode == "subtract") {
-                    string filterName = "genericFilter_InvertColors";
-                    var f_InvertColors = new FilterUtils.CompoundFilter
+                    // Requires dedicated invert ComponentTransfer + sRGB color space
+                    if (frame.BlendMode == "subtract")
                     {
-                        Name = filterName,
-                        Filters = new List<FilterUtils.AtomicFilter>()
-                    };
-                    f_InvertColors.Filters.Add(new FilterUtils.FeComponentTransfer
-                    {
-                        Functions = new List<FilterUtils.FeFunc>
+                        string filterName = "genericFilter_InvertColors";
+                        var f_InvertColors = new FilterUtils.CompoundFilter
+                        {
+                            Name = filterName,
+                            Filters = new List<FilterUtils.AtomicFilter>()
+                        };
+                        f_InvertColors.Filters.Add(new FilterUtils.FeComponentTransfer
+                        {
+                            Functions = new List<FilterUtils.FeFunc>
                         {
                             new FilterUtils.FeFuncImpl("R")
                             {
@@ -322,119 +343,122 @@ public class SVGRenderer
                                 TableValues = "1 0"
                             }
                         }
-                    });
-                    (var fDefs, g) = FilterUtils.ApplyFilter(g, f_InvertColors);
-                    defs[filterName] = fDefs;
-                    g.SetAttributeValue("style", $"mix-blend-mode: multiply;");
-                };
-
-                // This is Difference, but flooded white
-                if (frame.BlendMode == "invert") {
-                    string filterName = "genericFilter_FloodWhite";
-                    var f_FloodWhite = new FilterUtils.CompoundFilter
-                    {
-                        Name = filterName,
-                        Filters = new List<FilterUtils.AtomicFilter>()
+                        });
+                        (var fDefs, g) = FilterUtils.ApplyFilter(g, f_InvertColors);
+                        defs[filterName] = fDefs;
+                        g.SetAttributeValue("style", $"mix-blend-mode: multiply;");
                     };
-                    f_FloodWhite.Filters.Add(new FilterUtils.FeColorMatrix("1 0 0 0 255 0 1 0 0 255 0 0 1 0 255 0 0 0 1 0", "matrix"));
-                    (var fDefs, g) = FilterUtils.ApplyFilter(g, f_FloodWhite);
-                    defs[filterName] = fDefs;
-                    g.SetAttributeValue("style", $"mix-blend-mode: difference;");
-                };
 
-                // SWF documentation for BlendMode logic
-                // https://www.m2osw.com/mo_references_view/libsswf/classsswf_1_1BlendMode
+                    // This is Difference, but flooded white
+                    if (frame.BlendMode == "invert")
+                    {
+                        string filterName = "genericFilter_FloodWhite";
+                        var f_FloodWhite = new FilterUtils.CompoundFilter
+                        {
+                            Name = filterName,
+                            Filters = new List<FilterUtils.AtomicFilter>()
+                        };
+                        f_FloodWhite.Filters.Add(new FilterUtils.FeColorMatrix("1 0 0 0 255 0 1 0 0 255 0 0 1 0 255 0 0 0 1 0", "matrix"));
+                        (var fDefs, g) = FilterUtils.ApplyFilter(g, f_FloodWhite);
+                        defs[filterName] = fDefs;
+                        g.SetAttributeValue("style", $"mix-blend-mode: difference;");
+                    };
 
-                // SVG Porter-Duff operations
-                // https://drafts.fxtf.org/compositing-2/#ltblendmodegt
+                    // SWF documentation for BlendMode logic
+                    // https://www.m2osw.com/mo_references_view/libsswf/classsswf_1_1BlendMode
 
-                // Erase appears to be Destination-Out, between SourceGraphic and Backdrop. However, I know of no way to reference the Backdrop other than the CSS mix-blend-mode styling.
-                // We will probably end up using an inverse clipPath or Mask to make this work instead of trying to get the backdrop.
+                    // SVG Porter-Duff operations
+                    // https://drafts.fxtf.org/compositing-2/#ltblendmodegt
 
-                // https://youtu.be/UBCS5EPkiQ0
-                // This is the only video I've found that cleanly explains what the Alpha blend mode does. It's bizzare and useless and I don't want to program it.
+                    // Erase appears to be Destination-Out, between SourceGraphic and Backdrop. However, I know of no way to reference the Backdrop other than the CSS mix-blend-mode styling.
+                    // We will probably end up using an inverse clipPath or Mask to make this work instead of trying to get the backdrop.
 
-                // For our purposes Layer blend mode is useless, it forces the creation of an alpha channel so erase and alpha blend modes can be used. This is stupid, we're not doing that.
+                    // https://youtu.be/UBCS5EPkiQ0
+                    // This is the only video I've found that cleanly explains what the Alpha blend mode does. It's bizzare and useless and I don't want to program it.
 
-                if (frame.BlendMode == "erase") {
-                    
-                };
+                    // For our purposes Layer blend mode is useless, it forces the creation of an alpha channel so erase and alpha blend modes can be used. This is stupid, we're not doing that.
 
-                if (frame.BlendMode == "alpha") {
-                    
+                    if (frame.BlendMode == "erase")
+                    {
+
+                    };
+
+                    if (frame.BlendMode == "alpha")
+                    {
+
+                    }
+
                 }
 
-            }
-
-            var masterFilter = new FilterUtils.CompoundFilter
-            {
-                Name = $"Filter_{id}_Layer{layerIdx}",
-                Filters = new List<FilterUtils.AtomicFilter>()
-            };
-
-            if (frame.Filters.Count > 0)
-            {           
-                foreach (var (filter, filterIndex) in frame.Filters.Select((filter, index) => (filter, index)))
+                var masterFilter = new FilterUtils.CompoundFilter
                 {
-                    // These reimplementations of native Animate filters will always look different in some capacity because as far as I can tell, Animate internally uses a
-                    // fast box convolution blur with subpixel (twip) precision where we use a gaussian blur. I don't know of any way to get subpixel precision with a convolution matrix
-                    // in SVG, but for all intents and purposes, a gaussian blur will do just fine.
-                    switch (filter)
+                    Name = $"Filter_{id}_Layer{layerIdx}",
+                    Filters = new List<FilterUtils.AtomicFilter>()
+                };
+
+                if (frame.Filters.Count > 0)
+                {
+                    foreach (var (filter, filterIndex) in frame.Filters.Select((filter, index) => (filter, index)))
                     {
-                        case DropShadowFilter dropShadowFilter:
-                            var anDropShadow = new FilterUtils.AnDropShadow(dropShadowFilter.BlurX, dropShadowFilter.BlurY, dropShadowFilter.Distance, dropShadowFilter.Angle, dropShadowFilter.Strength, dropShadowFilter.Color, dropShadowFilter.Knockout, dropShadowFilter.Inner, dropShadowFilter.HideObject);
-                            foreach (var _filter in anDropShadow.Filters) 
-                            { 
-                                masterFilter.Filters.Add(_filter);
-                                if (_filter == anDropShadow.Filters.Last())
+                        // These reimplementations of native Animate filters will always look different in some capacity because as far as I can tell, Animate internally uses a
+                        // fast box convolution blur with subpixel (twip) precision where we use a gaussian blur. I don't know of any way to get subpixel precision with a convolution matrix
+                        // in SVG, but for all intents and purposes, a gaussian blur will do just fine.
+                        switch (filter)
+                        {
+                            case DropShadowFilter dropShadowFilter:
+                                var anDropShadow = new FilterUtils.AnDropShadow(dropShadowFilter.BlurX, dropShadowFilter.BlurY, dropShadowFilter.Distance, dropShadowFilter.Angle, dropShadowFilter.Strength, dropShadowFilter.Color, dropShadowFilter.Knockout, dropShadowFilter.Inner, dropShadowFilter.HideObject);
+                                foreach (var _filter in anDropShadow.Filters)
                                 {
-                                    _filter.Attributes["result"] = $"filter_output_{filterIndex}";
+                                    masterFilter.Filters.Add(_filter);
+                                    if (_filter == anDropShadow.Filters.Last())
+                                    {
+                                        _filter.Attributes["result"] = $"filter_output_{filterIndex}";
+                                    }
                                 }
-                            }
-                            break;
-                        case AdjustColorFilter adjustColorFilter:
-                            // Process AnAdjustColor
-                            // Oh boy, where to begin. HueRotation is correct, everything else is close enough. I gave it a sporting chance, but it's just too stupid trying to get this thing one-to-one.
-                            // Brightness, Contrast and Saturation are all messily interlinked in Animate and changing any of them changes the other. Bad matrix math, not my fault.
-                            var styleAttribute1 = g.Attribute("style");
-                            if (styleAttribute1 != null)
-                            {
-                                styleAttribute1.Value += $" filter: hue-rotate({adjustColorFilter.Hue}deg) brightness({(adjustColorFilter.Brightness+100)/100}) contrast({(adjustColorFilter.Contrast+100)/100}) saturate({(adjustColorFilter.Saturation+100)/100});";
-                            }
-                            else
-                            {
-                                g.SetAttributeValue("style", $"filter: hue-rotate({adjustColorFilter.Hue}deg) brightness({(adjustColorFilter.Brightness+100)/100}) contrast({(adjustColorFilter.Contrast+100)/100}) saturate({(adjustColorFilter.Saturation+100)/100});");
-                            }
-                            break;
-                        case BlurFilter blurFilter:
-                            // Process BlurFilter
-                            masterFilter.Filters.Add(new FilterUtils.FeGaussianBlur(blurFilter.BlurX/2, blurFilter.BlurY/2));
-                            break;
-                        // <!> Why does this not work when it's red?
-                        case GlowFilter glowFilter:
-                            // Process GlowFilter
-                            var anGlow = new FilterUtils.AnDropShadow(glowFilter.BlurX, glowFilter.BlurY, 0, 0, glowFilter.Strength, glowFilter.Color, glowFilter.Knockout, glowFilter.Inner, false);
-                            foreach (var _filter in anGlow.Filters)
-                            { masterFilter.Filters.Add(_filter); };
-                            break;
-                        default:
-                            throw new ArgumentException($"Unknown filter type {filter}");
+                                break;
+                            case AdjustColorFilter adjustColorFilter:
+                                // Process AnAdjustColor
+                                // Oh boy, where to begin. HueRotation is correct, everything else is close enough. I gave it a sporting chance, but it's just too stupid trying to get this thing one-to-one.
+                                // Brightness, Contrast and Saturation are all messily interlinked in Animate and changing any of them changes the other. Bad matrix math, not my fault.
+                                var styleAttribute1 = g.Attribute("style");
+                                if (styleAttribute1 != null)
+                                {
+                                    styleAttribute1.Value += $" filter: hue-rotate({adjustColorFilter.Hue}deg) brightness({(adjustColorFilter.Brightness + 100) / 100}) contrast({(adjustColorFilter.Contrast + 100) / 100}) saturate({(adjustColorFilter.Saturation + 100) / 100});";
+                                }
+                                else
+                                {
+                                    g.SetAttributeValue("style", $"filter: hue-rotate({adjustColorFilter.Hue}deg) brightness({(adjustColorFilter.Brightness + 100) / 100}) contrast({(adjustColorFilter.Contrast + 100) / 100}) saturate({(adjustColorFilter.Saturation + 100) / 100});");
+                                }
+                                break;
+                            case BlurFilter blurFilter:
+                                // Process BlurFilter
+                                masterFilter.Filters.Add(new FilterUtils.FeGaussianBlur(blurFilter.BlurX / 2, blurFilter.BlurY / 2));
+                                break;
+                            // <!> Why does this not work when it's red?
+                            case GlowFilter glowFilter:
+                                // Process GlowFilter
+                                var anGlow = new FilterUtils.AnDropShadow(glowFilter.BlurX, glowFilter.BlurY, 0, 0, glowFilter.Strength, glowFilter.Color, glowFilter.Knockout, glowFilter.Inner, false);
+                                foreach (var _filter in anGlow.Filters)
+                                { masterFilter.Filters.Add(_filter); };
+                                break;
+                            default:
+                                throw new ArgumentException($"Unknown filter type {filter}");
+                        }
                     }
                 }
-            }
 
-            // Correctly merge filters lol
-            var mergeFilter = new FilterUtils.FeMerge();
-            for (int i = frame.Filters.Count - 1; i >= 0; i--)
-            {
-                mergeFilter.AddNode(new FilterUtils.FeMergeNode($"filter_output_{i}"));
-            }
+                // Correctly merge filters lol
+                var mergeFilter = new FilterUtils.FeMerge();
+                for (int i = frame.Filters.Count - 1; i >= 0; i--)
+                {
+                    mergeFilter.AddNode(new FilterUtils.FeMergeNode($"filter_output_{i}"));
+                }
 
-            masterFilter.Filters.Add(mergeFilter);
+                masterFilter.Filters.Add(mergeFilter);
 
-            if (frame.FrameColor != null)
-            {
-                var multiplierList = ColorEffectUtils.GetMultipliers(frame.FrameColor);
+                if (frame.FrameColor != null)
+                {
+                    var multiplierList = ColorEffectUtils.GetMultipliers(frame.FrameColor);
                     var multiplier = multiplierList[0];
                     var offset = multiplierList[1];
 
@@ -450,28 +474,32 @@ public class SVGRenderer
                         "matrix"
                     );
                     masterFilter.Filters.Add(feColorMatrix);
-            }
-            
-            // If a CSS Style exists, inject the SVG filter into the style, otherwise, apply the filter to the SVG group.
-            var styleAttribute = g.Attribute("style");
-            if (styleAttribute != null)
-            {
-                var styleValue = styleAttribute.Value;
-                var filterIndex = styleValue.IndexOf("filter: ");
-                if (filterIndex != -1)
-                {
-                    styleAttribute.Value = styleValue.Insert(filterIndex + 8, $"url(#{masterFilter.Name}) ");
-                    defs[masterFilter.Name] = masterFilter.ToXElement();
-                } else if (frame.FrameColor != null) {
-                styleAttribute.Value += $" filter: url(#{masterFilter.Name})";
-                defs[masterFilter.Name] = masterFilter.ToXElement();
                 }
-            } else if (frame.Filters.Count > 0 || frame.FrameColor != null) {
-                g.Add(new XAttribute("filter", $"url(#{masterFilter.Name})"));
-                defs[masterFilter.Name] = masterFilter.ToXElement();
-            } 
 
-            foreach (var e in b)
+                // If a CSS Style exists, inject the SVG filter into the style, otherwise, apply the filter to the SVG group.
+                var styleAttribute = g.Attribute("style");
+                if (styleAttribute != null)
+                {
+                    var styleValue = styleAttribute.Value;
+                    var filterIndex = styleValue.IndexOf("filter: ");
+                    if (filterIndex != -1)
+                    {
+                        styleAttribute.Value = styleValue.Insert(filterIndex + 8, $"url(#{masterFilter.Name}) ");
+                        defs[masterFilter.Name] = masterFilter.ToXElement();
+                    }
+                    else if (frame.FrameColor != null)
+                    {
+                        styleAttribute.Value += $" filter: url(#{masterFilter.Name})";
+                        defs[masterFilter.Name] = masterFilter.ToXElement();
+                    }
+                }
+                else if (frame.Filters.Count > 0 || frame.FrameColor != null)
+                {
+                    g.Add(new XAttribute("filter", $"url(#{masterFilter.Name})"));
+                    defs[masterFilter.Name] = masterFilter.ToXElement();
+                }
+            }
+            foreach (XElement e in b)
             {
                 g.Add(e);
             }
@@ -480,9 +508,8 @@ public class SVGRenderer
             {
                 defs[def.Key] = def.Value;
             }
-            
-            body.Add(g);
 
+            body.Add(g);
         }
 
         return (defs, body);
@@ -690,7 +717,7 @@ public class SVGRenderer
             double anticipated_x = textRun.TextAttrs.LeftMargin + textRun.TextAttrs.Indent;
             double anticipated_y = textRun.TextAttrs.Size;
             string face = textRun.TextAttrs.Face;
-            if(face.EndsWith("Regular")) face = face[..^"Regular".Length]; // why does animate do this to me :(
+            if (face.EndsWith("Regular")) face = face[..^"Regular".Length]; // why does animate do this to me :(
             for (int j = 0; j < characters.Length; j++)
             {
                 var tspan = new XElement("tspan",
@@ -872,6 +899,76 @@ public class SVGRenderer
         targetFrame = targetLayer.GetFrame(frameOffset);
         return IsInstanceVisible(instance, targetFrame, frameOffset - targetFrame.StartFrame, containersAndOffsets, depth + 1);
     }
+
+    class AS3Command
+    {
+        public const string GOTOANDPLAY = "gotoAndPlay", GOTOANDSTOP = "gotoAndStop";
+        // contains the instance name this acts upon, the command, and the frame index
+        private readonly string actor;
+        private readonly string command;
+        private readonly int startFrame;
+        public string Actor { get => actor; }
+        public string Command { get => command; }
+        public int StartFrame { get => startFrame; }
+        public AS3Command(string AS3text)
+        {
+            // TODO: AS3 text will look like instanceName.gotoAndPlay(500); or instanceName.gotoAndStop(9001);
+            // goal is to extract the instance name, command, and frame index
+            actor = AS3text.Split('.')[0];
+            command = AS3text.Split('.')[1].Split('(')[0];
+            startFrame = int.Parse(AS3text.Split('.')[1].Split('(')[1].Split(')')[0]) - 1; // as3 is 1-indexed
+        }
+    }
+    private static AS3Command? GetAS3Result(ConcurrentBag<string> AS3Commands, SymbolInstance targetInstance)
+    {
+        // TODO: go through each command and return whether it's gotoAndStop (false) or gotoAndPlay (true),
+        // and the frame index within that command
+        // example is instanceName.gotoAndPlay(500); or instanceName.gotoAndStop(9001);
+        string instanceName = targetInstance.Name!;
+        foreach (string AS3 in AS3Commands)
+        {
+            // could contain multiple lines, so split by newline
+            string[] lines = AS3.Split('\n');
+            for (int i = 0; i < lines.Length; i++)
+            {
+                // first, validate that the line is a valid AS3 command
+                // using a regex that matches instanceName.gotoAndPlay(500); or instanceName.gotoAndStop(9001);
+                // (semicolon at the end is required here)
+                string line = lines[i].Trim();
+                if (Regexes.AS3CommandRegex().IsMatch(line))
+                {
+                    AS3Command result = new(line);
+                    if (result.Actor == instanceName) return result;
+                }
+            }
+        }
+        return null;
+    }
+    private int? CheckForActionscript(SymbolInstance instance, Timeline timeline, int startFrame, int endFrame)
+    {
+        int loopLength = (instance.CorrespondingItem as SymbolItem)!.Timeline.GetFrameCount();
+        var compiliedActionscripts = CompiledActionscriptCache[timeline];
+        if (compiliedActionscripts is not null)
+        {
+            for (int curAS3Frame = endFrame; curAS3Frame >= startFrame; curAS3Frame--)
+            {
+                // var AS3AtThisFrame = compiliedActionscripts[curAS3Frame];
+                if (!compiliedActionscripts.TryGetValue(curAS3Frame, out ConcurrentBag<string>? AS3AtThisFrame)) continue;
+                if (AS3AtThisFrame is null || AS3AtThisFrame.IsEmpty) continue;
+                AS3Command? curCommand = GetAS3Result(AS3AtThisFrame, instance);
+                if (curCommand is not null)
+                {
+                    if (curCommand.Command == AS3Command.GOTOANDSTOP) return curCommand.StartFrame;
+                    else if (curCommand.Command == AS3Command.GOTOANDPLAY)
+                    {
+                        int framesElapsed = endFrame - curAS3Frame;
+                        return (curCommand.StartFrame + framesElapsed) % loopLength;
+                    }
+                }
+            }
+        }
+        return null;
+    }
     private int GetMovieClipLoopFrame(SymbolInstance instance, List<(SymbolInstance, int)> containersAndOffsets)
     {
         // TODO: instance is a movie clip either on the main timeline or within a container
@@ -906,6 +1003,14 @@ public class SVGRenderer
             instanceIsVisible = IsInstanceVisible(instance, curFrame, mid - curFrame.StartFrame, containersAndOffsets);
             if (instanceIsVisible) high = mid;
             else low = mid + 1;
+        }
+        // high is the first frame the instance is visible
+        // see if there is any actionscript on the main timeline that changes the instance's frame
+        // (will implement as3 within symbols in the future)
+        if (instance.Name is not null)
+        {
+            int? AS3Frame = CheckForActionscript(instance, SymbolCache[mainTimelineInstance].timeline, high, curFrameIndex);
+            if (AS3Frame is not null) return AS3Frame.Value;
         }
         int loopFrame = (curFrameIndex - high) % loopLength;
         return loopFrame;
