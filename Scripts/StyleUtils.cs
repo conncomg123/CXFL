@@ -49,8 +49,8 @@ namespace Rendering
             }
             else
             {
-                // Should print warning rather than throw error?- ask Soundman
-                throw new Exception($"Unknown fill style: {fillStyle.ToString()}");
+                // Should print warning rather
+                Console.WriteLine($"Unknown fill style");
             }
 
             return (attributes, extraDefElements);

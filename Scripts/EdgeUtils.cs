@@ -338,7 +338,7 @@ namespace Rendering
             // index" attribute- NOT their index in lists
             // fillStyle/strokeStyle index in CSXFL Shape list: XFL "index" attribute - 1
 
-            // List of point lists with their associated fillStyle stored as pairs
+            // List of point lists with their associated fillStyle stored as pairs- these tuples are then combined into shapes
             List<(List<string>, int?)> fillEdges = new List<(List<string>, int?)>();
             // Maps strokeStyle id to associated pointLists
             // For any key, default value is list

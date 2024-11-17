@@ -111,6 +111,16 @@ public class SVGRenderer
             }
         }
     }
+
+    /// <summary>
+    /// Render SVGs from XFL.
+    /// </summary>
+    /// <param name="timeline">Name of the timeline being rendered.</param>
+    /// <param name="frameIndex">Frame being rendered.</param>
+    /// <param name="width">Width of the resulting SVG.</param>
+    /// <param name="height">Height of the resulting SVG.</param>
+    /// <param name="type">Whether this timeline is a "symbol" or a "symbol"</param>
+    /// <returns>Resulting SVG from the XFL.</returns>
     public XDocument Render(Timeline timeline, int frameIndex, int? width = null, int? height = null, string type = "symbol")
     {
         width ??= Document.Width;
