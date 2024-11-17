@@ -50,6 +50,7 @@ public abstract class Element
         root = elementNode;
         ns = root.Name.Namespace;
         this.elementType = elementType;
+        name = (string?)elementNode.Attribute("name");
         width = double.NaN;
         height = double.NaN;
         selected = (bool?)elementNode.Attribute("isSelected") ?? DefaultValues.Selected;
@@ -61,6 +62,7 @@ public abstract class Element
         root = other.Root is null ? null : new XElement(other.Root);
         ns = other.ns;
         elementType = other.elementType;
+        name = other.name;
         width = other.width;
         height = other.height;
         selected = other.selected;
