@@ -121,9 +121,9 @@ namespace Rendering
                 }
 
                 offset = (
-                    tintMultiplier * int.Parse(tintColor.Substring(1, 2), NumberStyles.HexNumber) / 255f,
-                    tintMultiplier * int.Parse(tintColor.Substring(3, 2), NumberStyles.HexNumber) / 255f,
-                    tintMultiplier * int.Parse(tintColor.Substring(5, 2), NumberStyles.HexNumber) / 255f,
+                    tintMultiplier * int.Parse(tintColor.Substring(1, 2), NumberStyles.HexNumber),
+                    tintMultiplier * int.Parse(tintColor.Substring(3, 2), NumberStyles.HexNumber),
+                    tintMultiplier * int.Parse(tintColor.Substring(5, 2), NumberStyles.HexNumber),
                     0);
             }
             // Advanced: multiply and offset each channel
