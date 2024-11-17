@@ -15,8 +15,8 @@ public static class TweenUtils
             M12 = (float)b,
             M21 = (float)c,
             M22 = (float)d,
-            M41 = (float)tx,
-            M42 = (float)ty,
+            M14 = (float)tx,
+            M24 = (float)ty,
             M33 = 1,
             M44 = 1
         };
@@ -39,8 +39,8 @@ public static class TweenUtils
             B = matrix.M12,
             C = matrix.M21,
             D = matrix.M22,
-            Tx = matrix.M41,
-            Ty = matrix.M42
+            Tx = matrix.M14,
+            Ty = matrix.M24
         };
     }
     private static (double, double, double) AdjustAdobeMatrixParams(double rotation, double srot, double erot, double sshear, double eshear)
@@ -100,8 +100,8 @@ public static class TweenUtils
             t * ex + (1 - t) * sx,
             t * ey + (1 - t) * sy
         );
-        interpolatedLinear.M41 = (float)(startMatrix.M41 * (1 - t) + endMatrix.M41 * t);
-        interpolatedLinear.M42 = (float)(startMatrix.M42 * (1 - t) + endMatrix.M42 * t);
+        interpolatedLinear.M14 = (float)(startMatrix.M14 * (1 - t) + endMatrix.M14 * t);
+        interpolatedLinear.M24 = (float)(startMatrix.M24 * (1 - t) + endMatrix.M24 * t);
         return SerializeMatrix(interpolatedLinear);
     }
     public static Matrix MatrixInterpolation(Matrix start, Matrix end, double rotation, Frame tweenFrame, int frameIndex, Point tp)
@@ -121,13 +121,13 @@ public static class TweenUtils
             fscale * ey + (1 - fscale) * sy
         );
         Matrix4x4 transformOrigin = Matrix4x4.Identity;
-        transformOrigin.M41 = (float)-tp.X;
-        transformOrigin.M42 = (float)-tp.Y;
+        transformOrigin.M14 = (float)-tp.X;
+        transformOrigin.M24 = (float)-tp.Y;
         transformOrigin *= interpolatedLinear;
-        transformOrigin.M41 += (float)tp.X;
-        transformOrigin.M42 += (float)tp.Y;
-        interpolatedLinear.M41 += (float)(startMatrix.M41 * (1 - fpos) + endMatrix.M41 * fpos + transformOrigin.M41);
-        interpolatedLinear.M42 += (float)(startMatrix.M42 * (1 - fpos) + endMatrix.M42 * fpos + transformOrigin.M42);
+        transformOrigin.M14 += (float)tp.X;
+        transformOrigin.M24 += (float)tp.Y;
+        interpolatedLinear.M14 += (float)(startMatrix.M14 * (1 - fpos) + endMatrix.M14 * fpos + transformOrigin.M14);
+        interpolatedLinear.M24 += (float)(startMatrix.M24 * (1 - fpos) + endMatrix.M24 * fpos + transformOrigin.M24);
         return SerializeMatrix(interpolatedLinear);
     }
     private static Color Scale(this Color color, double factor)
