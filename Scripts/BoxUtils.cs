@@ -106,6 +106,10 @@ namespace Rendering
             double xCritical;
             double yCritical;
 
+            // If denominator is 0, that means that there is no critical point
+            // As such, just set t = -1, this will be ignored as the t value for Bezier Curve's can only
+            // be [0 - 1]
+
             if (xDenom == 0)
             {
                 xCritical = -1;
