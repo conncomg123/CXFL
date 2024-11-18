@@ -86,8 +86,8 @@ namespace Rendering
         public static (double, double) GetPointOnQuadraticBezier((double, double) point1,
             (double, double) point2, (double, double) point3, double t)
         {
-            double x = (1 - t) * ((1 - t) * point1.Item1 + t * point2.Item1) + t * ((1 - t) * point2.Item1 + t + point3.Item1);
-            double y = (1 - t) * ((1 - t) * point1.Item2 + t * point2.Item2) + t * ((1 - t) * point2.Item2 + t + point3.Item2);
+            double x = (1 - t) * ((1 - t) * point1.Item1 + t * point2.Item1) + t * ((1 - t) * point2.Item1 + t * point3.Item1);
+            double y = (1 - t) * ((1 - t) * point1.Item2 + t * point2.Item2) + t * ((1 - t) * point2.Item2 + t * point3.Item2);
             return (x, y);
         }
 
@@ -161,8 +161,8 @@ namespace Rendering
 
             double minX = Math.Min(Math.Min(point1.Item1, point2.Item1), Math.Min(point3.Item1, point4.Item1));
             double maxY = Math.Max(Math.Max(point1.Item2, point2.Item2), Math.Max(point3.Item2, point4.Item2));
-            double maxX = Math.Min(Math.Min(point1.Item2, point2.Item2), Math.Min(point3.Item2, point4.Item2));
-            double minY = Math.Max(Math.Max(point1.Item1, point2.Item1), Math.Max(point3.Item1, point4.Item1));
+            double maxX = Math.Max(Math.Max(point1.Item1, point2.Item1), Math.Max(point3.Item1, point4.Item1));
+            double minY = Math.Min(Math.Min(point1.Item2, point2.Item2), Math.Min(point3.Item2, point4.Item2));
 
             Rectangle boundingBox = new Rectangle(minX, maxY, maxX, minY);
             return boundingBox;
