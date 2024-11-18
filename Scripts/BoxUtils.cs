@@ -91,26 +91,34 @@ namespace Rendering
             return (x, y);
         }
 
+        /// <summary>
+        /// Gets the critical points of the Bezier Curve.
+        /// </summary>
+        /// <param name="point1">Start point of Bezier curve.</param>
+        /// <param name="point2">Control point of Beizer curve.</param>
+        /// <param name="point3">End point of Bezier curve.</param>
+        /// <returns>The critical points of the Bezier Curve for both the x and y axis.</returns>
         public static (double, double) GetQuadraticCriticalPoints((double, double) point1,
             (double, double) point2, (double, double) point3)
         {
-            double xDenom = point1.Item1 - 2 * point2.Item1 + point3.Item1;
+            //Get the critical point by taking the derivative of the Bezier Curve and solving for 0
+            double xDenom = point1.Item1 - (2 * point2.Item1) + point3.Item1;
             double xCritical;
             double yCritical;
 
             if (xDenom == 0)
             {
-                xCritical = Double.MaxValue;
+                xCritical = -1;
             }
             else
             {
                 xCritical = (point1.Item1 - point2.Item2) / xDenom;
             }
 
-            double yDenom = point1.Item2 - 2 * point2.Item2 + point3.Item2;
+            double yDenom = point1.Item2 - (2 * point2.Item2) + point3.Item2;
             if (yDenom == 0)
             {
-                yCritical = Double.MaxValue;
+                yCritical = -1;
             }
             else
             {
@@ -125,44 +133,46 @@ namespace Rendering
         /// </summary>
         /// <param name="point1">Start point of Bezier curve.</param>
         /// <param name="controlPoint">Control point of Beizer curve.</param>
-        /// <param name="point3">End point of Bezier curve.</param>
+        /// <param name="point2">End point of Bezier curve.</param>
         /// <returns>Bounding box assoicated with a quadratic Bezier curve.</returns>
         public static Rectangle GetQuadraticBoundingBox ((double, double) point1,
             (double, double) controlPoint, (double, double) point2)
         {
+            // t values of where derivative is = 0, which indicates a potential min or max
+            // Use those values to get the extreme points relative to the x and y axis
             (double, double) criticalPoints = GetQuadraticCriticalPoints(point1, controlPoint, point2);
-            (double, double) point3, point4;
+            (double, double) xExtremePoint, yExtremePoint;
             
             if(criticalPoints.Item1 > 0 && criticalPoints.Item1 < 1)
             {
-                point3 = GetPointOnQuadraticBezier(point1, controlPoint, point2, criticalPoints.Item1);
+                xExtremePoint = GetPointOnQuadraticBezier(point1, controlPoint, point2, criticalPoints.Item1);
             }
             else
             {
                 // Pick either the start or the end of the curve arbitrarily so it doesn't affect
                 // the max/min point calculation
-                point3 = point1;
+                xExtremePoint = point1;
             }
 
             if(criticalPoints.Item2 > 0 && criticalPoints.Item2 < 1)
             {
-                point4 = GetPointOnQuadraticBezier(point1, controlPoint, point2, criticalPoints.Item2);
+                yExtremePoint = GetPointOnQuadraticBezier(point1, controlPoint, point2, criticalPoints.Item2);
             }
             else
             {
                 // Pick either the start or the end of the curve arbitrarily so it doesn't affect
                 // the max/min point calculation
-                point4 = point1;
+                yExtremePoint = point1;
             }
 
             // The way that rectangles are stored is left = x of left side, top = y of top side, right = x of right side
             // bottom = y of bottom side
             // min x = left, max y = top, max x = right, min y = bottom
 
-            double minX = Math.Min(Math.Min(point1.Item1, point2.Item1), Math.Min(point3.Item1, point4.Item1));
-            double maxY = Math.Max(Math.Max(point1.Item2, point2.Item2), Math.Max(point3.Item2, point4.Item2));
-            double maxX = Math.Max(Math.Max(point1.Item1, point2.Item1), Math.Max(point3.Item1, point4.Item1));
-            double minY = Math.Min(Math.Min(point1.Item2, point2.Item2), Math.Min(point3.Item2, point4.Item2));
+            double minX = Math.Min(Math.Min(point1.Item1, point2.Item1), Math.Min(xExtremePoint.Item1, yExtremePoint.Item1));
+            double maxY = Math.Max(Math.Max(point1.Item2, point2.Item2), Math.Max(xExtremePoint.Item2, yExtremePoint.Item2));
+            double maxX = Math.Max(Math.Max(point1.Item1, point2.Item1), Math.Max(xExtremePoint.Item1, yExtremePoint.Item1));
+            double minY = Math.Min(Math.Min(point1.Item2, point2.Item2), Math.Min(xExtremePoint.Item2, yExtremePoint.Item2));
 
             Rectangle boundingBox = new Rectangle(minX, maxY, maxX, minY);
             return boundingBox;
