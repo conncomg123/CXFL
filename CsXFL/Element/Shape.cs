@@ -88,7 +88,7 @@ public class FillStyle
     {
         this.root = root;
         ns = root.Name.Namespace;
-        index = (int?)root.Attribute("index") ?? throw new ArgumentNullException(nameof(root));
+        index = (int?)root.Attribute("index") ?? -1;
         if (root.Element(ns + SolidColor.SOLID_COLOR_NODE_IDENTIFIER) != null)
         {
             solidColor = new SolidColor(root.Element(ns + SolidColor.SOLID_COLOR_NODE_IDENTIFIER)!);
@@ -401,7 +401,7 @@ public class StrokeStyle
     {
         this.root = root;
         ns = root.Name.Namespace;
-        index = (int?)root.Attribute("index") ?? throw new ArgumentNullException(nameof(root));
+        index = (int?)root.Attribute("index") ?? -1;
         string strokeType = root.Elements().First().Name.LocalName;
         switch (strokeType)
         {
