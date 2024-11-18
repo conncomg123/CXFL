@@ -7,28 +7,30 @@ public abstract class PrimitiveShape : Element
     public const string PRIMITIVE_FILL_NODE_IDENTIFIER = "fill",
 PRIMITIVE_STROKE_NODE_IDENTIFIER = "stroke";
     private double objectWidth, objectHeight, x, y;
-    private FillStyle fill;
-    private StrokeStyle stroke;
+    private FillStyle? fill;
+    private StrokeStyle? stroke;
     public double ObjectWidth { get { return objectWidth; } set { objectWidth = value; root?.SetAttributeValue("objectWidth", value); } }
     public double ObjectHeight { get { return objectHeight; } set { objectHeight = value; root?.SetAttributeValue("objectHeight", value); } }
     public double X { get { return x; } set { x = value; root?.SetAttributeValue("x", value); } }
     public double Y { get { return y; } set { y = value; root?.SetAttributeValue("y", value); } }
-    public FillStyle Fill { get { return fill; } set { SetFill(value); } }
-    public StrokeStyle Stroke { get { return stroke; } set { SetStroke(value); } }
-    private void SetFill(FillStyle fill)
+    public FillStyle? Fill { get { return fill; } set { SetFill(value); } }
+    public StrokeStyle? Stroke { get { return stroke; } set { SetStroke(value); } }
+    private void SetFill(FillStyle? fill)
     {
         this.fill = fill;
         if (root is null) return;
         root.Element(ns + PRIMITIVE_FILL_NODE_IDENTIFIER)?.Remove();
+        if (fill is null) return;
         XElement fillNode = new XElement(ns + PRIMITIVE_FILL_NODE_IDENTIFIER);
         fillNode.Add(fill.Root);
         root.Add(fillNode);
     }
-    private void SetStroke(StrokeStyle stroke)
+    private void SetStroke(StrokeStyle? stroke)
     {
         this.stroke = stroke;
         if (root is null) return;
         root.Element(ns + PRIMITIVE_STROKE_NODE_IDENTIFIER)?.Remove();
+        if(stroke is null) return;
         XElement strokeNode = new XElement(ns + PRIMITIVE_STROKE_NODE_IDENTIFIER);
         strokeNode.Add(stroke.Root);
         root.Add(strokeNode);
@@ -39,8 +41,8 @@ PRIMITIVE_STROKE_NODE_IDENTIFIER = "stroke";
         objectHeight = (double?)primitiveNode.Attribute("objectHeight") ?? double.NaN;
         x = (double?)primitiveNode.Attribute("x") ?? double.NaN;
         y = (double?)primitiveNode.Attribute("y") ?? double.NaN;
-        fill = new FillStyle(primitiveNode.Element(ns + PRIMITIVE_FILL_NODE_IDENTIFIER)!);
-        stroke = new StrokeStyle(primitiveNode.Element(ns + PRIMITIVE_STROKE_NODE_IDENTIFIER)!);
+        fill = primitiveNode.Element(ns + PRIMITIVE_FILL_NODE_IDENTIFIER) is null ? null : new FillStyle(primitiveNode.Element(ns + PRIMITIVE_FILL_NODE_IDENTIFIER)!);
+        stroke = primitiveNode.Element(ns + PRIMITIVE_STROKE_NODE_IDENTIFIER) is null ? null : new StrokeStyle(primitiveNode.Element(ns + PRIMITIVE_STROKE_NODE_IDENTIFIER)!);
     }
     public PrimitiveShape(PrimitiveShape other) : base(other)
     {
@@ -48,8 +50,8 @@ PRIMITIVE_STROKE_NODE_IDENTIFIER = "stroke";
         objectHeight = other.objectHeight;
         x = other.x;
         y = other.y;
-        fill = new FillStyle(other.fill);
-        stroke = new StrokeStyle(other.stroke);
+        fill = other.fill is null ? null : new FillStyle(other.fill);
+        stroke = other.stroke is null ? null : new StrokeStyle(other.stroke);
     }
 }
 public class PrimitiveOval : PrimitiveShape
