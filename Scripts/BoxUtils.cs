@@ -77,32 +77,32 @@ namespace Rendering
         /// <summary>
         /// Gets a point on a quadratic Bezier curve.
         /// </summary>
-        /// <param name="point1">Start point of Bezier curve.</param>
-        /// <param name="point2">Control point of Beizer curve.</param>
+        /// <param name="point0">Start point of Bezier curve.</param>
+        /// <param name="point1">Control point of Beizer curve.</param>
         /// <param name="point3">End point of Bezier curve.</param>
         /// <param name="t">How far from the start point the point being calculated is [0, 1]- with
         /// 0 being the start point and 1 being the end point.</param>
         /// <returns>A point on the Bezier curve that is t from the start point.</returns>
-        public static (double, double) GetPointOnQuadraticBezier((double, double) point1,
-            (double, double) point2, (double, double) point3, double t)
+        public static (double, double) GetPointOnQuadraticBezier((double, double) point0,
+            (double, double) point1, (double, double) point2, double t)
         {
-            double x = (1 - t) * ((1 - t) * point1.Item1 + t * point2.Item1) + t * ((1 - t) * point2.Item1 + t * point3.Item1);
-            double y = (1 - t) * ((1 - t) * point1.Item2 + t * point2.Item2) + t * ((1 - t) * point2.Item2 + t * point3.Item2);
+            double x = (1 - t) * ((1 - t) * point0.Item1 + t * point1.Item1) + t * ((1 - t) * point1.Item1 + t * point2.Item1);
+            double y = (1 - t) * ((1 - t) * point0.Item2 + t * point1.Item2) + t * ((1 - t) * point1.Item2 + t * point2.Item2);
             return (x, y);
         }
 
         /// <summary>
         /// Gets the critical points of the Bezier Curve.
         /// </summary>
-        /// <param name="point1">Start point of Bezier curve.</param>
-        /// <param name="point2">Control point of Beizer curve.</param>
-        /// <param name="point3">End point of Bezier curve.</param>
+        /// <param name="point0">Start point of Bezier curve.</param>
+        /// <param name="point1">Control point of Beizer curve.</param>
+        /// <param name="point2">End point of Bezier curve.</param>
         /// <returns>The critical points of the Bezier Curve for both the x and y axis.</returns>
-        public static (double, double) GetQuadraticCriticalPoints((double, double) point1,
-            (double, double) point2, (double, double) point3)
+        public static (double, double) GetQuadraticCriticalPoints((double, double) point0,
+            (double, double) point1, (double, double) point2)
         {
             //Get the critical point by taking the derivative of the Bezier Curve and solving for 0
-            double xDenom = point1.Item1 - (2 * point2.Item1) + point3.Item1;
+            double xDenom = point0.Item1 - (2 * point1.Item1) + point2.Item1;
             double xCritical;
             double yCritical;
 
@@ -112,17 +112,17 @@ namespace Rendering
             }
             else
             {
-                xCritical = (point1.Item1 - point2.Item1) / xDenom;
+                xCritical = (point0.Item1 - point1.Item1) / xDenom;
             }
 
-            double yDenom = point1.Item2 - (2 * point2.Item2) + point3.Item2;
+            double yDenom = point0.Item2 - (2 * point1.Item2) + point2.Item2;
             if (yDenom == 0)
             {
                 yCritical = -1;
             }
             else
             {
-                yCritical = (point1.Item2 - point2.Item2) / yDenom;
+                yCritical = (point0.Item2 - point1.Item2) / yDenom;
             }
 
             return (xCritical, yCritical);
