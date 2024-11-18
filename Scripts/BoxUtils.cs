@@ -112,7 +112,7 @@ namespace Rendering
             }
             else
             {
-                xCritical = (point1.Item1 - point2.Item2) / xDenom;
+                xCritical = (point1.Item1 - point2.Item1) / xDenom;
             }
 
             double yDenom = point1.Item2 - (2 * point2.Item2) + point3.Item2;
@@ -122,7 +122,7 @@ namespace Rendering
             }
             else
             {
-                yCritical = (point1.Item1 - point2.Item2) / yDenom;
+                yCritical = (point1.Item2 - point2.Item2) / yDenom;
             }
 
             return (xCritical, yCritical);
