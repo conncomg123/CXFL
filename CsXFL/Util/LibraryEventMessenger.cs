@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 namespace CsXFL;
 internal interface ILibraryEventReceiver
 {
@@ -7,7 +9,7 @@ public class LibraryEventMessenger
 {
     private static LibraryEventMessenger? instance;
     private LibraryEventMessenger() { }
-    private readonly Dictionary<Item, List<WeakReference<ILibraryEventReceiver>>> itemToReceiversMap = new();
+    private readonly ConcurrentDictionary<Item, List<WeakReference<ILibraryEventReceiver>>> itemToReceiversMap = new();
     public static LibraryEventMessenger Instance
     {
         get
@@ -45,7 +47,7 @@ internal void RegisterReceiver(Item item, ILibraryEventReceiver receiver)
             receivers.RemoveAll(receiverRef => receiverRef.TryGetTarget(out var target) && ReferenceEquals(target, receiver));
             if (receivers.Count == 0)
             {
-                itemToReceiversMap.Remove(item);
+                itemToReceiversMap.Remove(item, out var _);
             }
         }
     }
@@ -75,7 +77,7 @@ internal void RegisterReceiver(Item item, ILibraryEventReceiver receiver)
                     receiver.OnLibraryEvent(this, new LibraryEventArgs { Item = item, EventType = LibraryEvent.ItemRemoved });
                 }
             }
-            itemToReceiversMap.Remove(item);
+            itemToReceiversMap.Remove(item, out var _);
         }
     }
 }
