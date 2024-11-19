@@ -1,8 +1,10 @@
 using CsXFL;
+using SixLabors.Fonts;
 using System.Collections.Concurrent;
 using System.Data;
 using System.IO.Compression;
 using System.Numerics;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
@@ -697,6 +699,11 @@ public class SVGRenderer
         new XAttribute("height", bitmap.VPixels.ToString()));
         return imageElement;
     }
+    private static double GetTextRenderSize(string text, Font font)
+    {
+        TextOptions textOptions = new TextOptions(font);
+        return TextMeasurer.MeasureSize(text, textOptions).Width;
+    }
 
     // Animate mangles font names. Is it possible to take TextAttrs.Face and get the corresponding Windows font? Will be needed for font embedding.
 
@@ -707,7 +714,36 @@ public class SVGRenderer
         XElement textElement = new XElement(svgNs + "text",
             new XAttribute("writing-mode", "lr") // Force writing mode to left-right. Circle back to this later.
         );
+        if (TextElement is DynamicText)
+        {
+            // has no newlines, so let's make them
+            TextElement = new DynamicText(TextElement); // don't destroy the original
+            var textRun = TextElement.TextRuns[0]; // dynamic text only has one run
+            string fontName = textRun.TextAttrs.Face;
+            double fontSize = textRun.TextAttrs.Size;
+            double letterSpacing = textRun.TextAttrs.LetterSpacing;
+            if (fontName.EndsWith("Regular")) fontName = fontName[..^"Regular".Length]; // why does animate do this to me :(
+            Font font = SystemFonts.CreateFont(fontName, (float)fontSize);
 
+            string textString = TextElement.GetTextString();
+            // iterate over the words and insert newlines once the next word would fill the box
+            string[] words = textString.Split(' ');
+            StringBuilder sb = new StringBuilder();
+            foreach (string word in words)
+            {
+                int indexBefore = sb.Length;
+                sb.Append(word + ' ');
+                string curLine = sb.ToString()[(sb.ToString().LastIndexOf('\r') + 1)..];
+                double width = GetTextRenderSize(curLine, font);
+                width += curLine.Length * letterSpacing;
+                if (width > TextElement.Width)
+                {
+                    sb.Insert(indexBefore, '\r');
+                }
+            }
+            textString = sb.ToString().TrimEnd();
+            TextElement.SetTextString(textString);
+        }
         for (int i = 0; i < TextElement.TextRuns.Count; i++)
         {
             var textRun = TextElement.TextRuns[i];
@@ -716,13 +752,14 @@ public class SVGRenderer
             double carriage_y = 1;
             double anticipated_x = textRun.TextAttrs.LeftMargin + textRun.TextAttrs.Indent;
             double anticipated_y = textRun.TextAttrs.Size;
+            double animateYOffset = anticipated_y * 43 / 1000;
             string face = textRun.TextAttrs.Face;
-            if (face.EndsWith("Regular")) face = face[..^"Regular".Length]; // why does animate do this to me :(
+            if (face.EndsWith("Regular")) face = face[..^"Regular".Length];
             for (int j = 0; j < characters.Length; j++)
             {
-                var tspan = new XElement("tspan",
+                var tspan = new XElement(svgNs + "tspan",
                     new XAttribute("baseline-shift", "0%"),
-                    new XAttribute("font-family", textRun.TextAttrs.Face),
+                    new XAttribute("font-family", face),
                     new XAttribute("font-size", textRun.TextAttrs.Size),
                     new XAttribute("fill", textRun.TextAttrs.FillColor),
                     new XAttribute("letter-spacing", textRun.TextAttrs.LetterSpacing),
@@ -748,7 +785,7 @@ public class SVGRenderer
                 if (i == 0)
                 {
                     tspan.Add(new XAttribute("x", anticipated_x));
-                    tspan.Add(new XAttribute("y", anticipated_y));
+                    tspan.Add(new XAttribute("y", anticipated_y + animateYOffset));
                 }
 
                 // If previous TextRuns.Characters had length zero or TextRun.Characters contains escape character \r
