@@ -849,7 +849,7 @@ public class SVGRenderer
     }
     private static string BestMatch(IEnumerable<string> strings, string target)
     {
-        return strings.OrderByDescending(s => s.Zip(target, (c1, c2) => c1 == c2).TakeWhile(b => b).Count()).First();
+        return strings.OrderByDescending(s => s.Replace(" ", "").Zip(target, (c1, c2) => c1 == c2).TakeWhile(b => b).Count()).First();
     }
     private static Font GetFontFromNameWithoutSpaces(string fontNameWithoutSpaces, float size)
     {
@@ -857,7 +857,6 @@ public class SVGRenderer
         fontNameWithoutSpaces = fontNameWithoutSpaces.Replace("-", "");
         string bestMatch = BestMatch(SystemFonts.Families.Select(f => f.Name), fontNameWithoutSpaces);
         return SystemFonts.CreateFont(bestMatch, size);
-        throw new ArgumentException($"The font '{fontNameWithoutSpaces}' could not be found.");
     }
 
     // Animate mangles font names. Is it possible to take TextAttrs.Face and get the corresponding Windows font? Will be needed for font embedding.
@@ -883,10 +882,11 @@ public class SVGRenderer
             // iterate over the words and insert newlines once the next word would fill the box
             string[] words = textString.Split(' ');
             StringBuilder sb = new StringBuilder();
-            foreach (string word in words)
+            for(int i = 0; i < words.Length; i++)
             {
+                string word = words[i];
                 int indexBefore = sb.Length;
-                sb.Append(word + ' ');
+                sb.Append(word + (i == words.Length - 1 ? "" : " "));
                 string curLine = sb.ToString()[(sb.ToString().LastIndexOf('\r') + 1)..];
                 double width = GetTextRenderSize(curLine, font);
                 width += curLine.Length * letterSpacing;
@@ -895,7 +895,7 @@ public class SVGRenderer
                     sb.Insert(indexBefore, '\r');
                 }
             }
-            textString = sb.ToString().TrimEnd();
+            textString = sb.ToString();
             TextElement.SetTextString(textString);
         }
         for (int i = 0; i < TextElement.TextRuns.Count; i++)
@@ -913,11 +913,12 @@ public class SVGRenderer
             {
                 var tspan = new XElement(svgNs + "tspan",
                     new XAttribute("baseline-shift", "0%"),
-                    new XAttribute("font-family", face),
+                    new XAttribute("font-family", font.Name),
                     new XAttribute("font-size", textRun.TextAttrs.Size),
                     new XAttribute("fill", textRun.TextAttrs.FillColor),
                     new XAttribute("letter-spacing", textRun.TextAttrs.LetterSpacing),
                     new XAttribute("fill-opacity", textRun.TextAttrs.Alpha),
+                    new XAttribute(XNamespace.Xml + "space", "preserve"),
                     new XText(characters[j])
                 );
 

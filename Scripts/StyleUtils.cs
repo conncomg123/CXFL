@@ -28,18 +28,18 @@ namespace Rendering
             Dictionary<string, string> attributes = new Dictionary<string, string>();
             Dictionary<string, XElement> extraDefElements = new Dictionary<string, XElement>();
 
-            if(fillStyle.SolidColor != null)
+            if (fillStyle.SolidColor != null)
             {
                 attributes["fill"] = fillStyle.SolidColor.Color;
                 attributes["fill-opacity"] = fillStyle.SolidColor.Alpha.ToString();
             }
-            else if(fillStyle.LinearGradient != null)
+            else if (fillStyle.LinearGradient != null)
             {
                 XElement gradientElement = GradientUtils.ConvertLinearGradientToSVG(fillStyle.LinearGradient);
                 attributes["fill"] = $"url(#{gradientElement.Attribute("id")!.Value})";
                 extraDefElements[gradientElement.Attribute("id")!.Value] = gradientElement;
             }
-            else if(fillStyle.RadialGradient != null)
+            else if (fillStyle.RadialGradient != null)
             {
                 XElement gradientElement = GradientUtils.ConvertRadialGradientToSVG(fillStyle.RadialGradient);
                 attributes["fill"] = $"url(#{gradientElement.Attribute("id")!.Value})";
@@ -60,14 +60,14 @@ namespace Rendering
         /// <param name="strokeStyle">CSXFL StrokeStyle element whose SVG attributes
         /// will be parsed from.</param>
         /// <returns>A Dictionary of SVG style attributes.</returns>
-        public static Dictionary<string, string> ParseStrokeStyle(StrokeStyle strokeStyle)
+        public static (Dictionary<string, string>, Dictionary<string, XElement>) ParseStrokeStyle(StrokeStyle strokeStyle)
         {
-            if(strokeStyle.Stroke == null)
+            if (strokeStyle.Stroke == null)
             {
                 throw new Exception($"Unknown stroke style: {strokeStyle.ToString()}");
             }
 
-            if(strokeStyle.Stroke.ScaleMode != "normal")
+            if (strokeStyle.Stroke.ScaleMode != "normal")
             {
                 Console.Error.WriteLine($"'stroke-scaleMode' value not supported: {strokeStyle.Stroke.ScaleMode}");
             }
@@ -76,11 +76,12 @@ namespace Rendering
             // attribute
             string capsProperty = strokeStyle.Stroke.Caps;
 
-            if(capsProperty == "none")
+            if (capsProperty == "none")
             {
                 capsProperty = "butt";
             }
 
+            Dictionary<string, XElement> extraDefElements = new Dictionary<string, XElement>();
             Dictionary<string, string> attributes = new Dictionary<string, string>()
             {
                 {"stroke-linecap", capsProperty },
@@ -91,37 +92,42 @@ namespace Rendering
 
             // Are we always going to try to get solidStyle even if Stroke isn't
             // SolidStroke?
-            SolidStroke solidStroke = (SolidStroke) strokeStyle.Stroke;
-
-            if(solidStroke.SolidStyle == "hairline")
+            SolidStroke solidStroke = (SolidStroke)strokeStyle.Stroke;
+            if (strokeStyle.Stroke.SolidColor != null)
+            {
+                attributes["stroke"] = strokeStyle.Stroke.SolidColor.Color;
+                attributes["fill-opacity"] = strokeStyle.Stroke.SolidColor.Alpha.ToString();
+            }
+            if (solidStroke.SolidStyle == "hairline")
             {
                 // A hairline solidStyle overrides the "weight" XFL attribute.
                 attributes["stroke-width"] = "0.05";
             }
-            else if(solidStroke.SolidStyle != string.Empty)
+            else if (solidStroke.SolidStyle != string.Empty)
             {
                 throw new Exception($"Unknown 'solidStyle' value: {solidStroke.ToString()}");
             }
-
-            if(strokeStyle.Stroke.RadialGradient != null)
+            if (strokeStyle.Stroke.LinearGradient != null)
             {
-                // TODO: add support for RadialGradient
-                throw new Exception("RadialGradient is not supported yet!");
+                XElement gradientElement = GradientUtils.ConvertLinearGradientToSVG(strokeStyle.Stroke.LinearGradient);
+                attributes["stroke"] = $"url(#{gradientElement.Attribute("id")!.Value})";
+                extraDefElements[gradientElement.Attribute("id")!.Value] = gradientElement;
             }
-            else if(strokeStyle.Stroke.SolidColor == null)
+            if (strokeStyle.Stroke.RadialGradient != null)
             {
-                throw new Exception($"Unknown stroke fill: {strokeStyle.ToString()}");
+                XElement gradientElement = GradientUtils.ConvertRadialGradientToSVG(strokeStyle.Stroke.RadialGradient);
+                attributes["stroke"] = $"url(#{gradientElement.Attribute("id")!.Value})";
+                extraDefElements[gradientElement.Attribute("id")!.Value] = gradientElement;
             }
 
-            attributes["stroke"] = strokeStyle.Stroke.SolidColor.Color;
-            attributes["fill-opacity"] = strokeStyle.Stroke.SolidColor.Alpha.ToString();
+
 
             if (attributes["stroke-linejoin"] == "miter")
             {
                 attributes["stroke-miterlimit"] = strokeStyle.Stroke.MiterLimit.ToString();
             }
 
-            return attributes;
+            return (attributes, extraDefElements);
         }
     }
 }
