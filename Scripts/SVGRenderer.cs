@@ -1,8 +1,10 @@
 using CsXFL;
+using SixLabors.Fonts;
 using System.Collections.Concurrent;
 using System.Data;
 using System.IO.Compression;
 using System.Numerics;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
@@ -840,6 +842,23 @@ public class SVGRenderer
         new XAttribute("height", bitmap.VPixels.ToString()));
         return imageElement;
     }
+    private static double GetTextRenderSize(string text, Font font)
+    {
+        TextOptions textOptions = new TextOptions(font);
+        return TextMeasurer.MeasureSize(text, textOptions).Width;
+    }
+    private static string BestMatch(IEnumerable<string> strings, string target)
+    {
+        return strings.OrderByDescending(s => s.Zip(target, (c1, c2) => c1 == c2).TakeWhile(b => b).Count()).First();
+    }
+    private static Font GetFontFromNameWithoutSpaces(string fontNameWithoutSpaces, float size)
+    {
+        // sometimes these have dashes
+        fontNameWithoutSpaces = fontNameWithoutSpaces.Replace("-", "");
+        string bestMatch = BestMatch(SystemFonts.Families.Select(f => f.Name), fontNameWithoutSpaces);
+        return SystemFonts.CreateFont(bestMatch, size);
+        throw new ArgumentException($"The font '{fontNameWithoutSpaces}' could not be found.");
+    }
 
     // Animate mangles font names. Is it possible to take TextAttrs.Face and get the corresponding Windows font? Will be needed for font embedding.
 
@@ -850,7 +869,35 @@ public class SVGRenderer
         XElement textElement = new XElement(svgNs + "text",
             new XAttribute("writing-mode", "lr") // Force writing mode to left-right. Circle back to this later.
         );
-
+        if (TextElement is DynamicText)
+        {
+            // has no newlines, so let's make them
+            TextElement = new DynamicText(TextElement); // don't destroy the original
+            var textRun = TextElement.TextRuns[0]; // dynamic text only has one run
+            string fontName = textRun.TextAttrs.Face;
+            double fontSize = textRun.TextAttrs.Size;
+            double letterSpacing = textRun.TextAttrs.LetterSpacing;
+            if (fontName.EndsWith("Regular")) fontName = fontName[..^"Regular".Length]; // why does animate do this to me :(
+            Font font = GetFontFromNameWithoutSpaces(fontName, (float)fontSize);
+            string textString = TextElement.GetTextString();
+            // iterate over the words and insert newlines once the next word would fill the box
+            string[] words = textString.Split(' ');
+            StringBuilder sb = new StringBuilder();
+            foreach (string word in words)
+            {
+                int indexBefore = sb.Length;
+                sb.Append(word + ' ');
+                string curLine = sb.ToString()[(sb.ToString().LastIndexOf('\r') + 1)..];
+                double width = GetTextRenderSize(curLine, font);
+                width += curLine.Length * letterSpacing;
+                if (width > TextElement.Width)
+                {
+                    sb.Insert(indexBefore, '\r');
+                }
+            }
+            textString = sb.ToString().TrimEnd();
+            TextElement.SetTextString(textString);
+        }
         for (int i = 0; i < TextElement.TextRuns.Count; i++)
         {
             var textRun = TextElement.TextRuns[i];
@@ -858,14 +905,15 @@ public class SVGRenderer
 
             double carriage_y = 1;
             double anticipated_x = textRun.TextAttrs.LeftMargin + textRun.TextAttrs.Indent;
-            double anticipated_y = textRun.TextAttrs.Size;
             string face = textRun.TextAttrs.Face;
-            if (face.EndsWith("Regular")) face = face[..^"Regular".Length]; // why does animate do this to me :(
+            Font font = GetFontFromNameWithoutSpaces(face, textRun.TextAttrs.Size);
+            double anticipated_y = (double)font.FontMetrics.HorizontalMetrics.Ascender / font.FontMetrics.UnitsPerEm * textRun.TextAttrs.Size;
+            if (face.EndsWith("Regular")) face = face[..^"Regular".Length];
             for (int j = 0; j < characters.Length; j++)
             {
-                var tspan = new XElement("tspan",
+                var tspan = new XElement(svgNs + "tspan",
                     new XAttribute("baseline-shift", "0%"),
-                    new XAttribute("font-family", textRun.TextAttrs.Face),
+                    new XAttribute("font-family", face),
                     new XAttribute("font-size", textRun.TextAttrs.Size),
                     new XAttribute("fill", textRun.TextAttrs.FillColor),
                     new XAttribute("letter-spacing", textRun.TextAttrs.LetterSpacing),
@@ -901,7 +949,10 @@ public class SVGRenderer
                     tspan.Add(new XAttribute("dy", carriage_y + (TextElement.TextRuns[i - 1].TextAttrs.LineSpacing / 20) + "em"));
                     tspan.Add(new XAttribute("x", anticipated_x));
                 }
-
+                if (j > 0)
+                {
+                    tspan.SetAttributeValue("y", anticipated_y + j * (TextElement.TextRuns[i].TextAttrs.LineHeight + TextElement.TextRuns[i].TextAttrs.LineSpacing));
+                }
                 textElement.Add(tspan);
             }
         }
