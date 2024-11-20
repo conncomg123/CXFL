@@ -58,7 +58,7 @@ namespace Rendering
             // stopwatch.Stop();
             // Console.WriteLine($"Time: {stopwatch.ElapsedMilliseconds} ms");
 
-            var doc = new Document(@"C:\Users\Administrator\Desktop\MultipleFilters.fla");
+            var doc = new Document(@"C:\Users\Administrator\Desktop\Ellipse.fla");
             var targetPath = @"C:\Users\Administrator\Desktop\ffmpeg+librsvg\";
 
             SVGRenderer renderer = new SVGRenderer(doc, @"C:\Users\Administrator\Desktop\ffmpeg+librsvg\image", true);
