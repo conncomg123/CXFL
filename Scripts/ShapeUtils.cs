@@ -68,7 +68,15 @@ namespace Rendering
             foreach (StrokeStyle strokeStyle in shapeElement.Strokes)
             {
                 int index = strokeStyle.Index;
-                strokeStylesAttributes[index.ToString()] = StyleUtils.ParseStrokeStyle(strokeStyle);
+                (Dictionary<string, string>, Dictionary<string, XElement>)
+                        svgAttributeElements = StyleUtils.ParseStrokeStyle(strokeStyle);
+                strokeStylesAttributes[index.ToString()] = svgAttributeElements.Item1;
+
+                // Add any elements that need to be added to SVG <defs>
+                foreach (KeyValuePair<string, XElement> defElementPair in svgAttributeElements.Item2)
+                {
+                    extraDefElements[defElementPair.Key] = defElementPair.Value;
+                }
             }
 
             (List<XElement>?, List<XElement>?) pathElements = 
