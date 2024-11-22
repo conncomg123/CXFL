@@ -609,7 +609,6 @@ public class SVGRenderer
         }
         else if (element is Text text)
         {
-            // <!> Hi Soundman!
             body.Add(HandleText(text));
         }
         else if (element is Shape shape)
@@ -637,7 +636,7 @@ public class SVGRenderer
         }
         else if (element is PrimitiveOval primitiveOval)
         {
-            body.Add(HandleOval(primitiveOval));
+            (defs, body) = HandleOval(primitiveOval);
         }
         else
         {
@@ -671,6 +670,7 @@ public class SVGRenderer
         return (defs, body);
     }
 
+    // This took some work lol
     public XElement GenerateEllipsePath(double cx, double cy, double rx, double ry, double t1, double delta, double phi, bool reverse = false)
     {
         const double pi = Math.PI;
@@ -703,10 +703,12 @@ public class SVGRenderer
         }
     }
 
-    //Shearing wrong    
-    private XElement HandleOval(PrimitiveOval primitiveOval) 
+    // <!> I got busy and could only get this far. Stroke and fill are not split in this object
+    // <!> Doesn't support gradients on strokes, incorrect line weight when shearing
+    private (Dictionary<string, XElement>, List<XElement>) HandleOval(PrimitiveOval primitiveOval)
     {
-        Dictionary<string, XElement> tmpDefs = new Dictionary<string, XElement>();
+        Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
+        List<XElement> body = new List<XElement>();
         XElement? svgEllipse;
 
         double centerX = primitiveOval.X + primitiveOval.ObjectWidth / 2;
@@ -740,24 +742,24 @@ public class SVGRenderer
         {
             svgEllipse = GenerateEllipsePath(centerX, centerY, radiusX, radiusY, startRads, delta, 0);
         }
-        XElement svgAnnulus = GenerateEllipsePath(centerX, centerY, anulusRadiusX, anulusRadiusY, startRads, delta, 0, true);
+        XElement svgAnulus = GenerateEllipsePath(centerX, centerY, anulusRadiusX, anulusRadiusY, startRads, delta, 0, true);
 
         if (!simpleEllipse && primitiveOval.ClosePath && !(startRads == endRads))
         {
             XElement newPath = new XElement(svgNs + "path");
             string[] ovalPoints = (svgEllipse.Attribute("d")?.Value ?? "").Split(' ');
-            string[] anulusPoints = (svgAnnulus.Attribute("d")?.Value ?? "").Split(' ');
+            string[] anulusPoints = (svgAnulus.Attribute("d")?.Value ?? "").Split(' ');
             string ovalStartPoint = ovalPoints[1] + " " + ovalPoints[2];
             string anulusStartPoint = anulusPoints[1] + " " + anulusPoints[2];
             string anulusEndPoint = anulusPoints[anulusPoints.Length - 2] + " " + anulusPoints[anulusPoints.Length - 1];
             string pathValue = $"M {anulusEndPoint} L {ovalStartPoint}" + (svgEllipse.Attribute("d")?.Value ?? "").Replace("M", "") + " ";
             pathValue += $"L {anulusStartPoint}";
-            pathValue += (svgAnnulus.Attribute("d")?.Value ?? "").Replace("M", "") + " Z";
+            pathValue += (svgAnulus.Attribute("d")?.Value ?? "").Replace("M", "") + " Z";
             newPath.Add(new XAttribute("d", pathValue));
             svgEllipse = newPath;
         } else if (!simpleEllipse && (startRads == endRads)) {
             XElement newPath = new XElement(svgNs + "path");
-            string pathValue = (svgEllipse.Attribute("d")?.Value ?? "") + (svgAnnulus.Attribute("d")?.Value ?? "");
+            string pathValue = (svgEllipse.Attribute("d")?.Value ?? "") + (svgAnulus.Attribute("d")?.Value ?? "");
             newPath.Add(new XAttribute("d", pathValue));
             newPath.Add(new XAttribute("fill-rule", "evenodd"));
             svgEllipse = newPath;
@@ -765,14 +767,12 @@ public class SVGRenderer
  
         if (primitiveOval.Stroke != null)
         {
-            if (primitiveOval.Stroke.Stroke is SolidStroke solidStroke)
+            var (strokeStyleAttributes, extraDefElements) = StyleUtils.ParseStrokeStyle(primitiveOval.Stroke);
+            foreach (var attribute in strokeStyleAttributes)
             {
-                svgEllipse.Add(new XAttribute("stroke", solidStroke.SolidColor.Color));
-                svgEllipse.Add(new XAttribute("stroke-width", solidStroke.Weight));
-                if (primitiveOval.InnerRadius > 0) {
-                    svgAnnulus.Add(new XAttribute("stroke", solidStroke.SolidColor.Color));
-                    svgAnnulus.Add(new XAttribute("stroke-width", solidStroke.Weight));
-                }
+                if (attribute.Key == "fill") continue;
+                svgEllipse.Add(new XAttribute(attribute.Key, attribute.Value));
+                svgAnulus.Add(new XAttribute(attribute.Key, attribute.Value));
             }
         }
         if (primitiveOval.Fill != null)
@@ -792,23 +792,26 @@ public class SVGRenderer
                 if (gradientElement != null)
                 {
                     svgEllipse.Add(new XAttribute("fill", $"url(#{gradientElement.Attribute("id")?.Value})"));
-                    tmpDefs.Add(gradientElement.Attribute("id")?.Value ?? string.Empty, gradientElement);
+                    defs.Add(gradientElement.Attribute("id")?.Value ?? string.Empty, gradientElement);
                 }
             }
         } else {
             svgEllipse.Add(new XAttribute("fill", "none"));
         }
-        svgAnnulus.Add(new XAttribute("fill", "none"));
+        svgAnulus.Add(new XAttribute("fill", "none"));
 
         if (!primitiveOval.ClosePath) {
         XElement svgGroup = new XElement(svgNs + "g");
         svgGroup.Add(svgEllipse);
-        svgGroup.Add(svgAnnulus);
 
-        return svgGroup;
+        if (primitiveOval.InnerRadius > 0) { svgGroup.Add(svgAnulus); }
+
+        body.Add(svgGroup);
         } else {
-            return svgEllipse;
+            body.Add(svgEllipse);
         }
+
+        return (defs, body);
     }
 
     private XElement HandleBitmap(BitmapInstance bitmap)
