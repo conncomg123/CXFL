@@ -1,8 +1,10 @@
+using Scripts;
+
 namespace Rendering;
 class Program
 {
     static void Main(string[] args)
     {
-        MainLauncher.Run(args);
+        FfmpegLauncher.Run(args);
     }
 }
