@@ -910,13 +910,15 @@ public class SVGRenderer
             double anticipated_x = textRun.TextAttrs.LeftMargin + textRun.TextAttrs.Indent;
             string face = textRun.TextAttrs.Face;
             Font font = GetFontFromNameWithoutSpaces(face, textRun.TextAttrs.Size);
+            face = font.Name;
             double anticipated_y = (double)font.FontMetrics.HorizontalMetrics.Ascender / font.FontMetrics.UnitsPerEm * textRun.TextAttrs.Size;
             if (face.EndsWith("Regular")) face = face[..^"Regular".Length];
+            face = face.Trim();
             for (int j = 0; j < characters.Length; j++)
             {
                 var tspan = new XElement(svgNs + "tspan",
                     new XAttribute("baseline-shift", "0%"),
-                    new XAttribute("font-family", font.Name),
+                    new XAttribute("font-family", face),
                     new XAttribute("font-size", textRun.TextAttrs.Size),
                     new XAttribute("fill", textRun.TextAttrs.FillColor),
                     new XAttribute("letter-spacing", textRun.TextAttrs.LetterSpacing),
