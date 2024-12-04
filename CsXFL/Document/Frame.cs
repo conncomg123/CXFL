@@ -184,6 +184,12 @@ public class Frame : ILibraryEventReceiver, IDisposable
                 case Group.GROUP_NODE_IDENTIFIER:
                     elements.Add(new Group(elementNode, library));
                     break;
+                case PrimitiveOval.PRIMITIVE_OVAL_NODE_IDENTIFIER:
+                    elements.Add(new PrimitiveOval(elementNode));
+                    break;
+                case PrimitiveRectangle.PRIMITIVE_RECTANGLE_NODE_IDENTIFIER:
+                    elements.Add(new PrimitiveRectangle(elementNode));
+                    break;
             }
         }
     }

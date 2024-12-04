@@ -40,17 +40,14 @@ namespace Rendering
             }
             else if(fillStyle.RadialGradient != null)
             {
-                // Note that a FillStyle element just describes a type of fill- it can have multiple bounding boxes associated
-                // with it as those boxes would just be filled with that type of fill.
-
                 XElement gradientElement = GradientUtils.ConvertRadialGradientToSVG(fillStyle.RadialGradient);
                 attributes["fill"] = $"url(#{gradientElement.Attribute("id")!.Value})";
                 extraDefElements[gradientElement.Attribute("id")!.Value] = gradientElement;
             }
             else
             {
-                // Should print warning rather
-                Console.WriteLine($"Unknown fill style");
+                // Should print warning rather than throw error?- ask Soundman
+                throw new Exception($"Unknown fill style: {fillStyle.ToString()}");
             }
 
             return (attributes, extraDefElements);
@@ -85,6 +82,7 @@ namespace Rendering
                 capsProperty = "butt";
             }
 
+            Dictionary<string, XElement> extraDefElements = new Dictionary<string, XElement>();
             Dictionary<string, string> attributes = new Dictionary<string, string>()
             {
                 {"stroke-linecap", capsProperty },
@@ -92,7 +90,6 @@ namespace Rendering
                 {"stroke-linejoin", strokeStyle.Stroke.Joints },
                 {"fill", "none" }
             };
-            Dictionary<string, XElement> extraDefElements = new Dictionary<string, XElement>();
 
             // Are we always going to try to get solidStyle even if Stroke isn't
             // SolidStroke?

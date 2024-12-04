@@ -1,8 +1,10 @@
 using CsXFL;
+using SixLabors.Fonts;
 using System.Collections.Concurrent;
 using System.Data;
 using System.IO.Compression;
 using System.Numerics;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
@@ -617,7 +619,6 @@ public class SVGRenderer
         }
         else if (element is Text text)
         {
-            // <!> Hi Soundman!
             body.Add(HandleText(text));
         }
         else if (element is Shape shape)
@@ -642,6 +643,10 @@ public class SVGRenderer
         else if (element is BitmapInstance bitmap)
         {
             body.Add(HandleBitmap(bitmap));
+        }
+        else if (element is PrimitiveOval primitiveOval)
+        {
+            (defs, body) = HandleOval(primitiveOval);
         }
         else
         {
@@ -675,6 +680,149 @@ public class SVGRenderer
         return (defs, body);
     }
 
+    // This took some work lol
+    public XElement GenerateEllipsePath(double cx, double cy, double rx, double ry, double t1, double delta, double phi, bool reverse = false)
+    {
+        const double pi = Math.PI;
+        delta = delta % (2 * pi);
+        double rotX = Math.Cos(phi);
+        double rotY = Math.Sin(phi);
+        double startX = cx + (rx * Math.Cos(t1) * rotX - ry * Math.Sin(t1) * rotY);
+        double startY = cy + (rx * Math.Cos(t1) * rotY + ry * Math.Sin(t1) * rotX);
+
+        if (delta == 0) {
+            return new XElement(svgNs + "path",
+                new XAttribute("d", $"M {cx} {cy - ry} " + 
+                                $"C {cx + rx * 0.55} {cy - ry} {cx + rx} {cy - ry * 0.55} {cx + rx} {cy} " + 
+                                $"C {cx + rx} {cy + ry * 0.55} {cx + rx * 0.55} {cy + ry} {cx} {cy + ry} " + 
+                                $"C {cx - rx * 0.55} {cy + ry} {cx - rx} {cy + ry * 0.55} {cx - rx} {cy} " + 
+                                $"C {cx - rx} {cy - ry * 0.55} {cx - rx * 0.55} {cy - ry} {cx} {cy - ry}"));
+        } else {
+            double endX = cx + (rx * Math.Cos(t1 + delta) * rotX - ry * Math.Sin(t1 + delta) * rotY);
+            double endY = cy + (rx * Math.Cos(t1 + delta) * rotY + ry * Math.Sin(t1 + delta) * rotX);
+            int fA = (delta > pi) ? 1 : 0;
+            int fS = (delta > 0) ? 1 : 0;
+
+        if (reverse) {
+            (startX, startY, endX, endY) = (endX, endY, startX, startY);
+            fS = ~fS & 1;
+        }
+
+        return new XElement(svgNs + "path",
+            new XAttribute("d", $"M {startX} {startY} A {rx} {ry} {phi / (2 * pi) * 360} {fA} {fS} {endX} {endY}"));
+        }
+    }
+
+    // <!> I got busy and could only get this far. Stroke and fill are not split in this object
+    // <!> Doesn't support gradients on strokes, incorrect line weight when shearing
+    private (Dictionary<string, XElement>, List<XElement>) HandleOval(PrimitiveOval primitiveOval)
+    {
+        Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
+        List<XElement> body = new List<XElement>();
+        XElement? svgEllipse;
+
+        double centerX = primitiveOval.X + primitiveOval.ObjectWidth / 2;
+        double centerY = primitiveOval.Y + primitiveOval.ObjectHeight / 2;
+        double radiusX = primitiveOval.ObjectWidth / 2;
+        double radiusY = primitiveOval.ObjectHeight / 2;
+        double anulusRadiusX = radiusX * primitiveOval.InnerRadius / 100.0;
+        double anulusRadiusY = radiusY * primitiveOval.InnerRadius / 100.0;
+        double startRads = primitiveOval.StartAngle * Math.PI / 180;
+        double endRads = primitiveOval.EndAngle * Math.PI / 180;
+        double delta = endRads - startRads;
+
+        bool simpleEllipse = (startRads == endRads) && (primitiveOval.InnerRadius == 0);
+
+        if (startRads > endRads)
+        {
+            startRads -= 2 * Math.PI;
+            delta = endRads - startRads;
+        }
+
+        if (simpleEllipse)
+        {
+            svgEllipse = new XElement(svgNs + "ellipse",
+                new XAttribute("cx", centerX),
+                new XAttribute("cy", centerY),
+                new XAttribute("rx", radiusX),
+                new XAttribute("ry", radiusY)
+            );
+        }
+        else
+        {
+            svgEllipse = GenerateEllipsePath(centerX, centerY, radiusX, radiusY, startRads, delta, 0);
+        }
+        XElement svgAnulus = GenerateEllipsePath(centerX, centerY, anulusRadiusX, anulusRadiusY, startRads, delta, 0, true);
+
+        if (!simpleEllipse && primitiveOval.ClosePath && !(startRads == endRads))
+        {
+            XElement newPath = new XElement(svgNs + "path");
+            string[] ovalPoints = (svgEllipse.Attribute("d")?.Value ?? "").Split(' ');
+            string[] anulusPoints = (svgAnulus.Attribute("d")?.Value ?? "").Split(' ');
+            string ovalStartPoint = ovalPoints[1] + " " + ovalPoints[2];
+            string anulusStartPoint = anulusPoints[1] + " " + anulusPoints[2];
+            string anulusEndPoint = anulusPoints[anulusPoints.Length - 2] + " " + anulusPoints[anulusPoints.Length - 1];
+            string pathValue = $"M {anulusEndPoint} L {ovalStartPoint}" + (svgEllipse.Attribute("d")?.Value ?? "").Replace("M", "") + " ";
+            pathValue += $"L {anulusStartPoint}";
+            pathValue += (svgAnulus.Attribute("d")?.Value ?? "").Replace("M", "") + " Z";
+            newPath.Add(new XAttribute("d", pathValue));
+            svgEllipse = newPath;
+        } else if (!simpleEllipse && (startRads == endRads)) {
+            XElement newPath = new XElement(svgNs + "path");
+            string pathValue = (svgEllipse.Attribute("d")?.Value ?? "") + (svgAnulus.Attribute("d")?.Value ?? "");
+            newPath.Add(new XAttribute("d", pathValue));
+            newPath.Add(new XAttribute("fill-rule", "evenodd"));
+            svgEllipse = newPath;
+        }
+ 
+        if (primitiveOval.Stroke != null)
+        {
+            var (strokeStyleAttributes, extraDefElements) = StyleUtils.ParseStrokeStyle(primitiveOval.Stroke);
+            foreach (var attribute in strokeStyleAttributes)
+            {
+                if (attribute.Key == "fill") continue;
+                svgEllipse.Add(new XAttribute(attribute.Key, attribute.Value));
+                svgAnulus.Add(new XAttribute(attribute.Key, attribute.Value));
+            }
+        }
+        if (primitiveOval.Fill != null)
+        {
+            if (primitiveOval.Fill.SolidColor != null)
+            {
+                svgEllipse.Add(new XAttribute("fill", primitiveOval.Fill.SolidColor.Color));
+            }
+            else
+            {
+                var gradientElement = primitiveOval.Fill.LinearGradient != null
+                    ? GradientUtils.ConvertLinearGradientToSVG(primitiveOval.Fill.LinearGradient)
+                    : primitiveOval.Fill.RadialGradient != null
+                        ? GradientUtils.ConvertRadialGradientToSVG(primitiveOval.Fill.RadialGradient)
+                        : null;
+
+                if (gradientElement != null)
+                {
+                    svgEllipse.Add(new XAttribute("fill", $"url(#{gradientElement.Attribute("id")?.Value})"));
+                    defs.Add(gradientElement.Attribute("id")?.Value ?? string.Empty, gradientElement);
+                }
+            }
+        } else {
+            svgEllipse.Add(new XAttribute("fill", "none"));
+        }
+        svgAnulus.Add(new XAttribute("fill", "none"));
+
+        if (!primitiveOval.ClosePath) {
+        XElement svgGroup = new XElement(svgNs + "g");
+        svgGroup.Add(svgEllipse);
+
+        if (primitiveOval.InnerRadius > 0) { svgGroup.Add(svgAnulus); }
+
+        body.Add(svgGroup);
+        } else {
+            body.Add(svgEllipse);
+        }
+
+        return (defs, body);
+    }
 
     private XElement HandleBitmap(BitmapInstance bitmap)
     {
@@ -707,6 +855,22 @@ public class SVGRenderer
         new XAttribute("height", bitmap.VPixels.ToString()));
         return imageElement;
     }
+    private static double GetTextRenderSize(string text, Font font)
+    {
+        TextOptions textOptions = new TextOptions(font);
+        return TextMeasurer.MeasureSize(text, textOptions).Width;
+    }
+    private static string BestMatch(IEnumerable<string> strings, string target)
+    {
+        return strings.OrderByDescending(s => s.Replace(" ", "").Zip(target, (c1, c2) => c1 == c2).TakeWhile(b => b).Count()).First();
+    }
+    private static Font GetFontFromNameWithoutSpaces(string fontNameWithoutSpaces, float size)
+    {
+        // sometimes these have dashes
+        fontNameWithoutSpaces = fontNameWithoutSpaces.Replace("-", "");
+        string bestMatch = BestMatch(SystemFonts.Families.Select(f => f.Name), fontNameWithoutSpaces);
+        return SystemFonts.CreateFont(bestMatch, size);
+    }
 
     // Animate mangles font names. Is it possible to take TextAttrs.Face and get the corresponding Windows font? Will be needed for font embedding.
 
@@ -717,7 +881,36 @@ public class SVGRenderer
         XElement textElement = new XElement(svgNs + "text",
             new XAttribute("writing-mode", "lr") // Force writing mode to left-right. Circle back to this later.
         );
-
+        if (TextElement is DynamicText)
+        {
+            // has no newlines, so let's make them
+            TextElement = new DynamicText(TextElement); // don't destroy the original
+            var textRun = TextElement.TextRuns[0]; // dynamic text only has one run
+            string fontName = textRun.TextAttrs.Face;
+            double fontSize = textRun.TextAttrs.Size;
+            double letterSpacing = textRun.TextAttrs.LetterSpacing;
+            if (fontName.EndsWith("Regular")) fontName = fontName[..^"Regular".Length]; // why does animate do this to me :(
+            Font font = GetFontFromNameWithoutSpaces(fontName, (float)fontSize);
+            string textString = TextElement.GetTextString();
+            // iterate over the words and insert newlines once the next word would fill the box
+            string[] words = textString.Split(' ');
+            StringBuilder sb = new StringBuilder();
+            for(int i = 0; i < words.Length; i++)
+            {
+                string word = words[i];
+                int indexBefore = sb.Length;
+                sb.Append(word + (i == words.Length - 1 ? "" : " "));
+                string curLine = sb.ToString()[(sb.ToString().LastIndexOf('\r') + 1)..];
+                double width = GetTextRenderSize(curLine, font);
+                width += curLine.Length * letterSpacing;
+                if (width > TextElement.Width)
+                {
+                    sb.Insert(indexBefore, '\r');
+                }
+            }
+            textString = sb.ToString();
+            TextElement.SetTextString(textString);
+        }
         for (int i = 0; i < TextElement.TextRuns.Count; i++)
         {
             var textRun = TextElement.TextRuns[i];
@@ -725,18 +918,22 @@ public class SVGRenderer
 
             double carriage_y = 1;
             double anticipated_x = textRun.TextAttrs.LeftMargin + textRun.TextAttrs.Indent;
-            double anticipated_y = textRun.TextAttrs.Size;
             string face = textRun.TextAttrs.Face;
-            if (face.EndsWith("Regular")) face = face[..^"Regular".Length]; // why does animate do this to me :(
+            Font font = GetFontFromNameWithoutSpaces(face, textRun.TextAttrs.Size);
+            face = font.Name;
+            double anticipated_y = (double)font.FontMetrics.HorizontalMetrics.Ascender / font.FontMetrics.UnitsPerEm * textRun.TextAttrs.Size;
+            if (face.EndsWith("Regular")) face = face[..^"Regular".Length];
+            face = face.Trim();
             for (int j = 0; j < characters.Length; j++)
             {
-                var tspan = new XElement("tspan",
+                var tspan = new XElement(svgNs + "tspan",
                     new XAttribute("baseline-shift", "0%"),
-                    new XAttribute("font-family", textRun.TextAttrs.Face),
+                    new XAttribute("font-family", face),
                     new XAttribute("font-size", textRun.TextAttrs.Size),
                     new XAttribute("fill", textRun.TextAttrs.FillColor),
                     new XAttribute("letter-spacing", textRun.TextAttrs.LetterSpacing),
                     new XAttribute("fill-opacity", textRun.TextAttrs.Alpha),
+                    new XAttribute(XNamespace.Xml + "space", "preserve"),
                     new XText(characters[j])
                 );
 
@@ -768,7 +965,10 @@ public class SVGRenderer
                     tspan.Add(new XAttribute("dy", carriage_y + (TextElement.TextRuns[i - 1].TextAttrs.LineSpacing / 20) + "em"));
                     tspan.Add(new XAttribute("x", anticipated_x));
                 }
-
+                if (j > 0)
+                {
+                    tspan.SetAttributeValue("y", anticipated_y + j * (TextElement.TextRuns[i].TextAttrs.LineHeight + TextElement.TextRuns[i].TextAttrs.LineSpacing));
+                }
                 textElement.Add(tspan);
             }
         }
