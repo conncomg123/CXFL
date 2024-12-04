@@ -13,23 +13,12 @@ namespace Scripts
         public static void Run(string[] args)
         {
             CsXFL.Document doc = new CsXFL.Document(@"D:\Documents\EOJAssets\TestFiles\301_S5.fla");
-            // CsXFL.Document doc = new CsXFL.Document(@"C:\Stuff\CXFL\CsXFL.Tests\TestAssets\INVESTIGATION_Spike.fla");
-            // CsXFL.Document doc = new CsXFL.Document(@"C:\Stuff\CXFL\CsXFL.Tests\TestAssets\test.xfl");
+            const string ffmpegFolder = @"D:\Documents\EOJAssets\ffmpeg\";
             const string targetPath = @"D:\Documents\EOJAssets\TestFolder\";
             SVGRenderer renderer = new SVGRenderer(doc, null, true);
-            // Console.WriteLine("");
-            // renderer.Render(doc.GetTimeline(0), 1162).Save($"{targetPath}test1162.svg");
-            // renderer.Render(doc.GetTimeline(0), 30).Save($"{targetPath}test31.svg");
-            // renderer.Render(doc.GetTimeline(0), 31).Save($"{targetPath}test32.svg");
-            // Stopwatch stopwatch = Stopwatch.StartNew();
-            // for(int i = 0; i < 8000; i++)
-            // {
-            //     renderer.Render(doc.GetTimeline(0), 0).Save($"{targetPath}test0.svg");
-            // }
-            // stopwatch.Stop();
-            // System.Console.WriteLine($"Took {stopwatch.ElapsedMilliseconds}ms");
-            int numCores = 1;
-            int numFrames = 1;
+            
+            int numCores = 4;
+            int numFrames = 8000;
             int framesPerCore = numFrames / numCores;
             Stopwatch stopwatch = Stopwatch.StartNew();
             // make subfolders for each core
@@ -56,7 +45,7 @@ namespace Scripts
             Task.WaitAll(tasks);
             stopwatch.Stop();
             Console.WriteLine($"Time: {stopwatch.ElapsedMilliseconds} ms");
-            string ffmpegPath = $"{targetPath}ffmpeg2.exe";
+            string ffmpegPath = $"{ffmpegFolder}ffmpeg-eoj.exe";
             stopwatch.Restart();
             Parallel.For(0, numCores, i =>
             {
@@ -84,9 +73,6 @@ namespace Scripts
             process.WaitForExit();
             stopwatch.Stop();
             Console.WriteLine($"Time: {stopwatch.ElapsedMilliseconds} ms");
-            // Console.WriteLine($"Took {GlobalStopwatch.ElapsedMilliseconds}ms for movie clip parsing");
-            // Console.WriteLine($"IsInstanceVisible called {TimesIsInstanceVisibleCalled} times");
-            // renderer.Render(doc.GetTimeline(0), 648).Save($"{targetPath}{648}_clippath.svg");
         }
     }
 }
