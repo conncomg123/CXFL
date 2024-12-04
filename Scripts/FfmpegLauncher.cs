@@ -17,7 +17,7 @@ namespace Scripts
             const string targetPath = @"D:\Documents\EOJAssets\TestFolder\";
             SVGRenderer renderer = new SVGRenderer(doc, null, true);
             
-            int numCores = 4;
+            int numCores = 8;
             int numFrames = 8000;
             int framesPerCore = numFrames / numCores;
             Stopwatch stopwatch = Stopwatch.StartNew();

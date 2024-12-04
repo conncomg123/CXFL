@@ -5,6 +5,9 @@ class Program
 {
     static void Main(string[] args)
     {
-        FfmpegLauncher.Run(args);
+        CsXFL.Document doc = new CsXFL.Document(@"D:\Documents\EOJAssets\TestFiles\301_S5.fla");
+        const string targetPath = @"D:\Documents\EOJAssets\TestFolder\";
+        SVGRenderer renderer = new SVGRenderer(doc, null, true);
+        renderer.Render(doc.GetTimeline(0), 1).Save($"{targetPath}{2}.svg");
     }
 }
