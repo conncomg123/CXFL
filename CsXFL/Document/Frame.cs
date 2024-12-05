@@ -40,7 +40,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         public const string BlendMode = "normal";
         public const bool Visible = true;
     }
-    private readonly XElement? root;
+    private XElement? root;
     private readonly XNamespace ns;
     private readonly List<Element> elements;
     private readonly List<IEase> eases;
@@ -54,7 +54,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
     private string? actionScript;
     private string blendMode;
     private bool visible;
-    internal XElement? Root { get { return root; } }
+    internal XElement? Root { get { return root; } set { root = value; } }
     public XNamespace Ns { get { return ns.ToString(); } }
     public int StartFrame { get { return startFrame; } set { startFrame = value; root?.SetAttributeValue("index", value); } }
     public int Duration { get { return duration; } set { duration = value; root?.SetOrRemoveAttribute("duration", value, DefaultValues.Duration); } }

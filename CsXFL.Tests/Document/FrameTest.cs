@@ -1,6 +1,348 @@
 namespace CsXFL.Tests;
 public class FrameTest
 {
+
+
+    [Fact]
+    public void XNamespace_ShouldGet()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        
+
+        // Act
+        string cheese = frame.Ns.ToString();
+
+        // Assert
+        Assert.True(cheese == "http://ns.adobe.com/xfl/2008/");
+    }
+
+
+    [Fact]
+    public void StartFrame_ShouldGetAndSet()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        
+
+        // Act
+        frame.StartFrame = 2;
+
+        // Assert
+        Assert.True(frame.StartFrame == 2);
+    }
+
+    [Fact]
+    public void StartFrame_ShouldGetAndSet_WhenNull()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        frame.Root = null;
+
+        // Act
+        frame.StartFrame = 2;
+
+        // Assert
+        Assert.True(frame.StartFrame == 2);
+    }
+
+    [Fact]
+    public void Duration_ShouldGetAndSet()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        
+
+        // Act
+        frame.Duration = 7;
+
+        // Assert
+        Assert.True(frame.Duration == 7);
+    }
+
+    [Fact]
+    public void Duration_ShouldGetAndSet_WhenNull()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        frame.Root = null;
+
+        // Act
+        frame.Duration = 7;
+
+        // Assert
+        Assert.True(frame.Duration == 7);
+    }
+
+    [Fact]
+    public void KeyMode_ShouldGetAndSet()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        
+
+        // Act
+        frame.KeyMode = 1;
+
+        // Assert
+        Assert.True(frame.KeyMode == 1);
+    }
+
+    [Fact]
+    public void KeyMode_ShouldGetAndSet_WhenNull()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        frame.Root = null;
+
+        // Act
+        frame.KeyMode = 1;
+
+        // Assert
+        Assert.True(frame.KeyMode == 1);
+    }
+
+    [Fact]
+    public void InPoint44_ShouldGetAndSet()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        
+
+        // Act
+        frame.InPoint44 = 1;
+
+        // Assert
+        Assert.True(frame.InPoint44 == 1);
+    }
+
+    [Fact]
+    public void InPoint44_ShouldGetAndSet_WhenNull()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        frame.Root = null;
+
+        // Act
+        frame.InPoint44 = 1;
+
+        // Assert
+        Assert.True(frame.InPoint44 == 1);
+    }
+
+    [Fact]
+    public void MotionTweenRotateTimes_ShouldGetAndSet()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        
+
+        // Act
+        frame.MotionTweenRotateTimes = 1;
+
+        // Assert
+        Assert.True(frame.MotionTweenRotateTimes == 1);
+    }
+
+    [Fact]
+    public void MotionTweenRotateTimes_ShouldGetAndSet_WhenNull()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        frame.Root = null;
+
+        // Act
+        frame.MotionTweenRotateTimes = 1;
+
+        // Assert
+        Assert.True(frame.MotionTweenRotateTimes == 1);
+    }
+
+    [Fact]
+    public void LabelType_ShouldGetAndSet()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        
+
+        // Act
+        frame.LabelType = "comment";
+
+        // Assert
+        Assert.True(frame.LabelType == "comment");
+    }
+
+    [Fact]
+    public void LabelType_ShouldGetAndSet_WhenNull()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        frame.Root = null;
+
+        // Act
+        frame.LabelType = "comment";
+
+        // Assert
+        Assert.True(frame.LabelType == "comment");
+    }
+
+    [Fact]
+    public void LabelType_ShouldThrowException_WhenNotAcceptableType()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        frame.Root = null;
+        Action setProperty = () => frame.LabelType = "yourmom";
+
+        // Act and Assert
+        Assert.Throws<ArgumentException>(setProperty);
+    }
+
+
+    [Fact]
+    public void Name_ShouldGetAndSet()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        
+        // Act
+        frame.Name = "SkibidiRizz";
+
+        // Assert
+        Assert.True(frame.Name == "SkibidiRizz");
+    }
+
+    [Fact]
+    public void Name_ShouldGetAndSet_WhenNull()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        frame.Root = null;
+
+        // Act
+        frame.Name = "SkibidiRizz";
+
+        // Assert
+        Assert.True(frame.Name == "SkibidiRizz");
+    }
+
+    [Fact]
+    public void SoundSync_ShouldGetAndSet()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        
+        // Act
+        frame.SoundSync = "event";
+
+        // Assert
+        Assert.True(frame.SoundSync == "event");
+    }
+
+    [Fact]
+    public void SoundSync_ShouldGetAndSet_WhenNull()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        frame.Root = null;
+
+        // Act
+        frame.SoundSync = "event";
+
+        // Assert
+        Assert.True(frame.SoundSync == "event");
+    }
+
+    [Fact]
+    public void SoundSync_ShouldThrowException_WhenNotAcceptableType()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        frame.Root = null;
+        Action setProperty = () => frame.SoundSync = "Snoo pingas usual, I see";
+
+        // Act and Assert
+        Assert.Throws<ArgumentException>(setProperty);
+    }
+
+    [Fact]
+    public void TweenType_ShouldGetAndSet()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        
+        // Act
+        frame.TweenType = "Belieber";
+
+        // Assert
+        Assert.True(frame.TweenType == "Belieber");
+    }
+
+    [Fact]
+    public void TweenType_ShouldGetAndSet_WhenNull()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        frame.Root = null;
+
+        // Act
+        frame.TweenType = "Swifty";
+
+        // Assert
+        Assert.True(frame.TweenType == "Swifty");
+    }
+
+    [Fact]
+    public void MotionTweenSnap_ShouldGetAndSet()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        
+        // Act
+        frame.MotionTweenSnap = true;
+
+        // Assert
+        Assert.True(frame.MotionTweenSnap);
+    }
+
+    [Fact]
+    public void MotionTweenSnap_ShouldGetAndSet_WhenNull()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        frame.Root = null;
+
+        // Act
+        frame.MotionTweenSnap = true;
+
+        // Assert
+        Assert.True(frame.MotionTweenSnap);
+    }
+
+
     [Fact]
     public void ClearElements_ShouldRemoveAllElements()
     {
