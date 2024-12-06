@@ -146,6 +146,85 @@ namespace Rendering
             yield return pointList;
         }
 
+        public static IEnumerable<(List<string>, Rectangle?)> ConvertEdgeFormatToPointListsNew(string edges)
+        {
+            // As MatchCollection was written before .NET 2, it uses IEnumerable for iteration rather
+            // than IEnumerable<T>, meaning it defaults to an enumerable of objects.
+            // To get enumerable of Matches, have to explicity type cast enumerable as Match
+
+            IEnumerator<string> matchTokens = edgeTokenizer.Matches(edges).Cast<Match>().Select(currentMatch => currentMatch.Value).GetEnumerator();
+
+            // Assert that the first token is a moveto command
+            if (!matchTokens.MoveNext() || matchTokens.Current != "!")
+            {
+                throw new ArgumentException("Edge format must start with moveto (!) command");
+            }
+
+            // Using local delegate versus function for better performance
+            Func<(int, int)> nextPoint = () =>
+            {
+                matchTokens.MoveNext();
+                int x = (int) ParseNumber(matchTokens.Current);
+                matchTokens.MoveNext();
+                int y = (int) ParseNumber(matchTokens.Current);
+                return (x, y);
+            };
+
+            (int, int) prevPoint = nextPoint();
+            List<string> pointList = new List<string>();
+            Rectangle? boundingBox = new Rectangle(prevPoint.Item1, prevPoint.Item2, prevPoint.Item1, prevPoint.Item2);
+
+            while (matchTokens.MoveNext())
+            {
+                string command = matchTokens.Current;
+                (int, int) currPoint = nextPoint();
+
+                // "moveto" command
+                if (command == "!")
+                {
+                    // If a move command doesn't change the current point, ignore it.
+                    if (currPoint != prevPoint)
+                    {
+                        // Otherwise, a new segment is starting, so we must yield the
+                        // current (point list, boundingBox) and begin a new one.
+                        yield return (pointList, boundingBox);
+
+                        pointList = new List<string>();
+                        prevPoint = currPoint;
+                        boundingBox = null;
+                    }
+                }
+                // "lineto" command
+                else if (command == "|" || command == "/")
+                {
+                    pointList.Add($"{prevPoint.Item1} {prevPoint.Item2}");
+                    pointList.Add($"{currPoint.Item1} {currPoint.Item2}");
+                    Rectangle? lineBoundingBox = BoxUtils.GetLineBoundingBox(prevPoint, currPoint);
+
+                    boundingBox = BoxUtils.MergeBoundingBoxes(boundingBox, lineBoundingBox);
+                    prevPoint = currPoint;
+                }
+                // "quadto" command
+                else if (command == "[" || command == "]")
+                {
+                    // prevPoint is the start of the quadratic Bézier curve
+                    // currPoint is control point- this is denoted as a point string surrounded by []
+                    // nextPoint() is destination point of curve
+                    (int, int) endPoint = nextPoint();
+                    pointList.Add($"{prevPoint.Item1} {prevPoint.Item2}");
+                    pointList.Add($"{currPoint.Item1} {currPoint.Item2}");
+                    pointList.Add($"{endPoint.Item1} {endPoint.Item2}");
+                    Rectangle? quadraticBoundingBox = BoxUtils.GetQuadraticBoundingBox(prevPoint, currPoint, endPoint);
+
+                    boundingBox = BoxUtils.MergeBoundingBoxes(boundingBox, quadraticBoundingBox);
+                    prevPoint = endPoint;
+                }
+            }
+
+            yield return (pointList, boundingBox);
+            boundingBox = null;
+        }
+
         /// <summary>
         /// Converts a point list into a SVG path string.
         /// </summary>
@@ -500,6 +579,25 @@ namespace Rendering
 
             return (fillsPathElements, strokePathElements);
         }
+
+        /*public static (List<XElement>?, List<XElement>?) ConvertEdgesToSvgPath(List<Edge> edgesElement,
+            Dictionary<string, Dictionary<string, string>> fillStylesAttributes,
+            Dictionary<string, Dictionary<string, string>> strokeStylesAttributes)
+        {
+            // List of point lists with their associated fillStyle stored as pairs
+            // Used syntax sugar version of new as variable type is very verbose
+            List<(List<string>, int?)> fillEdges = new();
+
+            foreach (Edge edgeElement in edgesElement)
+            {
+                // Get "edges" string, fill styles, and stroke styles of a specific Edge
+                string? edgesString = edgeElement.Edges;
+                int? fillStyleLeftIndex = edgeElement.FillStyle0;
+                int? fillStyleRightIndex = edgeElement.FillStyle1;
+                int? strokeStyleIndex = edgeElement.StrokeStyle;
+            }
+
+        }*/
 
         public static XElement CreatePathElement(Dictionary<string, string> attributes)
         {
