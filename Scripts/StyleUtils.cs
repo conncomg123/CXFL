@@ -10,14 +10,14 @@ using System.Xml.Linq;
 namespace Rendering
 {
     /// <summary>
-    /// Utils for converting CSXFL Fill/StrokeStyle elements into their equivalent SVG elements.
+    /// Utils for converting XFL Fill/StrokeStyle elements into their equivalent SVG elements.
     /// </summary>
     class StyleUtils
     {
         /// <summary>
-        /// Parses CSXFL FillStyle element into SVG style attributes and any extra defs.
+        /// Parses XFL FillStyle element into SVG style attributes and any extra defs.
         /// </summary>
-        /// <param name="fillStyle">CSXFL FillStyle element whose SVG attributes/defs elements
+        /// <param name="fillStyle">XFL FillStyle element whose SVG attributes/defs elements
         /// will be parsed from.</param>
         /// <returns>A tuple: Dictionary of SVG style attributes, Dictionary of any SVG elements
         /// that should go into defs.</returns>
@@ -54,9 +54,9 @@ namespace Rendering
         }
 
         /// <summary>
-        /// Parses CSXFL FillStyle element into SVG style attributes.
+        /// Parses XFL FillStyle element into SVG style attributes.
         /// </summary>
-        /// <param name="strokeStyle">CSXFL StrokeStyle element whose SVG attributes
+        /// <param name="strokeStyle">XFL StrokeStyle element whose SVG attributes
         /// will be parsed from.</param>
         /// <returns>A tuple: Dictionary of SVG style attributes, Dictionary of any SVG elements
         /// that should go into defs.</returns>
