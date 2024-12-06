@@ -161,23 +161,23 @@ namespace Rendering
             }
 
             // Using local delegate versus function for better performance
-            Func<(int, int)> nextPoint = () =>
+            Func<(float, float)> nextPoint = () =>
             {
                 matchTokens.MoveNext();
-                int x = (int) ParseNumber(matchTokens.Current);
+                float x = ParseNumber(matchTokens.Current);
                 matchTokens.MoveNext();
-                int y = (int) ParseNumber(matchTokens.Current);
+                float y = ParseNumber(matchTokens.Current);
                 return (x, y);
             };
 
-            (int, int) prevPoint = nextPoint();
+            (float, float) prevPoint = nextPoint();
             List<string> pointList = new List<string>();
             Rectangle? boundingBox = new Rectangle(prevPoint.Item1, prevPoint.Item2, prevPoint.Item1, prevPoint.Item2);
 
             while (matchTokens.MoveNext())
             {
                 string command = matchTokens.Current;
-                (int, int) currPoint = nextPoint();
+                (float, float) currPoint = nextPoint();
 
                 // "moveto" command
                 if (command == "!")
@@ -210,9 +210,9 @@ namespace Rendering
                     // prevPoint is the start of the quadratic Bézier curve
                     // currPoint is control point- this is denoted as a point string surrounded by []
                     // nextPoint() is destination point of curve
-                    (int, int) endPoint = nextPoint();
+                    (float, float) endPoint = nextPoint();
                     pointList.Add($"{prevPoint.Item1} {prevPoint.Item2}");
-                    pointList.Add($"{currPoint.Item1} {currPoint.Item2}");
+                    pointList.Add($"[{currPoint.Item1} {currPoint.Item2}]");
                     pointList.Add($"{endPoint.Item1} {endPoint.Item2}");
                     Rectangle? quadraticBoundingBox = BoxUtils.GetQuadraticBoundingBox(prevPoint, currPoint, endPoint);
 
