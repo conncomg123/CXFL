@@ -83,6 +83,10 @@ namespace Rendering
             (List<XElement>?, List<XElement>?) pathElements =
                 EdgeUtils.ConvertEdgesToSvgPath(shapeElement.Edges, fillStylesAttributes, strokeStylesAttributes);
 
+            //REMOVE TEST CODE
+            (List<XElement>?, List<XElement>?) pathElementsNew =
+                EdgeUtils.ConvertEdgesToSvgPathNew(shapeElement.Edges, fillStylesAttributes, strokeStylesAttributes);
+
             XElement? fillsG = null;
             XElement? strokesG = null;
 

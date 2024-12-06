@@ -629,7 +629,6 @@ namespace Rendering
             List<XElement> fillsPathElements = new List<XElement>();
             List<XElement> strokePathElements = new List<XElement>();
             Dictionary<int, List<List<string>>> shapes = ConvertPointListsToShapes(fillEdges);
-            Dictionary<int, List<List<string>>> shapesNew = ConvertPointListsToShapesNew(fillEdges);
 
             // At this point, we have fillStyle indexes associated with various shapes
             // (a list of point lists) and strokeStyle indexes associated with a
@@ -662,7 +661,7 @@ namespace Rendering
             return (fillsPathElements, strokePathElements);
         }
 
-        /*public static (List<XElement>?, List<XElement>?) ConvertEdgesToSvgPath(List<Edge> edgesElement,
+        public static (List<XElement>?, List<XElement>?) ConvertEdgesToSvgPathNew(List<Edge> edgesElement,
             Dictionary<string, Dictionary<string, string>> fillStylesAttributes,
             Dictionary<string, Dictionary<string, string>> strokeStylesAttributes)
         {
@@ -670,16 +669,56 @@ namespace Rendering
             // Used syntax sugar version of new as variable type is very verbose
             List<(List<string>, int?)> fillEdges = new();
 
-            foreach (Edge edgeElement in edgesElement)
+            Dictionary<int, List<string>> strokePaths = new Dictionary<int, List<string>>();
+
+            // Default value for a key that does not exist is null
+            Dictionary<int, Rectangle?> fillBoxes = new Dictionary<int, Rectangle?>();
+            Dictionary<int, Rectangle?> strokeBoxes = new Dictionary<int, Rectangle?>();
+
+            foreach(Edge edgeElement in edgesElement)
             {
                 // Get "edges" string, fill styles, and stroke styles of a specific Edge
-                string? edgesString = edgeElement.Edges;
+                string? edgesAttribute = edgeElement.Edges;
                 int? fillStyleLeftIndex = edgeElement.FillStyle0;
                 int? fillStyleRightIndex = edgeElement.FillStyle1;
                 int? strokeStyleIndex = edgeElement.StrokeStyle;
+
+                IEnumerable<(List<string>, Rectangle?)> pointListTuples = (edgesAttribute is null) ? new List<(List<string>, Rectangle?)>() : ConvertEdgeFormatToPointListsNew(edgesAttribute);
+                foreach((List<string> pointList,  Rectangle? pointListBox) in pointListTuples)
+                {
+
+                    if (fillStyleLeftIndex != null)
+                    {
+                        (List<string>, int?) tupleToAdd = new(pointList, fillStyleLeftIndex);
+                        fillEdges.Add(tupleToAdd);
+
+                        // Update bounding box associated with this point list
+                        Rectangle? existingBox = fillBoxes.GetValueOrDefault((int)fillStyleLeftIndex, null);
+                        fillBoxes[(int)fillStyleLeftIndex] = BoxUtils.MergeBoundingBoxes(existingBox, pointListBox);
+
+                    }
+
+                    if (fillStyleRightIndex != null)
+                    {
+                        // First reverse point list in order to fill it from the left, then add it
+                        // Python code does not change original pointList, so get reverse of Enumerable
+                        // and covert that to a list
+                        List<string> reversedList = pointList.AsEnumerable().Reverse().ToList();
+                        (List<string>, int?) tupleToAdd = new(reversedList, fillStyleRightIndex);
+                        fillEdges.Add(tupleToAdd);
+
+                        // Update bounding box associated with this point list
+                        Rectangle? existingBox = fillBoxes.GetValueOrDefault((int)fillStyleRightIndex, null);
+                        fillBoxes[(int)fillStyleRightIndex] = BoxUtils.MergeBoundingBoxes(existingBox, pointListBox);
+                    }
+                }
             }
 
-        }*/
+            var testing = ConvertPointListsToShapesNew(fillEdges);
+
+
+            return (null, null);
+        }
 
         public static XElement CreatePathElement(Dictionary<string, string> attributes)
         {
