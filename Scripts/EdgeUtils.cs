@@ -1,4 +1,5 @@
 ﻿using CsXFL;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
@@ -349,12 +350,12 @@ namespace Rendering
         /// <exception cref="Exception">Thrown when a shape could not be created.</exception>
         public static Dictionary<int, List<List<string>>> ConvertPointListsToShapes(List<(List<string>, int?)> pointLists)
         {
-            // {fillStyleIndex: {origin point: [point list, ...], ...}, ...}
+            // {fillStyleIndex: {origin point: [pointlist, ...], ...}, ...}
             // graph = defaultdict(lambda: defaultdict(list))
             // For any key, default value is dictionary whose default value is an empty list
             Dictionary<int, Dictionary<string, List<List<string>>>> graph = new Dictionary<int, Dictionary<string, List<List<string>>>>();
 
-            // {fillStyleIndex: [shape point list, ...], ...}
+            // {fillStyleIndex: [shapePointlist, ...], ...}
             // shapes = defaultdict(list)
             // For any key, default value is empty list
             Dictionary<int, List<List<string>>> shapes = new Dictionary<int, List<List<string>>>();
@@ -425,6 +426,86 @@ namespace Rendering
                             shapePointLists = new List<List<string>>();
                             shapes[fillIndex] = shapePointLists;
                         }
+
+                        pointList.AddRange(shape.GetRange(1, shape.Count - 1));
+                        shapePointLists.Add(pointList);
+                    }
+                }
+            }
+
+            return shapes;
+        }
+
+        public static Dictionary<int, List<List<string>>> ConvertPointListsToShapesNew(List<(List<string>, int?)> pointLists)
+        {
+            // {fillStyleIndex: {origin point: [pointlist, ...], ...}, ...}
+            // graph = defaultdict(lambda: defaultdict(list))
+            // For any key, default value is dictionary whose default value is an empty list
+            Dictionary<int, Dictionary<string, List<List<string>>>> graph = new Dictionary<int, Dictionary<string, List<List<string>>>>();
+
+            // {fillStyleIndex: [shapepointlist, ...], ...}
+            // shapes = defaultdict(list)
+            // For any key, default value is empty list
+            Dictionary<int, List<List<string>>> shapes = new Dictionary<int, List<List<string>>>();
+
+            // Add open point lists into graph
+            foreach ((List<string>, int?) tuple in pointLists)
+            {
+                List<string> pointList = tuple.Item1;
+                int fillIndex = (int)tuple.Item2!;
+
+                // Point list is already a closed shape, so just associate it with its
+                // fillStyle index
+                if (pointList[0] == pointList[pointList.Count - 1])
+                {
+                    // Either add to existing list of lists, or create new one
+                    List<List<string>> shapePointLists = shapes.GetValueOrDefault(fillIndex, new List<List<string>>());
+                    shapes[fillIndex] = shapePointLists;
+
+                    shapePointLists.Add(pointList);
+                }
+                else
+                {
+                    // Either add to existing graph, or create a new one
+                    Dictionary<string, List<List<string>>> fillGraph = graph.GetValueOrDefault(fillIndex, new Dictionary<string, List<List<string>>>());
+                    graph[fillIndex] = fillGraph;
+
+                    // At this point- key has empty Dictionary or existing Dictionary
+                    string originPoint = pointList[0];
+
+                    List<List<string>> originPointLists = fillGraph.GetValueOrDefault(originPoint, new List<List<string>>());
+                    fillGraph[originPoint] = originPointLists;
+
+                    originPointLists.Add(pointList);
+                }
+            }
+
+            // For each fill style ID, pick a random origin and join point lists into
+            // shapes with Walk() until we're done.
+            foreach (var (fillIndex, fillGraph) in graph)
+            {
+                foreach (string originPoint in fillGraph.Keys)
+                {
+                    // As we are popping off the top element, we have to check if list of lists
+                    // is empty rather than null
+                    while (fillGraph[originPoint].Count != 0)
+                    {
+                        // Pop off pointList from originPointLists
+                        List<string> pointList = fillGraph[originPoint][0];
+                        fillGraph[originPoint].RemoveAt(0);
+                        string currentPoint = pointList[pointList.Count - 1];
+
+                        HashSet<string> visited = new HashSet<string>() { originPoint, currentPoint };
+
+                        List<string>? shape = Walk(currentPoint, visited, originPoint, fillGraph);
+                        if (shape == null)
+                        {
+                            throw new Exception("Failed to build shape");
+                        }
+
+                        // Either add to existing list of shape point lists, or create new one
+                        List<List<string>> shapePointLists = shapes.GetValueOrDefault(fillIndex, new List<List<string>>());
+                        shapes[fillIndex] = shapePointLists;
 
                         pointList.AddRange(shape.GetRange(1, shape.Count - 1));
                         shapePointLists.Add(pointList);
@@ -548,6 +629,7 @@ namespace Rendering
             List<XElement> fillsPathElements = new List<XElement>();
             List<XElement> strokePathElements = new List<XElement>();
             Dictionary<int, List<List<string>>> shapes = ConvertPointListsToShapes(fillEdges);
+            Dictionary<int, List<List<string>>> shapesNew = ConvertPointListsToShapesNew(fillEdges);
 
             // At this point, we have fillStyle indexes associated with various shapes
             // (a list of point lists) and strokeStyle indexes associated with a
