@@ -1,5 +1,4 @@
 ﻿using CsXFL;
-using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
@@ -51,7 +50,7 @@ namespace Rendering
         public static float ParseNumber(string numberString)
         {
             // Check if the coordinate is signed and 32-bit fixed-point number in hex
-            if (numberString[0] == '#')
+            if(numberString[0] == '#')
             {
                 // Split the coordinate into the integer and fractional parts
                 string[] parts = numberString.Substring(1).Split('.');
@@ -91,7 +90,7 @@ namespace Rendering
             IEnumerator<string> matchTokens = edgeTokenizer.Matches(edges).Cast<Match>().Select(currentMatch => currentMatch.Value).GetEnumerator();
 
             // Assert that the first token is a moveto command
-            if (!matchTokens.MoveNext() || matchTokens.Current != "!")
+            if(!matchTokens.MoveNext() || matchTokens.Current != "!")
             {
                 throw new ArgumentException("Edge format must start with moveto (!) command");
             }
@@ -109,16 +108,16 @@ namespace Rendering
             string prevPoint = nextPoint();
             List<string> pointList = new List<string> { prevPoint };
 
-            while (matchTokens.MoveNext())
+            while(matchTokens.MoveNext())
             {
                 string command = matchTokens.Current;
                 string currPoint = nextPoint();
 
                 // "moveto" command
-                if (command == "!")
+                if(command == "!")
                 {
                     // If a move command doesn't change the current point, ignore it.
-                    if (currPoint != prevPoint)
+                    if(currPoint != prevPoint)
                     {
                         // Otherwise, a new segment is starting, so we must yield the current point list and begin a new one.
                         yield return pointList;
@@ -127,13 +126,13 @@ namespace Rendering
                     }
                 }
                 // "lineto" command
-                else if (command == "|" || command == "/")
+                else if(command == "|" || command == "/")
                 {
                     pointList.Add(currPoint);
                     prevPoint = currPoint;
                 }
                 // "quadto" command
-                else if (command == "[" || command == "]")
+                else if(command == "[" || command == "]")
                 {
                     // Previous point (the point before this in list) is the start of the quadratic Bézier curve
                     // currPoint is control point- this is denoted as a point string surrounded by []
@@ -145,85 +144,6 @@ namespace Rendering
             }
 
             yield return pointList;
-        }
-
-        public static IEnumerable<(List<string>, Rectangle?)> ConvertEdgeFormatToPointListsNew(string edges)
-        {
-            // As MatchCollection was written before .NET 2, it uses IEnumerable for iteration rather
-            // than IEnumerable<T>, meaning it defaults to an enumerable of objects.
-            // To get enumerable of Matches, have to explicity type cast enumerable as Match
-
-            IEnumerator<string> matchTokens = edgeTokenizer.Matches(edges).Cast<Match>().Select(currentMatch => currentMatch.Value).GetEnumerator();
-
-            // Assert that the first token is a moveto command
-            if (!matchTokens.MoveNext() || matchTokens.Current != "!")
-            {
-                throw new ArgumentException("Edge format must start with moveto (!) command");
-            }
-
-            // Using local delegate versus function for better performance
-            Func<(float, float)> nextPoint = () =>
-            {
-                matchTokens.MoveNext();
-                float x = ParseNumber(matchTokens.Current);
-                matchTokens.MoveNext();
-                float y = ParseNumber(matchTokens.Current);
-                return (x, y);
-            };
-
-            (float, float) prevPoint = nextPoint();
-            List<string> pointList = new List<string>();
-            Rectangle? boundingBox = new Rectangle(prevPoint.Item1, prevPoint.Item2, prevPoint.Item1, prevPoint.Item2);
-
-            while (matchTokens.MoveNext())
-            {
-                string command = matchTokens.Current;
-                (float, float) currPoint = nextPoint();
-
-                // "moveto" command
-                if (command == "!")
-                {
-                    // If a move command doesn't change the current point, ignore it.
-                    if (currPoint != prevPoint)
-                    {
-                        // Otherwise, a new segment is starting, so we must yield the
-                        // current (point list, boundingBox) and begin a new one.
-                        yield return (pointList, boundingBox);
-
-                        pointList = new List<string>();
-                        prevPoint = currPoint;
-                        boundingBox = null;
-                    }
-                }
-                // "lineto" command
-                else if (command == "|" || command == "/")
-                {
-                    pointList.Add($"{prevPoint.Item1} {prevPoint.Item2}");
-                    pointList.Add($"{currPoint.Item1} {currPoint.Item2}");
-                    Rectangle? lineBoundingBox = BoxUtils.GetLineBoundingBox(prevPoint, currPoint);
-
-                    boundingBox = BoxUtils.MergeBoundingBoxes(boundingBox, lineBoundingBox);
-                    prevPoint = currPoint;
-                }
-                // "quadto" command
-                else if (command == "[" || command == "]")
-                {
-                    // prevPoint is the start of the quadratic Bézier curve
-                    // currPoint is control point- this is denoted as a point string surrounded by []
-                    // nextPoint() is destination point of curve
-                    (float, float) endPoint = nextPoint();
-                    pointList.Add($"{prevPoint.Item1} {prevPoint.Item2}");
-                    pointList.Add($"[{currPoint.Item1} {currPoint.Item2}]");
-                    pointList.Add($"{endPoint.Item1} {endPoint.Item2}");
-                    Rectangle? quadraticBoundingBox = BoxUtils.GetQuadraticBoundingBox(prevPoint, currPoint, endPoint);
-
-                    boundingBox = BoxUtils.MergeBoundingBoxes(boundingBox, quadraticBoundingBox);
-                    prevPoint = endPoint;
-                }
-            }
-
-            yield return (pointList, boundingBox);
-            boundingBox = null;
         }
 
         /// <summary>
@@ -243,23 +163,23 @@ namespace Rendering
             // Start SVG path with M command and first point
             pointEnumerator.MoveNext();
 
-            List<string> svgPath = new List<string> { "M", pointEnumerator.Current };
+            List<string> svgPath = new List<string> { "M", pointEnumerator.Current};
             string lastCommand = "M";
 
-            while (pointEnumerator.MoveNext())
+            while(pointEnumerator.MoveNext())
             {
                 string currentPoint = pointEnumerator.Current;
                 string currentCommand = currentPoint.Contains('[') && currentPoint.Contains(']') ? "Q" : "L";
 
                 // SVG path element allows us to omit command letter if same command is used
                 // multiple times in a row, so only add it to svgPath string if new command is found
-                if (currentCommand != lastCommand)
+                if(currentCommand != lastCommand)
                 {
                     svgPath.Add(currentCommand);
                     lastCommand = currentCommand;
                 }
 
-                if (currentCommand == "Q")
+                if(currentCommand == "Q")
                 {
                     // As this is a "quadTo" command, control point is formatted as "[x y]"- need to remove []
                     // add said point, and then add end point (next point)
@@ -350,12 +270,12 @@ namespace Rendering
         /// <exception cref="Exception">Thrown when a shape could not be created.</exception>
         public static Dictionary<int, List<List<string>>> ConvertPointListsToShapes(List<(List<string>, int?)> pointLists)
         {
-            // {fillStyleIndex: {origin point: [pointlist, ...], ...}, ...}
+            // {fillStyleIndex: {origin point: [point list, ...], ...}, ...}
             // graph = defaultdict(lambda: defaultdict(list))
             // For any key, default value is dictionary whose default value is an empty list
             Dictionary<int, Dictionary<string, List<List<string>>>> graph = new Dictionary<int, Dictionary<string, List<List<string>>>>();
 
-            // {fillStyleIndex: [shapePointlist, ...], ...}
+            // {fillStyleIndex: [shape point list, ...], ...}
             // shapes = defaultdict(list)
             // For any key, default value is empty list
             Dictionary<int, List<List<string>>> shapes = new Dictionary<int, List<List<string>>>();
@@ -371,7 +291,7 @@ namespace Rendering
                 if (pointList[0] == pointList[pointList.Count - 1])
                 {
                     // Either add to existing list of lists, or create new one
-                    if (!shapes.TryGetValue(fillIndex, out var shapePointLists))
+                    if(!shapes.TryGetValue(fillIndex, out var shapePointLists))
                     {
                         shapePointLists = new List<List<string>>();
                         shapes[fillIndex] = shapePointLists;
@@ -380,7 +300,7 @@ namespace Rendering
                 }
                 else
                 {
-                    if (!graph.TryGetValue(fillIndex, out var fillGraph))
+                    if(!graph.TryGetValue(fillIndex, out var fillGraph))
                     {
                         fillGraph = new Dictionary<string, List<List<string>>>();
                         graph[fillIndex] = fillGraph;
@@ -388,7 +308,7 @@ namespace Rendering
 
                     // At this point- key has empty Dictionary or existing Dictionary
                     string originPoint = pointList[0];
-                    if (!fillGraph.TryGetValue(originPoint, out var originPointLists))
+                    if(!fillGraph.TryGetValue(originPoint, out var originPointLists))
                     {
                         originPointLists = new List<List<string>>();
                         fillGraph[originPoint] = originPointLists;
@@ -399,23 +319,23 @@ namespace Rendering
 
             // For each fill style ID, pick a random origin and join point lists into
             // shapes with Walk() until we're done.
-            foreach (var (fillIndex, fillGraph) in graph)
+            foreach(var (fillIndex, fillGraph) in  graph)
             {
-                foreach (string originPoint in fillGraph.Keys)
+                foreach(string originPoint in fillGraph.Keys)
                 {
                     // As we are popping off the top element, we have to check if list of lists
                     // is empty rather than null
-                    while (fillGraph[originPoint].Count != 0)
+                    while(fillGraph[originPoint].Count != 0)
                     {
                         // Pop off pointList from originPointLists
                         List<string> pointList = fillGraph[originPoint][0];
                         fillGraph[originPoint].RemoveAt(0);
                         string currentPoint = pointList[pointList.Count - 1];
 
-                        HashSet<string> visited = new HashSet<string>() { originPoint, currentPoint };
+                        HashSet<string> visited = new HashSet<string>() { originPoint, currentPoint};
 
                         List<string>? shape = Walk(currentPoint, visited, originPoint, fillGraph);
-                        if (shape == null)
+                        if(shape == null)
                         {
                             throw new Exception("Failed to build shape");
                         }
@@ -426,86 +346,6 @@ namespace Rendering
                             shapePointLists = new List<List<string>>();
                             shapes[fillIndex] = shapePointLists;
                         }
-
-                        pointList.AddRange(shape.GetRange(1, shape.Count - 1));
-                        shapePointLists.Add(pointList);
-                    }
-                }
-            }
-
-            return shapes;
-        }
-
-        public static Dictionary<int, List<List<string>>> ConvertPointListsToShapesNew(List<(List<string>, int?)> pointLists)
-        {
-            // {fillStyleIndex: {origin point: [pointlist, ...], ...}, ...}
-            // graph = defaultdict(lambda: defaultdict(list))
-            // For any key, default value is dictionary whose default value is an empty list
-            Dictionary<int, Dictionary<string, List<List<string>>>> graph = new Dictionary<int, Dictionary<string, List<List<string>>>>();
-
-            // {fillStyleIndex: [shapepointlist, ...], ...}
-            // shapes = defaultdict(list)
-            // For any key, default value is empty list
-            Dictionary<int, List<List<string>>> shapes = new Dictionary<int, List<List<string>>>();
-
-            // Add open point lists into graph
-            foreach ((List<string>, int?) tuple in pointLists)
-            {
-                List<string> pointList = tuple.Item1;
-                int fillIndex = (int)tuple.Item2!;
-
-                // Point list is already a closed shape, so just associate it with its
-                // fillStyle index
-                if (pointList[0] == pointList[pointList.Count - 1])
-                {
-                    // Either add to existing list of lists, or create new one
-                    List<List<string>> shapePointLists = shapes.GetValueOrDefault(fillIndex, new List<List<string>>());
-                    shapes[fillIndex] = shapePointLists;
-
-                    shapePointLists.Add(pointList);
-                }
-                else
-                {
-                    // Either add to existing graph, or create a new one
-                    Dictionary<string, List<List<string>>> fillGraph = graph.GetValueOrDefault(fillIndex, new Dictionary<string, List<List<string>>>());
-                    graph[fillIndex] = fillGraph;
-
-                    // At this point- key has empty Dictionary or existing Dictionary
-                    string originPoint = pointList[0];
-
-                    List<List<string>> originPointLists = fillGraph.GetValueOrDefault(originPoint, new List<List<string>>());
-                    fillGraph[originPoint] = originPointLists;
-
-                    originPointLists.Add(pointList);
-                }
-            }
-
-            // For each fill style ID, pick a random origin and join point lists into
-            // shapes with Walk() until we're done.
-            foreach (var (fillIndex, fillGraph) in graph)
-            {
-                foreach (string originPoint in fillGraph.Keys)
-                {
-                    // As we are popping off the top element, we have to check if list of lists
-                    // is empty rather than null
-                    while (fillGraph[originPoint].Count != 0)
-                    {
-                        // Pop off pointList from originPointLists
-                        List<string> pointList = fillGraph[originPoint][0];
-                        fillGraph[originPoint].RemoveAt(0);
-                        string currentPoint = pointList[pointList.Count - 1];
-
-                        HashSet<string> visited = new HashSet<string>() { originPoint, currentPoint };
-
-                        List<string>? shape = Walk(currentPoint, visited, originPoint, fillGraph);
-                        if (shape == null)
-                        {
-                            throw new Exception("Failed to build shape");
-                        }
-
-                        // Either add to existing list of shape point lists, or create new one
-                        List<List<string>> shapePointLists = shapes.GetValueOrDefault(fillIndex, new List<List<string>>());
-                        shapes[fillIndex] = shapePointLists;
 
                         pointList.AddRange(shape.GetRange(1, shape.Count - 1));
                         shapePointLists.Add(pointList);
@@ -661,69 +501,10 @@ namespace Rendering
             return (fillsPathElements, strokePathElements);
         }
 
-        public static (List<XElement>?, List<XElement>?) ConvertEdgesToSvgPathNew(List<Edge> edgesElement,
-            Dictionary<string, Dictionary<string, string>> fillStylesAttributes,
-            Dictionary<string, Dictionary<string, string>> strokeStylesAttributes)
-        {
-            // List of point lists with their associated fillStyle stored as pairs
-            // Used syntax sugar version of new as variable type is very verbose
-            List<(List<string>, int?)> fillEdges = new();
-
-            Dictionary<int, List<string>> strokePaths = new Dictionary<int, List<string>>();
-
-            // Default value for a key that does not exist is null
-            Dictionary<int, Rectangle?> fillBoxes = new Dictionary<int, Rectangle?>();
-            Dictionary<int, Rectangle?> strokeBoxes = new Dictionary<int, Rectangle?>();
-
-            foreach(Edge edgeElement in edgesElement)
-            {
-                // Get "edges" string, fill styles, and stroke styles of a specific Edge
-                string? edgesAttribute = edgeElement.Edges;
-                int? fillStyleLeftIndex = edgeElement.FillStyle0;
-                int? fillStyleRightIndex = edgeElement.FillStyle1;
-                int? strokeStyleIndex = edgeElement.StrokeStyle;
-
-                IEnumerable<(List<string>, Rectangle?)> pointListTuples = (edgesAttribute is null) ? new List<(List<string>, Rectangle?)>() : ConvertEdgeFormatToPointListsNew(edgesAttribute);
-                foreach((List<string> pointList,  Rectangle? pointListBox) in pointListTuples)
-                {
-
-                    if (fillStyleLeftIndex != null)
-                    {
-                        (List<string>, int?) tupleToAdd = new(pointList, fillStyleLeftIndex);
-                        fillEdges.Add(tupleToAdd);
-
-                        // Update bounding box associated with this point list
-                        Rectangle? existingBox = fillBoxes.GetValueOrDefault((int)fillStyleLeftIndex, null);
-                        fillBoxes[(int)fillStyleLeftIndex] = BoxUtils.MergeBoundingBoxes(existingBox, pointListBox);
-
-                    }
-
-                    if (fillStyleRightIndex != null)
-                    {
-                        // First reverse point list in order to fill it from the left, then add it
-                        // Python code does not change original pointList, so get reverse of Enumerable
-                        // and covert that to a list
-                        List<string> reversedList = pointList.AsEnumerable().Reverse().ToList();
-                        (List<string>, int?) tupleToAdd = new(reversedList, fillStyleRightIndex);
-                        fillEdges.Add(tupleToAdd);
-
-                        // Update bounding box associated with this point list
-                        Rectangle? existingBox = fillBoxes.GetValueOrDefault((int)fillStyleRightIndex, null);
-                        fillBoxes[(int)fillStyleRightIndex] = BoxUtils.MergeBoundingBoxes(existingBox, pointListBox);
-                    }
-                }
-            }
-
-            var testing = ConvertPointListsToShapesNew(fillEdges);
-
-
-            return (null, null);
-        }
-
         public static XElement CreatePathElement(Dictionary<string, string> attributes)
         {
             XElement newPathElement = new XElement("path");
-            foreach (var attribute in attributes)
+            foreach(var attribute in attributes)
             {
                 newPathElement.SetAttributeValue(attribute.Key, attribute.Value);
             }
