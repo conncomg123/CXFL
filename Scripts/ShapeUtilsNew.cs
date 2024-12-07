@@ -2,6 +2,7 @@
 using CsXFL;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
@@ -25,7 +26,7 @@ namespace Rendering
         /// </remarks>
         /// <param name="pointList">The point list that is being converted.</param>
         /// <returns>The equivalent "d" string for the given point list.</returns>
-        private static string ConvertPointListToPathString(List<string> pointList)
+        public static string ConvertPointListToPathString(List<string> pointList)
         {
             // Using iterator to match previous method as well as Python implementation
             IEnumerator<string> pointEnumerator = pointList.GetEnumerator();
@@ -72,7 +73,7 @@ namespace Rendering
             {
                 // If starting point == ending point i.e completes a closed shape/stroke,
                 // Add Z command
-                svgPath.Add("Z");
+                //svgPath.Add("Z");
             }
 
             // Combine list into space separated string to create SVG path string
@@ -149,7 +150,7 @@ namespace Rendering
                 // TODO: Figure out how strokes are supposed to behave in masks
                 if(mask)
                 {
-                    Console.WriteLine("Strokes in makes are not supported!");
+                    Console.WriteLine("Strokes in masks are not supported!");
                 }
 
                 // Get this strokeStyle's SVG attributes and any extra SVG elements
@@ -167,6 +168,8 @@ namespace Rendering
                 // Create XML path element with its proper attributes
                 var pathElement = CreatePathElement(styleSVGAttributes);
                 pathElement.SetAttributeValue("d", string.Join(" ", pointLists.Select(pl => ConvertPointListToPathString(pl))));
+                // pathElement.SetAttributeValue("d", string.Join(" ", pointLists.Select(pl => pl[0])));
+
                 strokedPaths.Add(pathElement);
                 boundingBox = BoxUtils.MergeBoundingBoxes(boundingBox, currentBoundingBox);
             }

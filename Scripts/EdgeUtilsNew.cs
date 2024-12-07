@@ -295,6 +295,24 @@ namespace Rendering
                         strokePointLists.Add(pointList);
                         strokePaths[(int)strokeStyleIndex] = strokePointLists;
 
+                        // First get converted path format for this Edge, then add it to
+                        // associated strokeStyle
+                        /*string svgPathString = ShapeUtilsNew.ConvertPointListToPathString(pointList);
+
+                        // defaultdict(list)- For any key, default value is empty list
+                        // Is used to create a list of size 1 when first creating stroke path list
+
+                        // Idea- ensuring that list exists for key (either existing one or an empty one)
+                        if (!strokePaths.TryGetValue((int)strokeStyleIndex, out var strokePathList))
+                        {
+                            // Setting this reference so item can be added to it afterwards
+                            strokePathList = new List<List<string>>();
+                            strokePaths[(int)strokeStyleIndex] = strokePathList;
+                        }
+                        List<string> newList = new() { svgPathString };
+
+                        strokePathList.Add(pointList);*/
+
                         // Update this strokeStyle's bounding box to include this pointList's bounding box
                         Rectangle? existingBox = strokeBoxes.GetValueOrDefault((int)strokeStyleIndex, null);
                         strokeBoxes[(int)strokeStyleIndex] = BoxUtils.MergeBoundingBoxes(existingBox, pointListBox);
