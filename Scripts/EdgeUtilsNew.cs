@@ -288,13 +288,12 @@ namespace Rendering
                         fillBoxes[(int)fillStyleRightIndex] = BoxUtils.MergeBoundingBoxes(existingBox, pointListBox);
                     }
 
-                    // If strokeStyle exists for Edge, convert immediately as no shape needs to be joined
+                    // For strokes, don't need to join any point lists into shapes
                     if (strokeStyleIndex != null && strokeStyles.ContainsKey((int)strokeStyleIndex))
                     {
                         List<List<string>> strokePointLists = strokePaths.GetValueOrDefault((int)strokeStyleIndex, new List<List<string>>());
-                        strokePaths[(int)strokeStyleIndex] = strokePointLists;
-
                         strokePointLists.Add(pointList);
+                        strokePaths[(int)strokeStyleIndex] = strokePointLists;
 
                         // Update this strokeStyle's bounding box to include this pointList's bounding box
                         Rectangle? existingBox = strokeBoxes.GetValueOrDefault((int)strokeStyleIndex, null);

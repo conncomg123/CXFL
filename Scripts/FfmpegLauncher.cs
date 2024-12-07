@@ -17,8 +17,8 @@ namespace Scripts
             const string targetPath = @"D:\Documents\EOJAssets\TestFolder\";
             SVGRenderer renderer = new SVGRenderer(doc, null, true);
             
-            int numCores = 8;
-            int numFrames = 8000;
+            int numCores = 4;
+            int numFrames = 1000;
             int framesPerCore = numFrames / numCores;
             Stopwatch stopwatch = Stopwatch.StartNew();
             // make subfolders for each core

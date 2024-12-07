@@ -72,7 +72,7 @@ namespace Rendering
             {
                 // If starting point == ending point i.e completes a closed shape/stroke,
                 // Add Z command
-                //svgPath.Add("Z");
+                svgPath.Add("Z");
             }
 
             // Combine list into space separated string to create SVG path string
@@ -128,14 +128,14 @@ namespace Rendering
 
                     styleSVGAttributes = UpdateDictionary(styleSVGAttributes, properAttributes);
                     extraDefElements = UpdateDictionary(extraDefElements, styleExtraElements);
-
-                    // Create XML path element with its proper attributes
-                    var pathElement = CreatePathElement(styleSVGAttributes);
-                    pathElement.SetAttributeValue("d", string.Join(" ", pointLists.Select(pl => ConvertPointListToPathString(pl))));
-                    filledPaths.Add(pathElement);
-
-                    boundingBox = BoxUtils.MergeBoundingBoxes(boundingBox, currentBoundingBox);
                 }
+
+                // Create XML path element with its proper attributes
+                var pathElement = CreatePathElement(styleSVGAttributes);
+                pathElement.SetAttributeValue("d", string.Join(" ", pointLists.Select(pl => ConvertPointListToPathString(pl))));
+                filledPaths.Add(pathElement);
+
+                boundingBox = BoxUtils.MergeBoundingBoxes(boundingBox, currentBoundingBox);
             }
 
             foreach (KeyValuePair<int, (List<List<string>>, Rectangle?)> strokePair in shapesAndStrokes.Item2)
@@ -146,37 +146,35 @@ namespace Rendering
                 StrokeStyle style = strokeStyles[strokeStyleIndex];
                 Dictionary<string, string> styleSVGAttributes = new Dictionary<string, string>();
 
-                // TODO: Figure out how strokes are suppsoed to behave in masks
+                // TODO: Figure out how strokes are supposed to behave in masks
                 if(mask)
                 {
                     Console.WriteLine("Strokes in makes are not supported!");
                 }
-                else
-                {
-                    // Get this strokeStyle's SVG attributes and any extra SVG elements
-                    // Create the proper path element for this strokeStyle
-                    (Dictionary<string, string> properAttributes,
-                        Dictionary<string, XElement> styleExtraElements) = StyleUtils.ParseStrokeStyle(style);
 
-                    styleSVGAttributes = UpdateDictionary(styleSVGAttributes, properAttributes);
-                    extraDefElements = UpdateDictionary(extraDefElements, styleExtraElements);
+                // Get this strokeStyle's SVG attributes and any extra SVG elements
+                // Create the proper path element for this strokeStyle
+                (Dictionary<string, string> properAttributes,
+                    Dictionary<string, XElement> styleExtraElements) = StyleUtils.ParseStrokeStyle(style);
 
-                    // Update bounding box for strokeStyle based on its width
-                    double strokeWidth = float.Parse(styleSVGAttributes["stroke-width"]);
-                    currentBoundingBox = BoxUtils.ExpandBoundingBox(currentBoundingBox!, strokeWidth);
+                styleSVGAttributes = UpdateDictionary(styleSVGAttributes, properAttributes);
+                extraDefElements = UpdateDictionary(extraDefElements, styleExtraElements);
 
-                    // Create XML path element with its proper attributes
-                    var pathElement = CreatePathElement(styleSVGAttributes);
-                    pathElement.SetAttributeValue("d", string.Join(" ", pointLists.Select(pl => ConvertPointListToPathString(pl))));
-                    strokedPaths.Add(pathElement);
-                    boundingBox = BoxUtils.MergeBoundingBoxes(boundingBox, currentBoundingBox);
-                }
+                // Update bounding box for strokeStyle based on its width
+                double strokeWidth = float.Parse(styleSVGAttributes["stroke-width"]);
+                currentBoundingBox = BoxUtils.ExpandBoundingBox(currentBoundingBox!, strokeWidth);
+
+                // Create XML path element with its proper attributes
+                var pathElement = CreatePathElement(styleSVGAttributes);
+                pathElement.SetAttributeValue("d", string.Join(" ", pointLists.Select(pl => ConvertPointListToPathString(pl))));
+                strokedPaths.Add(pathElement);
+                boundingBox = BoxUtils.MergeBoundingBoxes(boundingBox, currentBoundingBox);
             }
 
             XElement? fillsG = null;
             XElement? strokesG = null;
 
-            if (filledPaths.Count != 0)
+            if (filledPaths != null)
             {
                 fillsG = new XElement("g");
                 foreach (XElement fillPathElement in filledPaths)
@@ -185,7 +183,7 @@ namespace Rendering
                 }
             }
 
-            if (strokedPaths.Count != 0)
+            if (strokedPaths != null)
             {
                 strokesG = new XElement("g");
                 foreach (XElement strokePathElement in strokedPaths)
