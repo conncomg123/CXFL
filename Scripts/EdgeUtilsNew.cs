@@ -1,5 +1,6 @@
 using CsXFL;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
@@ -234,7 +235,8 @@ namespace Rendering
             return shapes;
         }
 
-        public static (List<XElement>?, List<XElement>?) ConvertEdgesToSvgPathNew(List<Edge> edgesElement,
+        public static (Dictionary<int, (List<List<string>>, Rectangle?)>,
+            Dictionary<int, (List<List<string>>, Rectangle?)>?) ConvertEdgesToSvgPathNew(List<Edge> edgesElement,
             Dictionary<string, Dictionary<string, string>> fillStylesAttributes,
             Dictionary<string, Dictionary<string, string>> strokeStylesAttributes)
         {
@@ -307,10 +309,24 @@ namespace Rendering
                 }
             }
 
-            var testing = ConvertPointListsToShapesNew(fillEdges);
+            Dictionary<int, (List<List<string>>, Rectangle?)> fillResult = new();
+            Dictionary<int, (List<List<string>>, Rectangle?)> strokeResult = new();
 
+            Dictionary<int, List<List<string>>> shapesAndBoundingBoxes = ConvertPointListsToShapesNew(fillEdges);
 
-            return (null, null);
+            foreach((int fillStyleIndex, List<List<string>> fillShape) in shapesAndBoundingBoxes)
+            {
+                (List<List<string>>, Rectangle?) tupleToAdd = new(fillShape, fillBoxes[fillStyleIndex]);
+                fillResult[fillStyleIndex] = tupleToAdd;
+            }
+
+            foreach((int strokeStyleIndex, List<List<string>> strokePath) in strokePaths)
+            {
+                (List<List<string>>, Rectangle?) tupleToAdd = new(strokePath, strokeBoxes[strokeStyleIndex]);
+                strokeResult[strokeStyleIndex] = tupleToAdd;
+            }
+
+            return (fillResult, strokeResult);
         }
     }
 }
