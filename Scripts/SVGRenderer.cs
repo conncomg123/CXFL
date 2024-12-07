@@ -999,6 +999,10 @@ public class SVGRenderer
         else
         {
             (fill_g, stroke_g, extra_defs) = ShapeUtils.ConvertShapeToSVG(shape, isMaskShape);
+
+            // REMOVE TEST CODE
+            (fill_g, stroke_g, extra_defs, _) = ShapeUtilsNew.ConvertShapeToSVG(shape, isMaskShape);
+
             if (!isMaskShape) ShapeCache[shape] = (fill_g, stroke_g, extra_defs);
             else MaskCache[shape] = (fill_g, stroke_g, extra_defs);
         }

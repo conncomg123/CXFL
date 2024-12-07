@@ -236,9 +236,9 @@ namespace Rendering
         }
 
         public static (Dictionary<int, (List<List<string>>, Rectangle?)>,
-            Dictionary<int, (List<List<string>>, Rectangle?)>?) ConvertEdgesToSvgPathNew(List<Edge> edgesElement,
-            Dictionary<string, Dictionary<string, string>> fillStylesAttributes,
-            Dictionary<string, Dictionary<string, string>> strokeStylesAttributes)
+            Dictionary<int, (List<List<string>>, Rectangle?)>) ConvertEdgesToSvgPathNew(List<Edge> edgesElement,
+            Dictionary<int, FillStyle> fillStyles,
+            Dictionary<int, StrokeStyle> strokeStyles)
         {
             // List of point lists with their associated fillStyle stored as pairs
             // Used syntax sugar version of new as variable type is very verbose
@@ -289,22 +289,16 @@ namespace Rendering
                     }
 
                     // If strokeStyle exists for Edge, convert immediately as no shape needs to be joined
-                    if (strokeStyleIndex != null)
+                    if (strokeStyleIndex != null && strokeStyles.ContainsKey((int)strokeStyleIndex))
                     {
-                        // Check if strokeStyle has associated SVG attributes created for it
-                        string? index = strokeStyleIndex.ToString();
+                        List<List<string>> strokePointLists = strokePaths.GetValueOrDefault((int)strokeStyleIndex, new List<List<string>>());
+                        strokePaths[(int)strokeStyleIndex] = strokePointLists;
 
-                        if (index != null && strokeStylesAttributes.ContainsKey(index))
-                        {
-                            List<List<string>> strokePointLists = strokePaths.GetValueOrDefault((int)strokeStyleIndex, new List<List<string>>());
-                            strokePaths[(int)strokeStyleIndex] = strokePointLists;
+                        strokePointLists.Add(pointList);
 
-                            strokePointLists.Add(pointList);
-
-                            // Update this strokeStyle's bounding box to include this pointList's bounding box
-                            Rectangle? existingBox = strokeBoxes.GetValueOrDefault((int)strokeStyleIndex, null);
-                            strokeBoxes[(int)strokeStyleIndex] = BoxUtils.MergeBoundingBoxes(existingBox, pointListBox);
-                        }
+                        // Update this strokeStyle's bounding box to include this pointList's bounding box
+                        Rectangle? existingBox = strokeBoxes.GetValueOrDefault((int)strokeStyleIndex, null);
+                        strokeBoxes[(int)strokeStyleIndex] = BoxUtils.MergeBoundingBoxes(existingBox, pointListBox);
                     }
                 }
             }
