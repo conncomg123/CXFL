@@ -168,7 +168,6 @@ namespace Rendering
                 // Create XML path element with its proper attributes
                 var pathElement = CreatePathElement(styleSVGAttributes);
                 pathElement.SetAttributeValue("d", string.Join(" ", pointLists.Select(pl => ConvertPointListToPathString(pl))));
-                // pathElement.SetAttributeValue("d", string.Join(" ", pointLists.Select(pl => pl[0])));
 
                 strokedPaths.Add(pathElement);
                 boundingBox = BoxUtils.MergeBoundingBoxes(boundingBox, currentBoundingBox);

@@ -235,6 +235,17 @@ namespace Rendering
             return shapes;
         }
 
+        private static List<T1> CreateListDeepCopy<T1> (List<T1> elements)
+        {
+            List<T1> deepCopy = new List<T1>();
+            foreach(T1 element in elements)
+            {
+                deepCopy.Add(element);
+            }
+
+            return deepCopy;
+        }
+
         public static (Dictionary<int, (List<List<string>>, Rectangle?)>,
             Dictionary<int, (List<List<string>>, Rectangle?)>) ConvertEdgesToSvgPathNew(List<Edge> edgesElement,
             Dictionary<int, FillStyle> fillStyles,
@@ -291,27 +302,11 @@ namespace Rendering
                     // For strokes, don't need to join any point lists into shapes
                     if (strokeStyleIndex != null && strokeStyles.ContainsKey((int)strokeStyleIndex))
                     {
+                        List<string> newCopy = CreateListDeepCopy(pointList);
+
                         List<List<string>> strokePointLists = strokePaths.GetValueOrDefault((int)strokeStyleIndex, new List<List<string>>());
-                        strokePointLists.Add(pointList);
+                        strokePointLists.Add(newCopy);
                         strokePaths[(int)strokeStyleIndex] = strokePointLists;
-
-                        // First get converted path format for this Edge, then add it to
-                        // associated strokeStyle
-                        /*string svgPathString = ShapeUtilsNew.ConvertPointListToPathString(pointList);
-
-                        // defaultdict(list)- For any key, default value is empty list
-                        // Is used to create a list of size 1 when first creating stroke path list
-
-                        // Idea- ensuring that list exists for key (either existing one or an empty one)
-                        if (!strokePaths.TryGetValue((int)strokeStyleIndex, out var strokePathList))
-                        {
-                            // Setting this reference so item can be added to it afterwards
-                            strokePathList = new List<List<string>>();
-                            strokePaths[(int)strokeStyleIndex] = strokePathList;
-                        }
-                        List<string> newList = new() { svgPathString };
-
-                        strokePathList.Add(pointList);*/
 
                         // Update this strokeStyle's bounding box to include this pointList's bounding box
                         Rectangle? existingBox = strokeBoxes.GetValueOrDefault((int)strokeStyleIndex, null);
