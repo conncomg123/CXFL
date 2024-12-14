@@ -1,10 +1,8 @@
 using System.IO.Compression;
 using CsXFL;
-using NAudio;
 using NAudio.Wave;
 using NAudio.Flac;
 using NAudio.Wave.SampleProviders;
-using NAudio.Gui;
 
 namespace Rendering;
 
@@ -25,8 +23,8 @@ public class AudioManager
     }
     private Dictionary<int, List<(MemoryStream, int, SoundType)>> GetSoundPathsWithTimestamps()
     {
-        #region GetSoundFilePath
-        MemoryStream GetSoundFilePath(string soundName)
+        #region GetSoundData
+        MemoryStream GetSoundData(string soundName)
         {
             var soundItem = document.Library.Items[soundName] as SoundItem ?? throw new ArgumentException($"Sound {soundName} does not exist.");
             MemoryStream ms;
@@ -67,7 +65,7 @@ public class AudioManager
                     {
                         int timestamp = frame.StartFrame + timelineFrameOffset;
                         int offset = frame.InPoint44;
-                        MemoryStream soundData = GetSoundFilePath(frame.SoundName);
+                        MemoryStream soundData = GetSoundData(frame.SoundName);
                         SoundType type = (SoundType)Enum.Parse(typeof(SoundType), Path.GetExtension(frame.SoundName)[1..], true);
                         if (!result.TryGetValue(timestamp, out var list))
                         {

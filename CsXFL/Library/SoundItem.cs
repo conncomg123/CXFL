@@ -6,7 +6,7 @@ public class SoundItem : Item // all the properties are propietary bullshit exce
     internal const string SOUND_NODE_IDENTIFIER = "DOMSoundItem";
     private string href, soundDataHRef, format;
     private int sampleCount;
-    internal string Href { get { return href; } set { href = value; Root?.SetAttributeValue("href", value); } }
+    public string Href { get { return href; } set { href = value; Root?.SetAttributeValue("href", value); } }
     internal string SoundDataHRef { get { return soundDataHRef; } set { soundDataHRef = value; Root?.SetAttributeValue("soundDataHRef", value); } }
     public string Format { get { return format; } set { format = value; Root?.SetAttributeValue("format", value); } }
     public int SampleCount { get { return sampleCount; } internal set { sampleCount = value; Root?.SetAttributeValue("sampleCount", value); } }
