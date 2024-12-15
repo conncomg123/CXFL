@@ -138,6 +138,10 @@ public class SVGRenderer
             }
         }
     }
+    public XDocument Render(int timelineIndex, int frameIndex, int? width = null, int? height = null, string type = "symbol")
+    {
+        return Render(Document.GetTimeline(timelineIndex), frameIndex, width, height, type);
+    }
     public XDocument Render(Timeline timeline, int frameIndex, int? width = null, int? height = null, string type = "symbol")
     {
         width ??= Document.Width;

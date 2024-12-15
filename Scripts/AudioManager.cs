@@ -3,6 +3,7 @@ using CsXFL;
 using NAudio.Wave;
 using NAudio.Flac;
 using NAudio.Wave.SampleProviders;
+using WaveWriter = CSCore.Codecs.WAV.WaveWriter;
 
 namespace Rendering;
 
@@ -81,56 +82,69 @@ public class AudioManager
         return result;
     }
     const double FORTY_FOUR_THOUSAND = 44000.0;
-    public void WriteSounds(string filename)
+    public MemoryStream GetMixedAudio()
     {
         // TODO: create file, write to it to create a file containing all the sounds at the correct timestamps
         List<WaveStream> readers = new();
         List<ISampleProvider> sampleProviders = new();
-        foreach (var frameOffset in soundPaths.Keys)
+        int approximateSize = 0;
+        try
         {
-            var data = soundPaths[frameOffset];
-            foreach (var sound in data)
+            foreach (var frameOffset in soundPaths.Keys)
             {
-                TimeSpan offset = TimeSpan.FromSeconds(frameOffset / document.FrameRate);
-                TimeSpan splitAudioOffset = TimeSpan.FromSeconds(sound.offset / FORTY_FOUR_THOUSAND);
-                WaveStream reader = sound.type switch
+                var data = soundPaths[frameOffset];
+                foreach (var sound in data)
                 {
-                    SoundType.FLAC => new FlacReader(sound.data),
-                    SoundType.WAV => new WaveFileReader(sound.data),
-                    SoundType.MP3 => new Mp3FileReader(sound.data),
-                    _ => throw new NotImplementedException(),
-                };
-                readers.Add(reader);
-                ISampleProvider resampler = new WdlResamplingSampleProvider(reader.ToSampleProvider(), 44100);
-                if(resampler.WaveFormat.Channels == 1)
-                {
-                    resampler = new MonoToStereoSampleProvider(resampler);
+                    TimeSpan offset = TimeSpan.FromSeconds(frameOffset / document.FrameRate);
+                    TimeSpan splitAudioOffset = TimeSpan.FromSeconds(sound.offset / FORTY_FOUR_THOUSAND);
+                    WaveStream reader = sound.type switch
+                    {
+                        SoundType.FLAC => new FlacReader(sound.data),
+                        SoundType.WAV => new WaveFileReader(sound.data),
+                        SoundType.MP3 => new Mp3FileReader(sound.data),
+                        _ => throw new NotImplementedException(),
+                    };
+                    readers.Add(reader);
+                    ISampleProvider resampler = new WdlResamplingSampleProvider(reader.ToSampleProvider(), 44100);
+                    if (resampler.WaveFormat.Channels == 1)
+                    {
+                        resampler = new MonoToStereoSampleProvider(resampler);
+                    }
+                    var offsetProvider = new OffsetSampleProvider(resampler)
+                    {
+                        DelayBy = offset,
+                        SkipOver = splitAudioOffset,
+                    };
+                    approximateSize += Convert.ToInt32(reader.TotalTime.TotalSeconds * offsetProvider.WaveFormat.AverageBytesPerSecond);
+                    sampleProviders.Add(offsetProvider);
                 }
-                var offsetProvider = new OffsetSampleProvider(resampler)
-                {
-                    DelayBy = offset,
-                    SkipOver = splitAudioOffset,
-                };
-                sampleProviders.Add(offsetProvider);
             }
-        }
-        var mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(44100, 2));
-        foreach (var provider in sampleProviders)
-        {
-            mixer.AddMixerInput(provider);
-        }
-        using (var waveFileWriter = new WaveFileWriter(filename, WaveFormat.CreateIeeeFloatWaveFormat(mixer.WaveFormat.SampleRate, mixer.WaveFormat.Channels)))
-        {
-            float[] buffer = new float[1024];
-            int samplesRead;
-            while ((samplesRead = mixer.Read(buffer, 0, buffer.Length)) > 0)
+            var waveFormatNaudio = WaveFormat.CreateIeeeFloatWaveFormat(44100, 2);
+            var waveFormatCSCore = new CSCore.WaveFormat(44100, 32, 2);
+            var mixer = new MixingSampleProvider(waveFormatNaudio);
+            foreach (var provider in sampleProviders)
             {
-                waveFileWriter.WriteSamples(buffer, 0, samplesRead);
+                mixer.AddMixerInput(provider);
             }
+            var memoryStream = new MemoryStream(approximateSize);
+            using (var waveWriter = new WaveWriter(memoryStream, waveFormatCSCore))
+            {
+                float[] buffer = new float[1024];
+                int samplesRead;
+                while ((samplesRead = mixer.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    waveWriter.WriteSamples(buffer, 0, samplesRead);
+                }
+            }
+            memoryStream.Position = 0;
+            return memoryStream;
         }
-        foreach (var reader in readers)
+        finally
         {
-            reader.Dispose();
+            foreach(var reader in readers)
+            {
+                reader.Dispose();
+            }
         }
     }
 }
