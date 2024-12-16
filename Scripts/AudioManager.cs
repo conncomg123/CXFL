@@ -82,6 +82,11 @@ public class AudioManager
         return result;
     }
     const double FORTY_FOUR_THOUSAND = 44000.0;
+    static double ConvertFramerate(double framerate)
+    {
+        if (framerate == 23.98) return 23.976;
+        return framerate;
+    }
     public MemoryStream GetMixedAudio()
     {
         // TODO: create file, write to it to create a file containing all the sounds at the correct timestamps
@@ -95,7 +100,7 @@ public class AudioManager
                 var data = soundPaths[frameOffset];
                 foreach (var sound in data)
                 {
-                    TimeSpan offset = TimeSpan.FromSeconds(frameOffset / document.FrameRate);
+                    TimeSpan offset = TimeSpan.FromSeconds(frameOffset / ConvertFramerate(document.FrameRate));
                     TimeSpan splitAudioOffset = TimeSpan.FromSeconds(sound.offset / FORTY_FOUR_THOUSAND);
                     WaveStream reader = sound.type switch
                     {
