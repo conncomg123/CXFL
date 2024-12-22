@@ -342,6 +342,122 @@ public class FrameTest
         Assert.True(frame.MotionTweenSnap);
     }
 
+    [Fact]
+    public void HasCustomEase_ShouldGetAndSet()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        
+        // Act
+        frame.HasCustomEase = true;
+
+        // Assert
+        Assert.True(frame.HasCustomEase);
+    }
+
+    [Fact]
+    public void HasCustomEase_ShouldGetAndSet_WhenNull()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        frame.Root = null;
+
+        // Act
+        frame.HasCustomEase = true;
+
+        // Assert
+        Assert.True(frame.HasCustomEase);
+    }
+
+    [Fact]
+    public void Bookmark_ShouldGetAndSet()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        
+        // Act
+        frame.Bookmark = true;
+
+        // Assert
+        Assert.True(frame.Bookmark);
+    }
+
+    [Fact]
+    public void Bookmark_ShouldGetAndSet_WhenNull()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        frame.Root = null;
+
+        // Act
+        frame.Bookmark = true;
+
+        // Assert
+        Assert.True(frame.Bookmark);
+    }
+
+    [Fact]
+    public void UseSingleEaseCurve_ShouldGetAndSet()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        
+        // Act
+        frame.UseSingleEaseCurve = true;
+
+        // Assert
+        Assert.True(frame.UseSingleEaseCurve);
+    }
+
+    [Fact]
+    public void UseSingleEaseCurve_ShouldGetAndSet_WhenNull()
+    {
+        // Arrange
+        Document doc = new("TestAssets/DOMDocument.xml");
+        Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        frame.Root = null;
+
+        // Act
+        frame.UseSingleEaseCurve = true;
+
+        // Assert
+        Assert.True(frame.UseSingleEaseCurve);
+    }
+
+    // [Fact]
+    // public void EaseMethodName_ShouldGetAndSet()
+    // {
+    //     // Arrange
+    //     Document doc = new("TestAssets/DOMDocument.xml");
+    //     Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+        
+    //     // Act
+    //     frame.EaseMethodName = "Belieber";
+
+    //     // Assert
+    //     Assert.True(frame.EaseMethodName == "Belieber");
+    // }
+
+    // [Fact]
+    // public void EaseMethodName_ShouldGetAndSet_WhenNull()
+    // {
+    //     // Arrange
+    //     Document doc = new("TestAssets/DOMDocument.xml");
+    //     Frame frame = doc.Timelines[0].Layers[0].GetFrame(42);
+    //     frame.Root = null;
+
+    //     // Act
+    //     frame.EaseMethodName = "Swifty";
+
+    //     // Assert
+    //     Assert.True(frame.EaseMethodName == "Swifty");
+    // }
+
 
     [Fact]
     public void ClearElements_ShouldRemoveAllElements()

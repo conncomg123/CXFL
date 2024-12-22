@@ -139,6 +139,11 @@ public class SVGRenderer
         }
     }
 
+    public XDocument Render(int timelineIndex, int frameIndex, int? width = null, int? height = null, string type = "symbol")
+    {
+        return Render(Document.GetTimeline(timelineIndex), frameIndex, width, height, type);
+    }
+
     /// <summary>
     /// Render SVGs from XFL.
     /// </summary>

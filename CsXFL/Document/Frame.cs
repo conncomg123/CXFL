@@ -111,7 +111,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
     public bool HasCustomEase { get { return hasCustomEase; } set { hasCustomEase = value; root?.SetOrRemoveAttribute("hasCustomEase", value, DefaultValues.HasCustomEase); } }
     public bool Bookmark { get { return bookmark; } set { bookmark = value; root?.SetOrRemoveAttribute("bookmark", value, DefaultValues.Bookmark); } }
     public bool UseSingleEaseCurve { get { return useSingleEaseCurve; } set { useSingleEaseCurve = value; root?.SetOrRemoveAttribute("useSingleEaseCurve", value, DefaultValues.UseSingleEaseCurve); } }
-    public string EaseMethodName { get { return easeMethodName; } private set { easeMethodName = value; root?.SetOrRemoveAttribute("easeMethodName", value, DefaultValues.EaseMethodName); } }
+    public string EaseMethodName { get { return easeMethodName; } internal set { easeMethodName = value; root?.SetOrRemoveAttribute("easeMethodName", value, DefaultValues.EaseMethodName); } }
     public string MotionTweenRotate { get { return motionTweenRotate; } set { motionTweenRotate = value; root?.SetOrRemoveAttribute("motionTweenRotate", value, DefaultValues.MotionTweenRotate); } }
     private static readonly HashSet<string> AcceptableSoundSyncs = new HashSet<string> { "event", "start", "stop", "stream" };
     public ReadOnlyCollection<Element> Elements { get { return elements.AsReadOnly(); } }
