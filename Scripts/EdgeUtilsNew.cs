@@ -48,7 +48,7 @@ namespace Rendering
         // In summary: Filled Shape/Stroked Path -> XFL Edge elements -> segments (pointLists) -> SVG path elements
 
 
-        //XFL "edges" ATTRIBUTE FORMAT:
+        //XFL "edges" ATTRIBUTE FORMAT INFO:
         // First gives command type, then follows it with n coordinates
         // Commands- !- moveto, /- lineto, |- lineto, [- quadto, ]- quadto
 
@@ -198,10 +198,41 @@ namespace Rendering
             boundingBox = null;
         }
 
+
+        // ALGORITHM INFO:
+        // Note that shape just refers multiple pointLists.
+        //
+        // Now that we have broken the XFL Edge elements into pointLists (segments):
+        // For filled shapes (fills):
+        //   For each XFL Edge element, process each of its pointLists:
+        //     If the Edge has "fillStyle0", associate pointList  with that fillStyle index
+        //     If the Edge has "fillStyle1", associate pointList reversed with that fillStyle index
+        //     so that filled shape is always left of the pointList.
+        //     Update the bounding box associated with fillStyle index to include new pointList added.
+        //   For each fillStyle index, consider each of its pointLists:
+        //     Pick an unused pointList. If it's already closed, leave it as we have a closed shape.
+        //     Otherwise, if the pointList is open, randomly add pointLists to it (making sure to
+        //     match start and end points) until:
+        //       1. The pointList is closed. That means we have a closed shape.
+        //       2. The pointList intersects with itself (current end point equals previous pointList's
+        //       end point), so we backtrack.
+        //       3. There are no more valid pointLists. Backtrack.
+        //     When all pointLists have been joined into shapes, map each fillStyle index with a (shape, bounding box)
+        //     tuple which ShapeUtils will then use to build the proper SVG elements for that shape.
+        //
+        // For stroked paths (paths):
+        //  Associate pointLists to specific strokeStyle indexes, updating the bounding box also associated with it
+        //  as each pointList is added.
+        //  As there is only one "strokeStyle" attribute, there is no need to reverse pointLists.
+        //
+        //  Once all pointLists have been associated, map strokeStyle index to (pointLists, bounding box) tuple
+        //  which ShapeUtils will then use to build the proper SVG elements for that shape.
+
+
         private static List<string>? Walk(string currentPoint, HashSet<string> usedPoints, string originPoint,
                 Dictionary<string, List<List<string>>> fillGraph)
         {
-            // Recursively join point lists into shapes
+            // Recursively join pointLists into shapes
             for (int i = 0; i < fillGraph[currentPoint].Count; i++)
             {
                 List<string> nextPointList = fillGraph[currentPoint][i];
@@ -215,7 +246,7 @@ namespace Rendering
                 }
                 else if (!usedPoints.Contains(nextPoint))
                 {
-                    // Try this point list
+                    // Try this pointList
                     usedPoints.Add(nextPoint);
                     List<string>? shape = Walk(nextPoint, usedPoints, originPoint, fillGraph);
                     if (shape == null)
@@ -226,7 +257,7 @@ namespace Rendering
                     else
                     {
                         fillGraph[currentPoint].RemoveAt(i);
-                        // Concat this point list, removing the redundant start move
+                        // Concat this pointList, removing the redundant start move
                         List<string> result = new List<string>(nextPointList);
                         result.AddRange(shape.GetRange(1, shape.Count - 1));
                         return result;
@@ -236,6 +267,15 @@ namespace Rendering
             return null;
         }
 
+        /// <summary>
+        /// Joins pointLists into shapes and maps fillStyleIndexes to these shapes.
+        /// </summary>
+        /// <remarks>
+        /// Note that shape just refers multiple pointLists.
+        /// </remarks>
+        /// <param name="pointLists">A list of tuples consisting of pointList and its associated fillStyleIndex.</param>
+        /// <returns>A dictionary that maps fillStyleIndexes with shapes.</returns>
+        /// <exception cref="Exception">Thrown when a shape can not be created.</exception>
         public static Dictionary<int, List<List<string>>> ConvertPointListsToShapesNew(List<(List<string>, int?)> pointLists)
         {
             // {fillStyleIndex: {origin point: [pointlist, ...], ...}, ...}
@@ -248,13 +288,13 @@ namespace Rendering
             // For any key, default value is empty list
             Dictionary<int, List<List<string>>> shapes = new Dictionary<int, List<List<string>>>();
 
-            // Add open point lists into graph
+            // Add open pointList into graph
             foreach ((List<string>, int?) tuple in pointLists)
             {
                 List<string> pointList = tuple.Item1;
                 int fillIndex = (int)tuple.Item2!;
 
-                // Point list is already a closed shape, so just associate it with its
+                // pointList is already a closed shape, so just associate it with its
                 // fillStyle index
                 if (pointList[0] == pointList[pointList.Count - 1])
                 {
@@ -280,7 +320,7 @@ namespace Rendering
                 }
             }
 
-            // For each fill style ID, pick a random origin and join point lists into
+            // For each fillStyle index, pick a random origin and join pointLists into
             // shapes with Walk() until we're done.
             foreach (var (fillIndex, fillGraph) in graph)
             {
@@ -303,7 +343,7 @@ namespace Rendering
                             throw new Exception("Failed to build shape");
                         }
 
-                        // Either add to existing list of shape point lists, or create new one
+                        // Either add to existing list of shape pointLists, or create new one
                         List<List<string>> shapePointLists = shapes.GetValueOrDefault(fillIndex, new List<List<string>>());
                         shapes[fillIndex] = shapePointLists;
 
@@ -316,6 +356,12 @@ namespace Rendering
             return shapes;
         }
 
+        /// <summary>
+        /// Creates a deep copy of a List.
+        /// </summary>
+        /// <typeparam name="T1">The type being stored in the list.</typeparam>
+        /// <param name="elements">The list that will be deeply copied.</param>
+        /// <returns></returns>
         private static List<T1> CreateListDeepCopy<T1> (List<T1> elements)
         {
             List<T1> deepCopy = new List<T1>();
@@ -327,6 +373,15 @@ namespace Rendering
             return deepCopy;
         }
 
+        /// <summary>
+        /// Converts XFL edges element into various pointLists and bounding boxes.
+        /// </summary>
+        /// <param name="edgesElement">The XFL edges element of a XFL DOMShape element.</param>
+        /// <param name="fillStyles">The fillStyles assoicated with this XFL DOMShape element.</param>
+        /// <param name="strokeStyles">The strokeStyles assoicated with this XFL DOMShape element.</param>
+        /// <returns>A tuple consisting of Dictionary of fillStyle indexes mapped to their respective pointLists
+        /// and bounding box, a Dictionary of strokeStyle indexes mapped to their respective
+        /// pointLists and bounding box.</returns>
         public static (Dictionary<int, (List<List<string>>, Rectangle?)>,
             Dictionary<int, (List<List<string>>, Rectangle?)>) ConvertEdgesToSvgPathNew(List<Edge> edgesElement,
             Dictionary<int, FillStyle> fillStyles,
@@ -380,7 +435,8 @@ namespace Rendering
                         fillBoxes[(int)fillStyleRightIndex] = BoxUtils.MergeBoundingBoxes(existingBox, pointListBox);
                     }
 
-                    // For strokes, don't need to join any point lists into shapes
+                    // For strokes, don't need to join any pointList into shapes
+                    // Just associate pointList with strokeStyleIndex
                     if (strokeStyleIndex != null && strokeStyles.ContainsKey((int)strokeStyleIndex))
                     {
                         List<string> newCopy = CreateListDeepCopy(pointList);
@@ -401,7 +457,12 @@ namespace Rendering
 
             Dictionary<int, List<List<string>>> shapesAndBoundingBoxes = ConvertPointListsToShapesNew(fillEdges);
 
-            foreach((int fillStyleIndex, List<List<string>> fillShape) in shapesAndBoundingBoxes)
+            // At this point, we have fillStyle indexes associated with various shapes (list of pointLists)
+            // and strokeStyle indexes associated with a list of pointLists.
+            // Now package the final point lists and bounding box in tuple for ShapeUtils to use to build
+            // proper SVG elements
+
+            foreach ((int fillStyleIndex, List<List<string>> fillShape) in shapesAndBoundingBoxes)
             {
                 (List<List<string>>, Rectangle?) tupleToAdd = new(fillShape, fillBoxes[fillStyleIndex]);
                 fillResult[fillStyleIndex] = tupleToAdd;
