@@ -1,11 +1,52 @@
 using CsXFL;
-using System.Collections.Generic;
-using System.IO;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
 
 namespace Rendering
 {
+
+    /// <summary>
+    /// Utils for converting XFL edges into its equivalent SVG elements.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Base logic and documentation was largely taken from PluieElectrique's
+    /// <see href="https://github.com/PluieElectrique/xfl2svg/blob/master/xfl2svg/shape/edge.py">edge.py</see>
+    /// and SynthBot-Anon's updated version of
+    /// <see href="https://github.com/synthbot-anon/PluieElectrique-xfl2svg/blob/radial-gradient-take2/xfl2svg/shape/edge.py">edge.py.</see>
+    /// </para>
+    /// <para>
+    /// One aspect that had to be accounted in translating the code was its use of defaultdict, which assigns a default
+    /// value to a key if it is not initially found in the dictionary. As .NET does not have a native data structure that
+    /// behaves in this same manner, the extension method GetValueOrDefault() was used in its stead.
+    /// </para>
+    /// <para>
+    /// In Animate, graphics that are drawn can be represented as either filled shapes (fills) or stroked paths (strokes),
+    /// with fills representing the inside of a shape and strokes representing the shape's boundary (same definitions
+    /// as in SVG). Both of these are defined by their outline which Animate breaks into various pieces.
+    /// We'll call each piece a "segment" to avoid confusion with the XFL edge element and attribute.
+    /// </para>
+    /// <para>
+    /// A segment may be part up at most two shapes- one being on its left and one on its right. This is determined
+    /// by the pressence of the "fillStyle0" (left) and "fillStyle1" (right) attributes, which specify the fill of the
+    /// shape on that side. In comparison, a segment can only be part of up to one stroked path, determined by
+    /// the pressence of a "strokeStyle" attribute.
+    /// </para>
+    /// <para>
+    /// Given this, to extract the graphics from the XFL format in preparation to convert them into SVG, we first will
+    /// convert the XFL edge attribute into segments (represented as pointlists). Each XFL Edge element is broken into
+    /// multiple segments, each of them inheriting the "fillStyle0", "fillStyle1", and "strokeStyle" attributes of the
+    /// XFL Edge element they were taken from.
+    /// </para>
+    /// <para>
+    /// Then, for filled shapes, we join segments of the same fill style and side (left or right) by their start
+    /// and end points. For stroked paths, we just collect all segments of the same style.
+    /// </para>
+    /// <para>
+    /// Finally, we convert segments to their equivalent SVG path d attribute string, put this string as part of a
+    /// SVG path element, and then assign the appropriate SVG fill/stroke attributes to said element.
+    /// </para>
+    /// </remarks>
+    /// <seealso href="https://github.com/SasQ/SavageFlask/blob/master/doc/FLA.txt"/>
     internal class EdgeUtilsNew
     {
         private const string EDGE_REGEX = @"[!|/[\]]|(?<!S)-?\d+(?:\.\d+)?|\#[A-Z0-9]+\.[A-Z0-9]+";
