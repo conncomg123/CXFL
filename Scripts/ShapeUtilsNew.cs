@@ -1,31 +1,35 @@
-﻿using CSCore.Streams.SampleConverter;
-using CsXFL;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
-using System.IO.Pipes;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+﻿using CsXFL;
 using System.Xml.Linq;
 
 namespace Rendering
 {
+    /// <summary>
+    /// Utils for converting a XFL DOMShape element into its equivalent SVG path elements.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Base logic and documentation was largely taken from PluieElectrique's
+    /// <see href="https://github.com/PluieElectrique/xfl2svg/blob/master/xfl2svg/shape/shape.py">edge.py</see>
+    /// and SynthBot-Anon's updated version of
+    /// <see href="https://github.com/synthbot-anon/PluieElectrique-xfl2svg/blob/radial-gradient-take2/xfl2svg/shape/shape.py">edge.py.</see>
+    /// </para>
+    /// <para>
+    /// To account for the original code's usage of the python dict's update() method which does not have a direct
+    /// equivalent in .NET, I created my own method.
+    /// </para>
+    /// </remarks>
     internal class ShapeUtilsNew
     {
         /// <summary>
-        /// Converts a point list into a SVG path string.
+        /// Converts a pointList into a SVG path string.
         /// </summary>
         /// <remarks>
-        /// This method converts a point list into the "d" attribute of a path element,
+        /// This method converts a pointList into the "d" attribute of a path element,
         /// NOT into an entire path element itself (with proper opening and closing path tags,
         /// d=, style= etc).
         /// </remarks>
-        /// <param name="pointList">The point list that is being converted.</param>
-        /// <returns>The equivalent "d" string for the given point list.</returns>
+        /// <param name="pointList">The pointList that is being converted.</param>
+        /// <returns>The equivalent "d" string for the given pointList.</returns>
         public static string ConvertPointListToPathString(List<string> pointList)
         {
             // Using iterator to match previous method as well as Python implementation
@@ -69,6 +73,13 @@ namespace Rendering
             // closed stroke. For shapes, it makes no difference, but for closed
             // strokes, it turns two overlapping line caps into a bevel, miter,
             // or round join, which does make a difference.
+
+            // TODO: It is likely that stroked paths can be broken into multiple pointLists
+            // and spread across multiple XFL Edge elements, which would require something
+            // like ConvertPointListsToShapes() but for stroked paths.
+            // It seems like closing a path seems good enough for now
+            // Code was commented out in SynthBot-Anon's version, so I replicated it here.
+
             if (pointList[0] == pointList[pointList.Count - 1])
             {
                 // If starting point == ending point i.e completes a closed shape/stroke,
@@ -80,6 +91,22 @@ namespace Rendering
             return string.Join(" ", svgPath);
         }
 
+        /// <summary>
+        /// Converts XFL DOMShape element into its equivalent SVG path elements.
+        /// </summary>
+        /// <remarks>
+        /// This method performs three actions:
+        /// 1. Gathers fillStyle and strokeStyle indexes
+        /// 2. Uses EdgeUtils to get pointLists and bounding boxes assoicated with these fill/strokeStyle indexes
+        /// 3. Generates the SVG, including style information.
+        /// </remarks>
+        /// <param name="shapeElement">The XFL DOMShape being converted.</param>
+        /// <param name="mask">If true, all fill colors will be set to #FFFFFF. This ensures
+        /// that the resulting mask is fully transparent.</param>
+        /// <returns>A 4-tuple consisting of: SVG g element containing filled paths elements,
+        /// SVG g element containing stroked path elements, and
+        /// dict of extra elements to put in SVG defs element (e.g.filters and gradients),
+        /// bounding box of entire shape.</returns>
         public static (XElement?, XElement?, Dictionary<string, XElement>?, Rectangle?)
             ConvertShapeToSVG(Shape shapeElement, bool mask = false)
         {
@@ -197,6 +224,20 @@ namespace Rendering
             return (fillsG, strokesG, extraDefElements, boundingBox);
         }
 
+        /// <summary>
+        /// Updates the contents of a dictionary based on the ones found in another.
+        /// </summary>
+        /// <remarks>
+        /// This method both inserts new key value pairs that are not found in the original dictionary
+        /// as well as updates ones that were already included.
+        /// </remarks>
+        /// <typeparam name="T1">The key's type.</typeparam>
+        /// <typeparam name="T2">The value's type.</typeparam>
+        /// <param name="dictionary">The original dictionary that will be updated.</param>
+        /// <param name="dictionaryToAdd">The dictionary whose contents will be added to the original
+        /// dictionary.</param>
+        /// <returns>The original dictionary with both the new key value pairs as well as the updated
+        /// ones. </returns>
         private static Dictionary<T1, T2> UpdateDictionary<T1,  T2>(Dictionary<T1, T2> dictionary,
             Dictionary<T1, T2> dictionaryToAdd) where T1 : notnull
         {
@@ -208,6 +249,11 @@ namespace Rendering
             return dictionary;
         }
 
+        /// <summary>
+        /// Creates a SVG path element.
+        /// </summary>
+        /// <param name="attributes">Attributes that will be included in the SVG path element.</param>
+        /// <returns>The SVG path element with the associated set of attributes.</returns>
         private static XElement CreatePathElement(Dictionary<string, string> attributes)
         {
             XElement newPathElement = new XElement("path");
