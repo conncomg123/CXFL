@@ -22,39 +22,57 @@ namespace Rendering
     /// <para>
     /// In Animate, graphics that are drawn can be represented as either filled shapes (fills) or stroked paths (strokes),
     /// with fills representing the inside of a shape and strokes representing the shape's boundary (same definitions
-    /// as in SVG). Both of these are defined by their outline which Animate breaks into various pieces.
-    /// We'll call each piece a "segment" to avoid confusion with the XFL edge element and attribute.
+    /// as in SVG). Both of these are defined by their outline which Animate breaks into various pieces or
+    /// XFL Edge elements.
     /// </para>
     /// <para>
-    /// A segment may be part up at most two shapes- one being on its left and one on its right. This is determined
+    /// An XFL Edge may be part up at most two shapes- one being on its left and one on its right. This is determined
     /// by the pressence of the "fillStyle0" (left) and "fillStyle1" (right) attributes, which specify the fill of the
-    /// shape on that side. In comparison, a segment can only be part of up to one stroked path, determined by
+    /// shape on that side. In comparison, a XFL Edge can only be part of up to one stroked path, determined by
     /// the pressence of a "strokeStyle" attribute.
     /// </para>
     /// <para>
     /// Given this, to extract the graphics from the XFL format in preparation to convert them into SVG, we first will
-    /// convert the XFL edge attribute into segments (represented as pointlists). Each XFL Edge element is broken into
-    /// multiple segments, each of them inheriting the "fillStyle0", "fillStyle1", and "strokeStyle" attributes of the
+    /// convert the XFL Edge elements smaller segments we will call pointLists. Each XFL Edge element is broken into
+    /// multiple pointLists, each of them inheriting the "fillStyle0", "fillStyle1", and "strokeStyle" attributes of the
     /// XFL Edge element they were taken from.
     /// </para>
     /// <para>
-    /// Then, for filled shapes, we join segments of the same fill style and side (left or right) by their start
-    /// and end points. For stroked paths, we just collect all segments of the same style.
+    /// Then, for filled shapes, we join pointLists of the same fill style and side (left or right) by their start
+    /// and end points. For stroked paths, we just collect all pointLists of the same style.
     /// </para>
     /// <para>
-    /// Finally, we convert segments to their equivalent SVG path d attribute string, put this string as part of a
+    /// Finally, we convert pointLists to their equivalent SVG path d attribute string, put this string as part of a
     /// SVG path element, and then assign the appropriate SVG fill/stroke attributes to said element.
+    /// </para>
+    /// <para>
+    /// In summary: Filled Shape/Stroked Path -> XFL Edge elements -> segments (pointLists) -> SVG path elements
     /// </para>
     /// </remarks>
     /// <seealso href="https://github.com/SasQ/SavageFlask/blob/master/doc/FLA.txt"/>
     internal class EdgeUtilsNew
     {
+        //XFL "edges" attribute format:
+        // First gives command type, then follows it with n coordinates
+        // Commands- !- moveto, /- lineto, |- lineto, [- quadto, ]- quadto
+
+        // Coordinates can either be decimal numbers or signed 32-number in Hex
+        // Hex Coords are denoted by a # before them
+
+        // "selects" in the format S[1-7] might be present as well in "moveto" commands- these are hints used
+        // by Animate for noting selections (n=bitmask, 1:fillStyle0, 2:fillStyle1, 4:stroke)
+        // When parsing Coords, they should be ignored (done with negative lookbehind)
+        // Cubic commands are omitted as they only appear in "cubics" attribute and are only hints for Animate
+
+        // Captures command, decimal number, or hex number
+        // Whitespace is automatically ignored through matches
+        // Negative lookbehind is used to ignore "select" (?<!S)
         private const string EDGE_REGEX = @"[!|/[\]]|(?<!S)-?\d+(?:\.\d+)?|\#[A-Z0-9]+\.[A-Z0-9]+";
 
         private static Regex edgeTokenizer = new Regex(EDGE_REGEX, RegexOptions.IgnorePatternWhitespace);
 
         /// <summary>
-        /// Parses and converts a coordinate in the "edges" string.
+        /// Parses and converts a coordinate of the XFL "edges" attribute.
         /// </summary>
         /// <param name="numberString">The coordinate in "edges" string being parsed.</param>
         /// <returns>The converted and scaled coordinate.</returns>
@@ -79,12 +97,17 @@ namespace Rendering
             }
         }
 
+        /// <summary>
+        /// Converts an XFL Edge element into pointLists.
+        /// </summary>
+        /// <param name="edges">The "edges" attribute of an Edge XFL element.</param>
+        /// <returns>The XFL Edge broken into pointLists with their associated bounding boxes.</returns>
+        /// <exception cref="ArgumentException">The XFL Edge's format did not start with a moveto command.</exception>
         public static IEnumerable<(List<string>, Rectangle?)> ConvertEdgeFormatToPointListsNew(string edges)
         {
             // As MatchCollection was written before .NET 2, it uses IEnumerable for iteration rather
             // than IEnumerable<T>, meaning it defaults to an enumerable of objects.
             // To get enumerable of Matches, have to explicity type cast enumerable as Match
-
             IEnumerator<string> matchTokens = edgeTokenizer.Matches(edges).Cast<Match>().Select(currentMatch => currentMatch.Value).GetEnumerator();
 
             // Assert that the first token is a moveto command
@@ -118,8 +141,8 @@ namespace Rendering
                     // If a move command doesn't change the current point, ignore it.
                     if (currPoint != prevPoint)
                     {
-                        // Otherwise, a new segment is starting, so we must yield the
-                        // current (point list, boundingBox) and begin a new one.
+                        // Otherwise, a new pointList is starting, so we must yield the
+                        // current (pointList, boundingBox) and begin a new one.
                         yield return (pointList, boundingBox);
 
                         pointList = new List<string>();
