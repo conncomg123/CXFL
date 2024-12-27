@@ -97,25 +97,26 @@ namespace Rendering
             }
         }
 
-        // POINTLIST FORMAT INFO
-        // Segments (pointLists) in reality are just a section of commands from the XFL Edge's "edges" attribute,
-        // which dictates the XFL Edge's outline.
-
-        // In order to join them into shapes, we need some way to reverse
-        // segments. This is so we can normalize them so that the filled shape is always on the left.
-        // In order to achieve this, we will store these segments as "pointLists".
-
-        // The first command of these pointLists is always a moveTo command. Any command that follows
-        // are lineTo commands. If a point is surrounded by [], that point is the control point of a
-        // quadTo command (representing a Bezier Curve), and the following point is the curve's destination.
-
-        // Given this format, we can just simply reverse the pointList to get the reverse of the segment.
-
         /// <summary>
         /// Converts an XFL Edge element into pointLists.
         /// </summary>
         /// <remarks>
+        /// <para>
+        /// Segments (pointLists) in reality are just a section of commands from the XFL Edge's "edges" attribute,
+        /// which dictates the XFL Edge's outline.
+        /// </para>
+        /// <para>
+        /// To join them into shapes, we need some way to reverse segments. This is so we can normalize them so
+        /// that the filled shape is always on the left. In order to achieve this, we will store these segments
+        /// as "pointLists".
+        /// </para>
+        /// The first command of these pointLists is always a moveTo command. Any command that follows
+        /// are lineTo commands. If a point is surrounded by [], that point is the control point of a
+        /// quadTo command (representing a Bezier Curve), and the following point is the curve's destination.
+        /// <para>
+        /// Given this format, we can just simply reverse the pointList to get the reverse of the segment.
         /// As each XFL Edge element can contain multiple segments, this function will yield multiple pointLists.
+        /// </para>
         /// </remarks>
         /// <param name="edges">The "edges" attribute of an Edge XFL element.</param>
         /// <returns>The XFL Edge broken into pointLists with their associated bounding boxes.</returns>
