@@ -33,16 +33,16 @@ namespace Rendering
     /// </para>
     /// <para>
     /// Given this, to extract the graphics from the XFL format in preparation to convert them into SVG, we first will
-    /// convert the XFL Edge elements smaller segments we will call pointLists. Each XFL Edge element is broken into
-    /// multiple pointLists, each of them inheriting the "fillStyle0", "fillStyle1", and "strokeStyle" attributes of the
-    /// XFL Edge element they were taken from.
+    /// convert the XFL Edge elements into smaller segments we will call pointLists (more about them later).
+    /// Each XFL Edge element is broken into multiple segments, each of them inheriting the "fillStyle0",
+    /// "fillStyle1", and "strokeStyle" attributes of the XFL Edge element they were taken from.
     /// </para>
     /// <para>
-    /// Then, for filled shapes, we join pointLists of the same fill style and side (left or right) by their start
-    /// and end points. For stroked paths, we just collect all pointLists of the same style.
+    /// Then, for filled shapes, we join segments of the same fill style and side (left or right) by their start
+    /// and end points. For stroked paths, we just collect all segments of the same style.
     /// </para>
     /// <para>
-    /// Finally, we convert pointLists to their equivalent SVG path d attribute string, put this string as part of a
+    /// Finally, we convert segments to their equivalent SVG path d attribute strings, put this string as part of a
     /// SVG path element, and then assign the appropriate SVG fill/stroke attributes to said element.
     /// </para>
     /// <para>
@@ -97,12 +97,29 @@ namespace Rendering
             }
         }
 
+        // POINTLIST FORMAT INFO
+        // Segments (pointLists) in reality are just a section of commands from the XFL Edge's "edges" attribute,
+        // which dictates the XFL Edge's outline.
+
+        // In order to join them into shapes, we need some way to reverse
+        // segments. This is so we can normalize them so that the filled shape is always on the left.
+        // In order to achieve this, we will store these segments as "pointLists".
+
+        // The first command of these pointLists is always a moveTo command. Any command that follows
+        // are lineTo commands. If a point is surrounded by [], that point is the control point of a
+        // quadTo command (representing a Bezier Curve), and the following point is the curve's destination.
+
+        // Given this format, we can just simply reverse the pointList to get the reverse of the segment.
+
         /// <summary>
         /// Converts an XFL Edge element into pointLists.
         /// </summary>
+        /// <remarks>
+        /// As each XFL Edge element can contain multiple segments, this function will yield multiple pointLists.
+        /// </remarks>
         /// <param name="edges">The "edges" attribute of an Edge XFL element.</param>
         /// <returns>The XFL Edge broken into pointLists with their associated bounding boxes.</returns>
-        /// <exception cref="ArgumentException">The XFL Edge's format did not start with a moveto command.</exception>
+        /// <exception cref="ArgumentException">The XFL Edge element did not start with a moveto command.</exception>
         public static IEnumerable<(List<string>, Rectangle?)> ConvertEdgeFormatToPointListsNew(string edges)
         {
             // As MatchCollection was written before .NET 2, it uses IEnumerable for iteration rather
