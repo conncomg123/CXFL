@@ -19,40 +19,36 @@ namespace Rendering
     /// value to a key if it is not initially found in the dictionary. As .NET does not have a native data structure that
     /// behaves in this same manner, the extension method GetValueOrDefault() was used in its stead.
     /// </para>
-    /// <para>
-    /// In Animate, graphics that are drawn can be represented as either filled shapes (fills) or stroked paths (strokes),
-    /// with fills representing the inside of a shape and strokes representing the shape's boundary (same definitions
-    /// as in SVG). Both of these are defined by their outline which Animate breaks into various pieces or
-    /// XFL Edge elements.
-    /// </para>
-    /// <para>
-    /// An XFL Edge may be part up at most two shapes- one being on its left and one on its right. This is determined
-    /// by the pressence of the "fillStyle0" (left) and "fillStyle1" (right) attributes, which specify the fill of the
-    /// shape on that side. In comparison, a XFL Edge can only be part of up to one stroked path, determined by
-    /// the pressence of a "strokeStyle" attribute.
-    /// </para>
-    /// <para>
-    /// Given this, to extract the graphics from the XFL format in preparation to convert them into SVG, we first will
-    /// convert the XFL Edge elements into smaller segments we will call pointLists (more about them later).
-    /// Each XFL Edge element is broken into multiple segments, each of them inheriting the "fillStyle0",
-    /// "fillStyle1", and "strokeStyle" attributes of the XFL Edge element they were taken from.
-    /// </para>
-    /// <para>
-    /// Then, for filled shapes, we join segments of the same fill style and side (left or right) by their start
-    /// and end points. For stroked paths, we just collect all segments of the same style.
-    /// </para>
-    /// <para>
-    /// Finally, we convert segments to their equivalent SVG path d attribute strings, put this string as part of a
-    /// SVG path element, and then assign the appropriate SVG fill/stroke attributes to said element.
-    /// </para>
-    /// <para>
-    /// In summary: Filled Shape/Stroked Path -> XFL Edge elements -> segments (pointLists) -> SVG path elements
-    /// </para>
     /// </remarks>
     /// <seealso href="https://github.com/SasQ/SavageFlask/blob/master/doc/FLA.txt"/>
     internal class EdgeUtilsNew
     {
-        //XFL "edges" attribute format:
+        // THOUGHT PROCESS BEHIND LOGIC:
+        // In Animate, graphics that are drawn can be represented as either filled shapes (fills) or stroked paths
+        // (strokes), with fills representing the inside of a shape and strokes representing the shape's boundary 
+        // (same definitions as in SVG). Both of these are defined by their outline which Animate breaks into
+        // various pieces or XFL Edge elements.
+
+        // An XFL Edge may be part up at most two shapes- one being on its left and one on its right. This is determined
+        // by the pressence of the "fillStyle0" (left) and "fillStyle1" (right) attributes, which specify the fill of the
+        // shape on that side. In comparison, a XFL Edge can only be part of up to one stroked path, determined by
+        /// the pressence of a "strokeStyle" attribute.
+
+        // Given this, to extract the graphics from the XFL format in preparation to convert them into SVG, we first will
+        // convert the XFL Edge elements into smaller segments we will call pointLists (more about them later).
+        // Each XFL Edge element is broken into multiple segments, each of them inheriting the "fillStyle0",
+        // "fillStyle1", and "strokeStyle" attributes of the XFL Edge element they were taken from.
+
+        // Then, for filled shapes, we will join segments of the same fill style and side (left or right) by their start
+        // and end points. For stroked paths, we will just collect all segments of the same style.
+
+        // Finally, we will convert segments to their equivalent SVG path d attribute strings, put this string as part of a
+        // SVG path element, and then assign the appropriate SVG fill/stroke attributes to said element.
+
+        // In summary: Filled Shape/Stroked Path -> XFL Edge elements -> segments (pointLists) -> SVG path elements
+
+
+        //XFL "edges" ATTRIBUTE FORMAT:
         // First gives command type, then follows it with n coordinates
         // Commands- !- moveto, /- lineto, |- lineto, [- quadto, ]- quadto
 
@@ -97,26 +93,29 @@ namespace Rendering
             }
         }
 
+
+        // POINTLIST FORMAT INFO:
+        // Segments (pointLists) in reality are just a section of commands from the XFL Edge's "edges" attribute,
+        // which dictates the XFL Edge's outline.
+
+        // To join them into shapes, we need some way to reverse segments. This is so we can normalize them so
+        // that the filled shape is always on the left. In order to achieve this, we will store these segments
+        // as "pointLists".
+
+        // The first command of these pointLists is always a moveTo command. Any command that follows
+        // are lineTo commands. If a point is surrounded by [], that point is the control point of a
+        // quadTo command (representing a Bezier Curve), and the following point is the curve's destination.
+
+        // The first command of these pointLists is always a moveTo command. Any command that follows
+        // are lineTo commands. If a point is surrounded by [], that point is the control point of a
+        // quadTo command (representing a Bezier Curve), and the following point is the curve's destination.
+
+
         /// <summary>
         /// Converts an XFL Edge element into pointLists.
         /// </summary>
         /// <remarks>
-        /// <para>
-        /// Segments (pointLists) in reality are just a section of commands from the XFL Edge's "edges" attribute,
-        /// which dictates the XFL Edge's outline.
-        /// </para>
-        /// <para>
-        /// To join them into shapes, we need some way to reverse segments. This is so we can normalize them so
-        /// that the filled shape is always on the left. In order to achieve this, we will store these segments
-        /// as "pointLists".
-        /// </para>
-        /// The first command of these pointLists is always a moveTo command. Any command that follows
-        /// are lineTo commands. If a point is surrounded by [], that point is the control point of a
-        /// quadTo command (representing a Bezier Curve), and the following point is the curve's destination.
-        /// <para>
-        /// Given this format, we can just simply reverse the pointList to get the reverse of the segment.
         /// As each XFL Edge element can contain multiple segments, this function will yield multiple pointLists.
-        /// </para>
         /// </remarks>
         /// <param name="edges">The "edges" attribute of an Edge XFL element.</param>
         /// <returns>The XFL Edge broken into pointLists with their associated bounding boxes.</returns>
