@@ -138,10 +138,21 @@ public class SVGRenderer
             }
         }
     }
+
     public XDocument Render(int timelineIndex, int frameIndex, int? width = null, int? height = null, string type = "symbol")
     {
         return Render(Document.GetTimeline(timelineIndex), frameIndex, width, height, type);
     }
+
+    /// <summary>
+    /// Render SVGs from XFL.
+    /// </summary>
+    /// <param name="timeline">Name of the timeline being rendered.</param>
+    /// <param name="frameIndex">Frame being rendered.</param>
+    /// <param name="width">Width of the resulting SVG.</param>
+    /// <param name="height">Height of the resulting SVG.</param>
+    /// <param name="type">Whether this timeline is a "symbol" or a "symbol"</param>
+    /// <returns>Resulting SVG from the XFL.</returns>
     public XDocument Render(Timeline timeline, int frameIndex, int? width = null, int? height = null, string type = "symbol")
     {
         width ??= Document.Width;
@@ -992,7 +1003,8 @@ public class SVGRenderer
         }
         else
         {
-            (fill_g, stroke_g, extra_defs) = ShapeUtils.ConvertShapeToSVG(shape, isMaskShape);
+            (fill_g, stroke_g, extra_defs, _) = ShapeUtils.ConvertShapeToSVG(shape, isMaskShape);
+
             if (!isMaskShape) ShapeCache[shape] = (fill_g, stroke_g, extra_defs);
             else MaskCache[shape] = (fill_g, stroke_g, extra_defs);
         }
