@@ -46,6 +46,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
     private readonly List<IEase> eases;
     private readonly List<Filter> frameFilters;
     private int startFrame, duration, keyMode, inPoint44, motionTweenRotateTimes;
+    private int? parentLayerIndex;
     private string labelType, name, soundName, soundSync, tweenType, easeMethodName, motionTweenRotate;
     private bool registeredForSoundItem, motionTweenSnap, hasCustomEase, bookmark, useSingleEaseCurve;
     private MorphShape? morphShape;
@@ -61,6 +62,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
     public int KeyMode { get { return keyMode; } set { keyMode = value; root?.SetOrRemoveAttribute("keyMode", value, DefaultValues.KeyMode); } }
     public int InPoint44 { get { return inPoint44; } set { inPoint44 = value; root?.SetOrRemoveAttribute("inPoint44", value, DefaultValues.InPoint44); } }
     public int MotionTweenRotateTimes { get { return motionTweenRotateTimes; } set { motionTweenRotateTimes = value; root?.SetOrRemoveAttribute("motionTweenRotateTimes", value, DefaultValues.MotionTweenRotateTimes); } }
+    public int? ParentLayerIndex { get { return parentLayerIndex; } set { parentLayerIndex = value; root?.SetOrRemoveAttribute("parentLayerIndex", value, null); } }
     public string LabelType
     {
         get { return labelType; }
@@ -254,6 +256,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         keyMode = (int?)frameNode.Attribute("keyMode") ?? DefaultValues.KeyMode;
         inPoint44 = (int?)frameNode.Attribute("inPoint44") ?? DefaultValues.InPoint44;
         motionTweenRotateTimes = (int?)frameNode.Attribute("motionTweenRotateTimes") ?? DefaultValues.MotionTweenRotateTimes;
+        parentLayerIndex = (int?)frameNode.Attribute("parentLayerIndex");
         labelType = (string?)frameNode.Attribute("labelType") ?? DefaultValues.LabelType;
         name = (string?)frameNode.Attribute("name") ?? DefaultValues.Name;
         soundName = (string?)frameNode.Attribute("soundName") ?? DefaultValues.SoundName;
@@ -297,6 +300,7 @@ public class Frame : ILibraryEventReceiver, IDisposable
         keyMode = other.keyMode;
         inPoint44 = other.inPoint44;
         motionTweenRotateTimes = other.motionTweenRotateTimes;
+        parentLayerIndex = other.parentLayerIndex;
         labelType = other.labelType;
         name = other.name;
         soundName = other.soundName;
