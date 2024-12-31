@@ -12,6 +12,18 @@ namespace Rendering
     /// </summary>
     internal class BoxUtils
     {
+        private static double[] legendreGaussWeights = new double[10]
+        {
+            0.2955242247147529, 0.2955242247147529, 0.2692667193099963, 0.2692667193099963, 0.2190863625159820,
+            0.2190863625159820, 0.1494513491505806, 0.1494513491505806, 0.0666713443086881, 0.0666713443086881
+        };
+
+        private static double[] legendreGaussAbscissa = new double[10]
+        {
+            -0.1488743389816312, 0.1488743389816312, -0.4333953941292472, 0.4333953941292472, -0.6794095682990244,
+            0.6794095682990244, -0.8650633666889845, 0.8650633666889845, -0.9739065285171717, 0.9739065285171717
+        };
+
         /// <summary>
         /// Merges two bounding boxes together.
         /// </summary>
@@ -131,6 +143,60 @@ namespace Rendering
             }
 
             return (xCritical, yCritical);
+        }
+
+        /// <summary>
+        /// Calculates the approximate arc length of part of a quadratic Bezier curve.
+        /// </summary>
+        /// <remarks>
+        /// The mathematics and logic behind this method were based on the section "Arc Length"
+        /// from Pomax's A Primer on Bezier Curves.
+        /// </remarks>
+        /// <param name="point0">Start point of Bezier curve.</param>
+        /// <param name="point1">Control point of Beizer curve.</param>
+        /// <param name="point2">End point of Bezier curve.</param>
+        /// <param name="z">The section of the curve whose length is being calculated- from [0, 1] with
+        /// 0 being the start point and 1 being the end point.</param>
+        /// <returns>An approximation of the arc length for a section of the quadratic Bezier curve.</returns>
+        /// <seealso href="https://pomax.github.io/bezierinfo/#arclength"/>
+        public static double CalculateQuadBezierLength((double, double) point0,
+            (double, double) point1, (double, double) point2, double z)
+        {
+            double arcLength = 0;
+
+            // (z/2) part of the arc length equation
+            double zConstant = z / 2;
+            for(int i = 0; i < 10; i++)
+            {
+                //Get Ci and ti for each rectangle strip being used to approximate arc length
+                double stripThicknessCi = legendreGaussWeights[i];
+                double stripLocationTi = legendreGaussAbscissa[i];
+
+                // f(t) is from the parametric curve length equation
+                // sqrt((dx/dt)^2 + (dy/dt)^2), where dx/dt is derivative of Bezier Curve equation
+
+                double tValue = (zConstant * stripLocationTi) + zConstant;
+
+                // double xBezierCurveDerivative = 2 * (point1.Item1 - point0.Item1) + 2 * tValue
+                //    *(point2.Item1 - (2 * point1.Item1) + point0.Item1);
+                //double yBezierCurveDerivative = 2 * (point1.Item2 - point0.Item2) + 2 * tValue
+                //    * (point2.Item2 - (2 * point1.Item2) + point0.Item2);
+
+                double xBezierCurveDerivative = 2 * (1 - tValue) * (point1.Item1 - point0.Item1) +
+                    2 * tValue * (point2.Item1 - point1.Item1);
+                double yBezierCurveDerivative = 2 * (1 - tValue) * (point1.Item2 - point0.Item2) +
+                    2 * tValue * (point2.Item2 - point1.Item2);
+
+                double functionValue = Math.Sqrt(Math.Pow(xBezierCurveDerivative, 2)
+                    + Math.Pow(yBezierCurveDerivative, 2));
+
+                // Ci * f(z/2 * ti + z/2)
+                arcLength += stripThicknessCi * functionValue;
+            }
+            // z/2 * summation
+            arcLength = zConstant * arcLength;
+
+            return arcLength;
         }
 
         /// <summary>
