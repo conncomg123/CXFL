@@ -1,4 +1,5 @@
 using CsXFL;
+using System.Collections;
 
 namespace Rendering
 {
@@ -166,6 +167,8 @@ namespace Rendering
 
             // (z/2) part of the arc length equation
             double zConstant = z / 2;
+
+            // Note that a higher number of Gauss-Legendre numbers can be used for better accuracy
             for(int i = 0; i < 10; i++)
             {
                 //Get Ci and ti for each rectangle strip being used to approximate arc length
@@ -177,6 +180,7 @@ namespace Rendering
 
                 double tValue = (zConstant * stripLocationTi) + zConstant;
 
+                // Alternate form of Bezier Curve derivative
                 // double xBezierCurveDerivative = 2 * (point1.Item1 - point0.Item1) + 2 * tValue
                 //    *(point2.Item1 - (2 * point1.Item1) + point0.Item1);
                 //double yBezierCurveDerivative = 2 * (point1.Item2 - point0.Item2) + 2 * tValue
@@ -197,6 +201,47 @@ namespace Rendering
             arcLength = zConstant * arcLength;
 
             return arcLength;
+        }
+
+        public static List<List<(double, double)>> SplitBezierCurve((double, double) point0,
+            (double, double) point1, (double, double) point2, double t)
+        {
+            // Utilize the De Casteljau Algorithm of drawing curves to split curve
+            // In interpolating various lines when obtaining a point on the curve,
+            // we can use the points created to actually the split the curve as well
+
+            // Calculate intermediate points in between the main points of curve using
+            // linear interpolation formula
+
+            // First Level linear interpolation
+            double xfirstSkeletonPoint = (1 - t) * point0.Item1 + t * point1.Item1;
+            double yfirstSkeletonPoint = (1 - t) * point0.Item2 + t * point1.Item2;
+            double xsecondSkeletonPoint = (1 - t) * point1.Item1 + t * point2.Item1;
+            double ysecondSkeletonPoint = (1 - t) * point1.Item2 + t * point2.Item2;
+
+            // Second Level linear interpolation
+            double xthirdSkeletonPoint = (1 - t) * xfirstSkeletonPoint + t * xsecondSkeletonPoint;
+            double ythirdSkeletonPoint = (1 - t) * yfirstSkeletonPoint + t * ysecondSkeletonPoint;
+
+            // First subcurve is defined by point0, first skeleton point, and third skeleton point
+            // Second subcurve is defined by third skeleton point, second skeleton point, and point2
+            List<List<(double, double)>> subCurves = new()
+            {
+                new List<(double, double)>()
+                {
+                    point0,
+                    (xfirstSkeletonPoint, yfirstSkeletonPoint),
+                    (xthirdSkeletonPoint, ythirdSkeletonPoint)
+                },
+                new List<(double, double)>()
+                {
+                    (xthirdSkeletonPoint, ythirdSkeletonPoint),
+                    (xsecondSkeletonPoint, ysecondSkeletonPoint),
+                    point2
+                }
+            };
+
+            return subCurves;
         }
 
         /// <summary>
