@@ -1,5 +1,4 @@
 using CsXFL;
-using System.Collections;
 
 namespace Rendering
 {
@@ -13,17 +12,24 @@ namespace Rendering
     /// </summary>
     internal class BoxUtils
     {
-        private static double[] legendreGaussWeights = new double[10]
-        {
-            0.2955242247147529, 0.2955242247147529, 0.2692667193099963, 0.2692667193099963, 0.2190863625159820,
-            0.2190863625159820, 0.1494513491505806, 0.1494513491505806, 0.0666713443086881, 0.0666713443086881
-        };
+        // Note that a higher number of Gauss-Legendre numbers can be used for better accuracy
+        private static double[] legendreGaussWeights =
+        [
+            0.1279381953467522, 0.1279381953467522, 0.1258374563468283, 0.1258374563468283, 0.1216704729278034,
+            0.1216704729278034, 0.1155056680537256, 0.1155056680537256, 0.1074442701159656, 0.1074442701159656,
+            0.0976186521041139, 0.0976186521041139, 0.0861901615319533, 0.0861901615319533, 0.0733464814110803,
+            0.0733464814110803, 0.0592985849154368, 0.0592985849154368, 0.0442774388174198, 0.0442774388174198,
+            0.0285313886289337, 0.0285313886289337, 0.0123412297999872, 0.0123412297999872
+        ];
 
-        private static double[] legendreGaussAbscissa = new double[10]
-        {
-            -0.1488743389816312, 0.1488743389816312, -0.4333953941292472, 0.4333953941292472, -0.6794095682990244,
-            0.6794095682990244, -0.8650633666889845, 0.8650633666889845, -0.9739065285171717, 0.9739065285171717
-        };
+        private static double[] legendreGaussAbscissa =
+        [
+            -0.0640568928626056, 0.0640568928626056, -0.1911188674736163 ,0.1911188674736163, -0.3150426796961634,
+            0.3150426796961634, -0.4337935076260451, 0.4337935076260451, -0.5454214713888396, 0.5454214713888396,
+            -0.6480936519369755, 0.6480936519369755, -0.7401241915785544, 0.7401241915785544, -0.8200019859739029,
+            0.8200019859739029, -0.8864155270044011, 0.8864155270044011, -0.9382745520027328, 0.9382745520027328,
+            -0.9747285559713095, 0.9747285559713095, -0.9951872199970213, 0.9951872199970213
+        ];
 
         /// <summary>
         /// Merges two bounding boxes together.
@@ -111,7 +117,8 @@ namespace Rendering
         /// <param name="point0">Start point of Bezier curve.</param>
         /// <param name="point1">Control point of Beizer curve.</param>
         /// <param name="point2">End point of Bezier curve.</param>
-        /// <returns>The critical points of the Bezier Curve for both the x and y axis.</returns>
+        /// <returns>The critical points of the Bezier Curve for both the x and y axis (the t values
+        /// of which these extreme points are found, if any).</returns>
         public static (double, double) GetQuadraticCriticalPoints((double, double) point0,
             (double, double) point1, (double, double) point2)
         {
@@ -169,7 +176,7 @@ namespace Rendering
             double zConstant = z / 2;
 
             // Note that a higher number of Gauss-Legendre numbers can be used for better accuracy
-            for(int i = 0; i < 10; i++)
+            for(int i = 0; i < legendreGaussWeights.Length; i++)
             {
                 //Get Ci and ti for each rectangle strip being used to approximate arc length
                 double stripThicknessCi = legendreGaussWeights[i];
@@ -203,7 +210,7 @@ namespace Rendering
             return arcLength;
         }
 
-        public static List<List<(double, double)>> SplitBezierCurve((double, double) point0,
+        public static List<List<(double, double)>> SplitQuadBezierCurve((double, double) point0,
             (double, double) point1, (double, double) point2, double t)
         {
             // Utilize the De Casteljau Algorithm of drawing curves to split curve
