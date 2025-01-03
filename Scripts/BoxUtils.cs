@@ -251,6 +251,43 @@ namespace Rendering
             return subCurves;
         }
 
+        public static void OffsetQuadBezierCurve((double, double) point0,
+            (double, double) point1, (double, double) point2)
+        {
+            IsQuadBezierCurveSafe(point0, point1, point2);
+        }
+
+        public static bool IsQuadBezierCurveSafe((double, double) point0,
+            (double, double) point1, (double, double) point2)
+        {
+            // Check if subcurve is safe
+            // 1. Baseline check- are control points (start, control(s), end points) of the subcurve all on same side 
+            // of line from its start and end points?
+
+            // To do this, we can perform multiple leftness tests on control points against the subcurve's
+            // baseline vector
+            // Lef(A, B, C) - stand at A, look toward B, is C left or right relative to that line?
+            // As a Quad Bezier Curve only has one control point, we don't need to check for this
+            // For cubic or more, we do
+
+            // 2. Midpoint check- is the midpoint of the subcurve (where t = 0.5) close to the geometric 
+            // center of the curve's control points?
+            // Note that the start and the end points are control points as well
+
+            (double, double) midpoint = GetPointOnQuadraticBezier(point0, point1, point2, 0.5);
+
+            // Calculate geometric center
+            double xGeometricCenter = (point0.Item1 + point1.Item1 + point2.Item1) / 3;
+            double yGeometricCenter = (point0.Item2 + point1.Item2 + point2.Item2) / 3;
+            (double, double) difference = (midpoint.Item1 - xGeometricCenter, midpoint.Item2 - yGeometricCenter);
+            if(difference.Item1 > 0.5 || difference.Item2 > 0.5)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         /// <summary>
         /// Gets the bounding box of a quadratic Bezier curve.
         /// </summary>
