@@ -5,10 +5,13 @@ class Program
 {
     static void Main(string[] args)
     {
-        CsXFL.Document doc = new CsXFL.Document(@"D:\Documents\EOJAssets\TestFiles\301_S5.fla");
+        CsXFL.Document doc = new CsXFL.Document(@"D:\Documents\EOJAssets\TestFiles\VPWTest\VPWTest.xfl");
         const string targetPath = @"D:\Documents\EOJAssets\TestFolder\";
         SVGRenderer renderer = new SVGRenderer(doc, null, true);
-        //renderer.Render(doc.GetTimeline(0), 13).Save($"{targetPath}{14}.svg");
-        FfmpegLauncher.Run(args);
+        renderer.Render(doc.GetTimeline(0), 0).Save($"{targetPath}{1}.svg");
+
+        /*double result = BoxUtils.CalculateQuadBezierLength((7, 25), (2, 11), (22, 6), 1);
+        BoxUtils.OffsetQuadBezierCurve((7, 25), (2, 11), (22, 6));*/
+        //FfmpegLauncher.Run(args);
     }
 }
