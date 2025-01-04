@@ -254,7 +254,57 @@ namespace Rendering
         public static void OffsetQuadBezierCurve((double, double) point0,
             (double, double) point1, (double, double) point2)
         {
-            IsQuadBezierCurveSafe(point0, point1, point2);
+            // Note that we will be splitting the subcurves going from from t = 0 to t = 1
+            // A subcurve from t = 0 to t = 0.6 would be "before" or earlier along in the original
+            // curve than a subcurve from t = 0.6 to t = 1
+
+            // Stores all subcurves of the original curve going from t = 0 to t = 1
+            List<List<(double, double)>> subCurveList = new List<List<(double, double)>>()
+            {
+                new List<(double, double)>()
+                {
+                    point0, point1, point2
+                }
+            };
+
+            // Stores ratio range that a subcurve covers relative to the original curve
+            List<(double, double)> startEndValues = new List<(double, double)>() { (0, 1) };
+
+            (double, double) criticalValues = GetQuadraticCriticalPoints(point0, point1, point2);
+
+            if(criticalValues.Item1 > 0 && criticalValues.Item1 < 1)
+            {
+                List<(double, double)> curve = subCurveList[0];
+                subCurveList.RemoveAt(0);
+                startEndValues.RemoveAt(0);
+
+                List<List<(double, double)>> splitCurve =
+                    SplitQuadBezierCurve(curve[0], curve[1], curve[2], criticalValues.Item1);
+
+                subCurveList.Add(splitCurve[0]); //left subcurve
+                subCurveList.Add(splitCurve[1]); //right subcurve
+                startEndValues.Add((0, criticalValues.Item1));
+                startEndValues.Add((criticalValues.Item1, 1));
+            }
+
+            if(criticalValues.Item2 > 0 && criticalValues.Item2 < 1)
+            {
+                // First check to see if curve was already split using x extreme's t value
+                // If so, see which subcurve y extreme's t value falls under, adjust it for said subcurve
+                // and then split it
+                if(subCurveList.Count > 0)
+                {
+                    // We have to get the t value from the original curve relative to the subcurve
+                    
+                    int subCurveToSplit = 0;
+                    if(criticalValues.Item1 > criticalValues.Item2)
+                    {
+                        subCurveToSplit = 0;
+                    }
+                }
+            }
+
+            //IsQuadBezierCurveSafe(point0, point1, point2);
         }
 
         public static bool IsQuadBezierCurveSafe((double, double) point0,
