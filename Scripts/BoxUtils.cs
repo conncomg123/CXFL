@@ -210,6 +210,66 @@ namespace Rendering
             return arcLength;
         }
 
+        public static double CalculateLineLength((double, double) point0, (double, double) point1)
+        {
+            double xPart = Math.Pow(point1.Item1 - point0.Item1, 2);
+            double yPart = Math.Pow(point1.Item2 - point0.Item2, 2);
+            return Math.Sqrt(xPart + yPart);
+        }
+
+        public static double CalculateSVGPathLength(string svgPathString)
+        {
+            double pathLength = 0;
+            IEnumerator<string> pathStringIterator = svgPathString.Split(" ").ToList().GetEnumerator();
+
+            Func<(double, double)> nextPoint = () =>
+            {
+                pathStringIterator.MoveNext();
+                double x = double.Parse(pathStringIterator.Current);
+                pathStringIterator.MoveNext();
+                double y = double.Parse(pathStringIterator.Current);
+                return (x, y);
+            };
+
+            // Process moveTo command at start of SVG path (required by format)
+            // by skipping command and getting starting point of SVG path
+            pathStringIterator.MoveNext();
+            (double, double) prevPoint = nextPoint();
+            (double, double) currPoint = prevPoint;
+
+            while (pathStringIterator.MoveNext())
+            {
+                string command = pathStringIterator.Current;
+
+                //lineTo command
+                if(command == "L")
+                {
+                    currPoint = nextPoint();
+                    double lineDistance = CalculateLineLength(prevPoint, currPoint);
+                    pathLength += lineDistance;
+
+                    prevPoint = currPoint;
+                }
+                else if(command == "Q")
+                {
+                    // The point that was before this one (either directly given via a command or
+                    // calculated) is the start of this curve
+                    // The control point is the coordinates immediately after the command
+                    // The end point is the one after that
+
+                    (double, double) point0 = prevPoint;
+                    (double, double) point1 = nextPoint();
+                    (double, double) point2 = nextPoint();
+                    double curveDistance = CalculateQuadBezierLength(point0, point1, point2, 1);
+                    pathLength += curveDistance;
+
+                    prevPoint = point2;
+                }
+            }
+
+            return pathLength;
+        }
+
         public static List<List<(double, double)>> SplitQuadBezierCurve((double, double) point0,
             (double, double) point1, (double, double) point2, double t)
         {

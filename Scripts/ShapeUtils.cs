@@ -47,11 +47,13 @@ namespace Rendering
 
                 // SVG path element allows us to omit command letter if same command is used
                 // multiple times in a row, so only add it to svgPath string if new command is found
-                if (currentCommand != lastCommand)
-                {
+                /*if (currentCommand != lastCommand)*/
+
+                // TEST CODE- DELETE IF NEEDED- EXPLICITLY SHOW EVERY COMMAND FOR TEST PURPOSES
+                /*{*/
                     svgPath.Add(currentCommand);
                     lastCommand = currentCommand;
-                }
+                /*}*/
 
                 if (currentCommand == "Q")
                 {
@@ -191,6 +193,19 @@ namespace Rendering
                 // Update bounding box for strokeStyle based on its width
                 double strokeWidth = float.Parse(styleSVGAttributes["stroke-width"]);
                 currentBoundingBox = BoxUtils.ExpandBoundingBox(currentBoundingBox!, strokeWidth);
+
+                List<string> testing = pointLists.Select(ConvertPointListToPathString).ToList();
+
+                // TEST CODE- DELETE IF NEEDED
+                SolidStroke solidStroke = (SolidStroke)style.Stroke;
+                if(solidStroke != null && solidStroke.WidthMarkers != null && solidStroke.WidthMarkers.Count != 0)
+                {
+                    BoxUtils.CalculateSVGPathLength(testing[0]);
+                    /*foreach(WidthMarker marker in solidStroke.WidthMarkers)
+                    {
+
+                    }*/
+                }
 
                 // Create XML path element with its proper attributes
                 var pathElement = CreatePathElement(styleSVGAttributes);

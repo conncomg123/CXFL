@@ -103,11 +103,7 @@ namespace Rendering
         // as "pointLists".
 
         // The first command of these pointLists is always a moveTo command. Any command that follows
-        // are lineTo commands. If a point is surrounded by [], that point is the control point of a
-        // quadTo command (representing a Bezier Curve), and the following point is the curve's destination.
-
-        // The first command of these pointLists is always a moveTo command. Any command that follows
-        // are lineTo commands. If a point is surrounded by [], that point is the control point of a
+        // are lineTo and quadTo commands. If a point is surrounded by [], that point is the control point of a
         // quadTo command (representing a Bezier Curve), and the following point is the curve's destination.
 
 
@@ -207,7 +203,7 @@ namespace Rendering
         //   For each XFL Edge element, process each of its pointLists:
         //     If the Edge has "fillStyle0", associate pointList  with that fillStyle index
         //     If the Edge has "fillStyle1", associate pointList reversed with that fillStyle index
-        //     so that filled shape is always left of the pointList.
+        //     so that filled shape is always left of the pointList (inside of it is always left)
         //     Update the bounding box associated with fillStyle index to include new pointList added.
         //   For each fillStyle index, consider each of its pointLists:
         //     Pick an unused pointList. If it's already closed, leave it as we have a closed shape.
