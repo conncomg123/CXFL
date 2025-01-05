@@ -221,6 +221,74 @@ namespace Rendering
         {
             double pathLength = 0;
             IEnumerator<string> pathStringIterator = svgPathString.Split(" ").ToList().GetEnumerator();
+            string prevCommand = "M";
+
+            Func<(double, double)> nextPoint = () =>
+            {
+                pathStringIterator.MoveNext();
+                double x = double.Parse(pathStringIterator.Current);
+                pathStringIterator.MoveNext();
+                double y = double.Parse(pathStringIterator.Current);
+                return (x, y);
+            };
+
+            // Process moveTo command at start of SVG path (required by format)
+            // by skipping command and getting starting point of SVG path
+            pathStringIterator.MoveNext();
+            (double, double) prevPoint = nextPoint();
+            (double, double) currPoint = prevPoint;
+
+            while (pathStringIterator.MoveNext())
+            {
+                // The next token is either a new command or a number as part of a coordinate
+                string nextToken = pathStringIterator.Current;
+
+                if(nextToken == "L" || nextToken == "Q")
+                {
+                    prevCommand = nextToken;
+                }
+                else
+                {
+                    double x = double.Parse(pathStringIterator.Current);
+                    pathStringIterator.MoveNext();
+                    double y = double.Parse(pathStringIterator.Current);
+                    currPoint = (x, y);
+
+                    if (prevCommand == "L")
+                    {
+                        double lineDistance = CalculateLineLength(prevPoint, currPoint);
+                        pathLength += lineDistance;
+
+                        prevPoint = currPoint;
+                    }
+                    else if(prevCommand == "Q")
+                    {
+                        // The point that was before this one (either directly given via a command or
+                        // calculated) is the start of this curve
+                        // The control point is the coordinates immediately after the command
+                        // The end point is the one after that
+
+                        (double, double) point0 = prevPoint;
+                        (double, double) point1 = currPoint;
+                        (double, double) point2 = nextPoint();
+                        double curveDistance = CalculateQuadBezierLength(point0, point1, point2, 1);
+                        pathLength += curveDistance;
+
+                        prevPoint = point2;
+                    }
+                }
+            }
+
+            return pathLength;
+        }
+
+        public static double CalculateFormattedSVGPathLength(string svgPathString)
+        {
+            // This assumes that a SVG path command is printed everytime it is used
+            // Also, that the moveTo command is only used once at the start of the SVG path
+
+            double pathLength = 0;
+            IEnumerator<string> pathStringIterator = svgPathString.Split(" ").ToList().GetEnumerator();
 
             Func<(double, double)> nextPoint = () =>
             {
@@ -242,7 +310,7 @@ namespace Rendering
                 string command = pathStringIterator.Current;
 
                 //lineTo command
-                if(command == "L")
+                if (command == "L")
                 {
                     currPoint = nextPoint();
                     double lineDistance = CalculateLineLength(prevPoint, currPoint);
@@ -250,7 +318,7 @@ namespace Rendering
 
                     prevPoint = currPoint;
                 }
-                else if(command == "Q")
+                else if (command == "Q")
                 {
                     // The point that was before this one (either directly given via a command or
                     // calculated) is the start of this curve
