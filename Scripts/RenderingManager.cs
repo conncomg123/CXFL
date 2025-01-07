@@ -1,4 +1,5 @@
 
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading.Tasks.Dataflow;
 using System.Xml.Linq;
@@ -25,8 +26,9 @@ public class RenderingManager
         this.outputPath = outputPath;
         this.ffmpegPath = ffmpegPath;
     }
-    public bool RenderFrame(int timelineIndex, int frameIndex, string name)
+    public bool RenderFrame(int timelineIndex, int frameIndex, string name, string? outputPath = null)
     {
+        outputPath ??= this.outputPath;
         try
         {
             XDocument rendered = renderer.Render(timelineIndex, frameIndex);
@@ -39,96 +41,111 @@ public class RenderingManager
             return false;
         }
     }
-    public bool RenderFrame(int absoluteFrameIndex, string name)
+    public bool RenderFrame(int absoluteFrameIndex, string name, string? outputPath = null)
     {
+        outputPath ??= this.outputPath;
         int curTimelineIndex = -1,
         numFramesLeft = absoluteFrameIndex;
         while (numFramesLeft >= doc.GetTimeline(++curTimelineIndex).GetFrameCount())
         {
             numFramesLeft -= doc.GetTimeline(curTimelineIndex).GetFrameCount();
         }
-        return RenderFrame(curTimelineIndex, numFramesLeft, name);
+        return RenderFrame(curTimelineIndex, numFramesLeft, name, outputPath);
     }
     public bool RenderDocument(string name, string ffmpegArgsBeforeinput = DEFAULT_FFMEPG_ARGS_BEFORE_INPUT, string ffmpegArgsAfterinput = DEFAULT_FFMEPG_ARGS_AFTER_INPUT)
     {
-        int numFrames = 0;
-        foreach (Timeline tl in doc.Timelines)
+        string tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        while (Directory.Exists(tempDir))
         {
-            numFrames += tl.GetFrameCount();
+            tempDir = Path.Combine(tempDir, Path.GetRandomFileName());
         }
-        int framesPerCore = numFrames / numCores;
-        int framesLeftover = numFrames % numCores;
-        // make subfolders for each core
-        for (int i = 0; i < numCores; i++)
-        {
-            Directory.CreateDirectory($"{Path.Combine(outputPath, i.ToString())}");
-        }
-        List<Task> renderTasks = new();
-        for (int i = 0; i < numCores; i++)
-        {
-            int folderIndex = i;
-            int frameIndex = i * framesPerCore + (i < framesLeftover ? 1 : 0);
-            renderTasks.Add(Task.Run(() =>
-            {
-                for (int j = 0; j < (folderIndex < framesLeftover ? framesPerCore + 1 : framesPerCore); j++)
-                {
-                    string outputFile = Path.Combine(folderIndex.ToString(), (j + 1).ToString() + ".svg");
-                    RenderFrame(frameIndex, outputFile);
-                    frameIndex++;
-                }
-            }));
-        }
-        Task<MemoryStream> audioTask = Task.Run(audioManager.GetMixedAudio);
-        renderTasks.Add(audioTask);
+        Directory.CreateDirectory(tempDir);
         try
         {
-            Task.WaitAll(renderTasks);
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine(ex.Message);
-            return false;
-        }
-        MemoryStream audio = audioTask.Result;
-        Parallel.For(0, numCores, i =>
-        {
-            string subfolderPath = Path.Combine(outputPath, i.ToString());
-            ProcessStartInfo startInfo = new ProcessStartInfo(ffmpegPath, $"{ffmpegArgsBeforeinput} -i {subfolderPath}\\%d.svg {ffmpegArgsAfterinput} {outputPath}\\{i}.mp4");
-            startInfo.UseShellExecute = false;
+            int numFrames = 0;
+            foreach (Timeline tl in doc.Timelines)
+            {
+                numFrames += tl.GetFrameCount();
+            }
+            int framesPerCore = numFrames / numCores;
+            int framesLeftover = numFrames % numCores;
+            // make subfolders for each core
+            for (int i = 0; i < numCores; i++)
+            {
+                string path = Path.Combine(tempDir, i.ToString());
+                Directory.CreateDirectory(path);
+            }
+            List<Task> renderTasks = new();
+            for (int i = 0; i < numCores; i++)
+            {
+                int folderIndex = i;
+                int frameIndex = i * framesPerCore + (i < framesLeftover ? 1 : 0);
+                renderTasks.Add(Task.Run(() =>
+                {
+                    for (int j = 0; j < (folderIndex < framesLeftover ? framesPerCore + 1 : framesPerCore); j++)
+                    {
+                        string outputFile = Path.Combine(folderIndex.ToString(), (j + 1).ToString() + ".svg");
+                        RenderFrame(frameIndex, outputFile, tempDir);
+                        frameIndex++;
+                    }
+                }));
+            }
+            Task<MemoryStream> audioTask = Task.Run(audioManager.GetMixedAudio);
+            renderTasks.Add(audioTask);
+            try
+            {
+                Task.WaitAll(renderTasks);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                return false;
+            }
+            MemoryStream audio = audioTask.Result;
+            Parallel.For(0, numCores, i =>
+            {
+                string subfolderPath = Path.Combine(tempDir, i.ToString());
+                string tempMp4Path = Path.Combine(tempDir, i.ToString() + ".mp4");
+                ProcessStartInfo startInfo = new ProcessStartInfo(ffmpegPath, $"{ffmpegArgsBeforeinput} -i {subfolderPath}\\%d.svg {ffmpegArgsAfterinput} {tempMp4Path}");
+                startInfo.UseShellExecute = false;
+                Process? process = Process.Start(startInfo);
+                process?.WaitForExit();
+            });
+            // Create a file containing the list of input files
+            string inputFileList = Path.Combine(tempDir, "input.txt");
+            string tmpOutputFile = Path.Combine(tempDir, "tmp_" + name);
+            string outputFile = Path.Combine(outputPath, name);
+            using (StreamWriter writer = new(inputFileList))
+            {
+                foreach (string file in Directory.GetFiles(tempDir, "*.mp4").OrderBy(f => int.Parse(Path.GetFileNameWithoutExtension(f))))
+                {
+                    writer.WriteLine($"file '{file}'");
+                }
+            }
+            ProcessStartInfo startInfo = new ProcessStartInfo(ffmpegPath, $"-y -f concat -safe 0 -i {inputFileList} -c copy {tmpOutputFile}")
+            {
+                UseShellExecute = false
+            };
             Process? process = Process.Start(startInfo);
             process?.WaitForExit();
-        });
-        // Create a file containing the list of input files
-        string inputFileList = Path.Combine(outputPath, "input.txt");
-        string tmpOutputFile = Path.Combine(outputPath, "tmp_" + name);
-        string outputFile = Path.Combine(outputPath, name);
-        using (StreamWriter writer = new(inputFileList))
-        {
-            foreach (string file in Directory.GetFiles(outputPath, "*.mp4").OrderBy(f => int.Parse(Path.GetFileNameWithoutExtension(f))))
+            // now add the audio
+            startInfo = new ProcessStartInfo(ffmpegPath, $"-y -i {tmpOutputFile} -i pipe:0 -c copy -map 0:v:0 -map 1:a:0 {outputFile}")
             {
-                writer.WriteLine($"file '{file}'");
+                UseShellExecute = false,
+                RedirectStandardInput = true
+            };
+            process = Process.Start(startInfo);
+            if (process is not null)
+            {
+                audio.CopyTo(process.StandardInput.BaseStream);
+                process.StandardInput.Close();
+                process.WaitForExit();
             }
+            return true;
         }
-        ProcessStartInfo startInfo = new ProcessStartInfo(ffmpegPath, $"-y -f concat -safe 0 -i {inputFileList} -c copy {tmpOutputFile}")
+        finally
         {
-            UseShellExecute = false
-        };
-        Process? process = Process.Start(startInfo);
-        process?.WaitForExit();
-        // now add the audio
-        startInfo = new ProcessStartInfo(ffmpegPath, $"-y -i {tmpOutputFile} -i pipe:0 -c copy -map 0:v:0 -map 1:a:0 {outputFile}")
-        {
-            UseShellExecute = false,
-            RedirectStandardInput = true
-        };
-        process = Process.Start(startInfo);
-        if (process is not null)
-        {
-            audio.CopyTo(process.StandardInput.BaseStream);
-            process.StandardInput.Close();
-            process.WaitForExit();
+            Directory.Delete(tempDir, true);
         }
-
-        return true;
     }
 }
