@@ -4,7 +4,7 @@ namespace CsXFL;
 public abstract class Item
 {
     private static readonly HashSet<string> AcceptableItemTypes = new HashSet<string> {"undefined",
-    "component", "movie clip", "graphic", "button", "puppet", "puppetBase", "folder", "font", "sound", "bitmap", "compiled clip",
+    "component", "movie clip", "graphic", "button", "puppet", "puppetBase", "ik container", "folder", "font", "sound", "bitmap", "compiled clip",
     "screen", "video"};
     protected XElement? root;
     protected XNamespace ns;

@@ -18,8 +18,8 @@ public class TextAttrs
     private readonly XElement? root;
     private bool aliasText, autoKern, bold, italic, rotation;
     private string alignment, characterPosition, face, fillColor, target, url;
-    private int leftMargin, lineSpacing, rightMargin, size;
-    private double indent, letterSpacing, alpha;
+    private int leftMargin, rightMargin, size;
+    private double indent, lineSpacing, letterSpacing, alpha;
     private readonly double lineHeight;
     public bool AliasText { get { return aliasText; } set { aliasText = value; root?.SetOrRemoveAttribute("aliasText", value, DefaultValues.AliasText); } }
     public bool AutoKern { get { return autoKern; } set { autoKern = value; root?.SetOrRemoveAttribute("autoKern", value, DefaultValues.AutoKern); } }
@@ -52,7 +52,7 @@ public class TextAttrs
     public double Indent { get { return indent; } set { indent = value; root?.SetOrRemoveAttribute("indent", value, DefaultValues.Indent); } }
     public int LeftMargin { get { return leftMargin; } set { leftMargin = value; root?.SetOrRemoveAttribute("leftMargin", value, DefaultValues.LeftMargin); } }
     public double LetterSpacing { get { return letterSpacing; } set { letterSpacing = value; root?.SetOrRemoveAttribute("letterSpacing", value, DefaultValues.LetterSpacing); } }
-    public int LineSpacing { get { return lineSpacing; } set { lineSpacing = value; root?.SetOrRemoveAttribute("lineSpacing", value, DefaultValues.LineSpacing); } }
+    public double LineSpacing { get { return lineSpacing; } set { lineSpacing = value; root?.SetOrRemoveAttribute("lineSpacing", value, DefaultValues.LineSpacing); } }
     public double LineHeight { get { return lineHeight; } } 
     public double Alpha { get { return alpha; } set { alpha = value; root?.SetOrRemoveAttribute("alpha", value, DefaultValues.Alpha); } }
     public int RightMargin { get { return rightMargin; } set { rightMargin = value; root?.SetOrRemoveAttribute("rightMargin", value, DefaultValues.RightMargin); } }
@@ -99,7 +99,7 @@ public class TextAttrs
         indent = (double?)textAttrsNode.Attribute("indent") ?? DefaultValues.Indent;
         leftMargin = (int?)textAttrsNode.Attribute("leftMargin") ?? DefaultValues.LeftMargin;
         letterSpacing = (double?)textAttrsNode.Attribute("letterSpacing") ?? DefaultValues.LetterSpacing;
-        lineSpacing = (int?)textAttrsNode.Attribute("lineSpacing") ?? DefaultValues.LineSpacing;
+        lineSpacing = (double?)textAttrsNode.Attribute("lineSpacing") ?? DefaultValues.LineSpacing;
         rightMargin = (int?)textAttrsNode.Attribute("rightMargin") ?? DefaultValues.RightMargin;
         size = (int?)textAttrsNode.Attribute("size") ?? DefaultValues.Size;
         lineHeight = (double?)textAttrsNode.Attribute("lineHeight") ?? size * LINEHEIGHT_MULTIPLIER;
@@ -175,7 +175,7 @@ public class TextAttrs
                 LetterSpacing = Convert.ToDouble(value);
                 break;
             case "lineSpacing":
-                LineSpacing = (int)value;
+                LineSpacing = (double)value;
                 break;
             case "rightMargin":
                 RightMargin = (int)value;
