@@ -2,6 +2,20 @@ using CsXFL;
 
 namespace Rendering
 {
+    internal class SvgPathSegment
+    {
+        public double Distance { get; set; } = 0;
+        public string SegmentString { get; set; } = "";
+        public string CommandType { get; set; } = "";
+        public List<(double, double)> ControlPoints { get; set; } = new List<(double, double)> ();
+
+        public void AddControlPoint((double, double) controlPoint)
+        {
+            ControlPoints.Add(controlPoint);
+        }
+
+    }
+
     // The way that CSXFL Rectangles are stored is left = x of left side, top = y of top side, right = x of right side
     // bottom = y of bottom side
     // In xfl2svg code, box[0] = minx, box[1] = miny, box[2] = maxx, box[3] = maxy
@@ -238,9 +252,107 @@ namespace Rendering
             (double, double) prevPoint = nextPoint();
             (double, double) currPoint = prevPoint;
 
+            SvgPathSegment moveSegment = new SvgPathSegment();
+            moveSegment.CommandType = prevCommand;
+            moveSegment.SegmentString = $"M {currPoint.Item1} {currPoint.Item2}";
+
+            moveSegment.AddControlPoint(currPoint);
+            segments.Add(moveSegment);
+
+            // As commands are processed separately from coordinates, to ensure that each segment has the
+            // proper part of the larger SVG path string, manually reset string depending on section of it
+            // processed
+            string svgSegmentString = "";
             while (pathStringIterator.MoveNext())
             {
-                // The next token is either a new command or a number as part of a coordinate
+                // The next token is either a new command or a x coordinate of the first point of a command
+                string nextToken = pathStringIterator.Current;
+
+                if (nextToken == "L" || nextToken == "Q")
+                {
+                    prevCommand = nextToken;
+                    svgSegmentString += $"{prevCommand} ";
+                }
+                else
+                {
+                    // If next token is x coord, get the associated y coord to get entire next point
+                    double x = double.Parse(pathStringIterator.Current);
+                    pathStringIterator.MoveNext();
+                    double y = double.Parse(pathStringIterator.Current);
+                    currPoint = (x, y);
+
+                    if (prevCommand == "L")
+                    {
+                        //Set values of segment
+                        SvgPathSegment newSeg = new SvgPathSegment();
+                        newSeg.CommandType = prevCommand;
+                        newSeg.SegmentString = svgSegmentString + $"{currPoint.Item1} {currPoint.Item2}";
+                        newSeg.AddControlPoint(prevPoint);
+                        newSeg.AddControlPoint(currPoint);
+
+                        double lineDistance = CalculateLineLength(prevPoint, currPoint);
+                        newSeg.Distance = lineDistance;
+                        segments.Add(newSeg);
+
+                        prevPoint = currPoint;
+                        svgSegmentString = "";
+                    }
+                    else if (prevCommand == "Q")
+                    {
+                        // The point that was before this one (either directly given via a command or
+                        // calculated) is the start of this curve
+                        // The control point is the coordinates immediately after the command
+                        // The end point is the set after that
+                        (double, double) point0 = prevPoint;
+                        (double, double) point1 = currPoint;
+                        (double, double) point2 = nextPoint();
+
+                        // Set values of segment
+                        SvgPathSegment newSeg = new SvgPathSegment();
+                        newSeg.CommandType = prevCommand;
+                        newSeg.SegmentString = svgSegmentString + $"{point1.Item1} {point1.Item2}"
+                            + $" {point2.Item1} {point2.Item2}";
+                        newSeg.AddControlPoint(point0);
+                        newSeg.AddControlPoint(point1);
+                        newSeg.AddControlPoint(point2);
+
+                        double curveDistance = CalculateQuadBezierLength(point0, point1, point2, 1);
+                        newSeg.Distance = curveDistance;
+                        segments.Add(newSeg);
+
+                        prevPoint = point2;
+                        svgSegmentString = "";
+                    }
+                }
+            }
+
+            return segments;
+        }
+
+        public static double CalculateSVGPathLength(string svgPathString)
+        {
+            double pathLength = 0;
+            IEnumerator<string> pathStringIterator = svgPathString.Split(" ").ToList().GetEnumerator();
+            string prevCommand = "M";
+
+            Func<(double, double)> nextPoint = () =>
+            {
+                pathStringIterator.MoveNext();
+                double x = double.Parse(pathStringIterator.Current);
+                pathStringIterator.MoveNext();
+                double y = double.Parse(pathStringIterator.Current);
+                return (x, y);
+            };
+
+            // Process moveTo command at start of SVG path (required by format)
+            // by skipping command and getting starting point of SVG path
+            pathStringIterator.MoveNext();
+            (double, double) prevPoint = nextPoint();
+            (double, double) currPoint = prevPoint;
+
+            while (pathStringIterator.MoveNext())
+            {
+                // The next token is either a new command or a number as part of a coordinate pair
                 string nextToken = pathStringIterator.Current;
 
                 if(nextToken == "L" || nextToken == "Q")
@@ -276,62 +388,6 @@ namespace Rendering
 
                         prevPoint = point2;
                     }
-                }
-            }
-
-            return pathLength;
-        }
-
-        public static double CalculateFormattedSVGPathLength(string svgPathString)
-        {
-            // This assumes that a SVG path command is printed everytime it is used
-            // Also, that the moveTo command is only used once at the start of the SVG path
-
-            double pathLength = 0;
-            IEnumerator<string> pathStringIterator = svgPathString.Split(" ").ToList().GetEnumerator();
-
-            Func<(double, double)> nextPoint = () =>
-            {
-                pathStringIterator.MoveNext();
-                double x = double.Parse(pathStringIterator.Current);
-                pathStringIterator.MoveNext();
-                double y = double.Parse(pathStringIterator.Current);
-                return (x, y);
-            };
-
-            // Process moveTo command at start of SVG path (required by format)
-            // by skipping command and getting starting point of SVG path
-            pathStringIterator.MoveNext();
-            (double, double) prevPoint = nextPoint();
-            (double, double) currPoint = prevPoint;
-
-            while (pathStringIterator.MoveNext())
-            {
-                string command = pathStringIterator.Current;
-
-                //lineTo command
-                if (command == "L")
-                {
-                    currPoint = nextPoint();
-                    double lineDistance = CalculateLineLength(prevPoint, currPoint);
-                    pathLength += lineDistance;
-
-                    prevPoint = currPoint;
-                }
-                else if (command == "Q")
-                {
-                    // The point that was before this one (either directly given via a command or
-                    // calculated) is the start of this curve
-                    // The control point is the coordinates immediately after the command
-                    // The end point is the one after that
-
-                    (double, double) point0 = prevPoint;
-                    (double, double) point1 = nextPoint();
-                    (double, double) point2 = nextPoint();
-                    double curveDistance = CalculateQuadBezierLength(point0, point1, point2, 1);
-                    pathLength += curveDistance;
-
-                    prevPoint = point2;
                 }
             }
 
