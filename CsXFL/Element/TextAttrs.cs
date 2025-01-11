@@ -175,7 +175,7 @@ public class TextAttrs
                 LetterSpacing = Convert.ToDouble(value);
                 break;
             case "lineSpacing":
-                LineSpacing = (double)value;
+                LineSpacing = Convert.ToDouble(value);
                 break;
             case "rightMargin":
                 RightMargin = (int)value;
