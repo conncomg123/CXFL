@@ -232,127 +232,13 @@ namespace Rendering
             return Math.Sqrt(xPart + yPart);
         }
 
-        public static (string, string) SplitSvgPathString(string svgPathString, double t)
+        public static double GetNormalSlopeOfLine((double, double) point0, (double, double) point1)
         {
-            List<SvgPathSegment> svgPathSegments = SplitSvgPathIntoSegments(svgPathString);
-            List<SvgPathSegment> leftSection = new List<SvgPathSegment>();
-            List<SvgPathSegment> rightSection = new List<SvgPathSegment>();
-            int splitPointSegmentIndex = -1;
-            double distanceBeforeSplitSegment = 0;
+            // Get slope at point by using slope formula - this is the slope of the tangent line
+            double slope = (point1.Item2 - point1.Item2) / (point1.Item1 - point0.Item1);
 
-            double totalDistance = svgPathSegments.Sum(seg =>  seg.Distance);
-            double distanceToSplit = totalDistance * t;
-
-            double distanceTraveled = 0;
-            for(int i = 0; i < svgPathSegments.Count; i++)
-            {
-                SvgPathSegment current = svgPathSegments[i];
-                distanceTraveled += current.Distance;
-
-                if(distanceTraveled < distanceToSplit)
-                {
-                    leftSection.Add(current);
-                }
-                else if(distanceTraveled >= distanceToSplit)
-                {
-                    if(splitPointSegmentIndex == -1)
-                    {
-                        distanceBeforeSplitSegment = distanceTraveled - current.Distance;
-                        splitPointSegmentIndex = i;
-                    }
-                    else
-                    {
-                        rightSection.Add(current);
-                    }
-                }
-            }
-
-            // Now that the segment that has the split point was found- three main scenarios can happen:
-            // 1. split point is located at the start point -> this segment should be at the start of right section
-            // 2. split point is located at the end point -> this segment should be at the end of left section
-            // 3. split point is in the middle -> Have to split it into two parts that go left and right
-
-            SvgPathSegment splitSegment = svgPathSegments[splitPointSegmentIndex];
-
-            // Implement range as since we are comparing doubles, they are basically never hundred percent equal
-            if (distanceBeforeSplitSegment - 0.2 <= distanceToSplit 
-                && distanceToSplit <= distanceBeforeSplitSegment + 0.2)
-            {
-                //Add new moveTo command to start of right section
-                SvgPathSegment moveTo = new SvgPathSegment();
-                moveTo.CommandType = "M";
-                moveTo.SegmentString = $"M {splitSegment.ControlPoints[0].Item1}" +
-                        $" {splitSegment.ControlPoints[0].Item2}";
-                moveTo.AddControlPoint(splitSegment.ControlPoints[0]);
-                rightSection.Insert(0, moveTo);
-
-                // Update the split segment string to start with command if needed
-                // as it now will follow a moveTo command
-                if (splitSegment.SegmentString[0] != 'Q' || splitSegment.SegmentString[0] != 'L')
-                {
-                    string newSegString = splitSegment.SegmentString.Insert(0, $"{splitSegment.CommandType} ");
-                    splitSegment.SegmentString = newSegString;
-                }
-                // Insert it right after the moveTo command
-                rightSection.Insert(1, splitSegment);
-            }
-            else if(distanceBeforeSplitSegment + splitSegment.Distance - 0.2 <= distanceToSplit
-                && distanceToSplit <= distanceBeforeSplitSegment + splitSegment.Distance + 0.2)
-            {
-                leftSection.Add(splitSegment);
-
-                if(rightSection.Count > 0)
-                {
-                    //Insert moveTo command based on the first segment of the right section
-                    SvgPathSegment firstRightSeg = rightSection[0];
-
-                    SvgPathSegment moveTo = new SvgPathSegment();
-                    moveTo.CommandType = "M";
-                    moveTo.SegmentString = $"M {firstRightSeg.ControlPoints[0].Item1}" +
-                            $" {firstRightSeg.ControlPoints[0].Item2}";
-                    moveTo.AddControlPoint(firstRightSeg.ControlPoints[0]);
-                    rightSection.Insert(0, moveTo);
-
-                    // Update the first segment to include the command in front as it is now after a moveTo
-                    // command
-                    if (firstRightSeg.SegmentString[0] != 'Q' || firstRightSeg.SegmentString[0] != 'L')
-                    {
-                        string newSegString = firstRightSeg.SegmentString.Insert(0, $"{firstRightSeg.CommandType} ");
-                        firstRightSeg.SegmentString = newSegString;
-                    }
-                }
-            }
-            else
-            {
-                // Split segment into two parts
-                // First have to get the ratio value of where to split relative to the split segment itself
-                // rather than in terms of the larger SVG path
-                double relativeT = (distanceToSplit - distanceBeforeSplitSegment)
-                    / splitSegment.Distance;
-
-                if(splitSegment.CommandType == "Q")
-                {
-                    (double, double) point0 = splitSegment.ControlPoints[0];
-                    (double, double) point1 = splitSegment.ControlPoints[1];
-                    (double, double) point2 = splitSegment.ControlPoints[2];
-
-                    List<List<(double, double)>> splitSegments = SplitQuadBezierCurve(point0, point1, point2, relativeT);
-                }
-            }
-
-            string leftSectionString = "";
-            string rightSectionString = "";
-            foreach(SvgPathSegment seg in leftSection)
-            {
-                leftSectionString += " " + seg.SegmentString;
-            }
-
-            foreach (SvgPathSegment seg in rightSection)
-            {
-                rightSectionString += " "+seg.SegmentString;
-            }
-
-            return (leftSectionString, rightSectionString);
+            // Negative reciprocal = normal slope
+            return (-1 / slope);
         }
 
         public static List<SvgPathSegment> SplitSvgPathIntoSegments(string svgPathString)
