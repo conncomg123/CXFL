@@ -194,17 +194,18 @@ namespace Rendering
                 double strokeWidth = float.Parse(styleSVGAttributes["stroke-width"]);
                 currentBoundingBox = BoxUtils.ExpandBoundingBox(currentBoundingBox!, strokeWidth);
 
+                // pointLists already break a stroke by its moveTo commands (think of it like cursive)
+                // So the entire SVG string is broken up by moveTo commands as well
                 List<string> testing = pointLists.Select(ConvertPointListToPathString).ToList();
 
                 // TEST CODE- DELETE IF NEEDED
                 SolidStroke solidStroke = (SolidStroke)style.Stroke;
                 if(solidStroke != null && solidStroke.WidthMarkers != null && solidStroke.WidthMarkers.Count != 0)
                 {
-                    BoxUtils.CalculateSVGPathLength(testing[0]);
-                    /*foreach(WidthMarker marker in solidStroke.WidthMarkers)
+                    foreach(string pointListString in testing)
                     {
-
-                    }*/
+                        (string, string) test = LinearOffsetSvgPath(pointListString, solidStroke);
+                    }
                 }
 
                 // Create XML path element with its proper attributes
@@ -278,6 +279,100 @@ namespace Rendering
             }
 
             return newPathElement;
+        }
+
+        private static (string, string) LinearOffsetSvgPath(string svgPathString, SolidStroke solidStroke)
+        {
+            List<WidthMarker> widthMarkers = solidStroke.WidthMarkers!;
+            List<SvgPathSegment> svgPathSegments = BoxUtils.SplitSvgPathIntoSegments(svgPathString);
+            int widthMarkerIndex = 0;
+            int segmentIndex = 1;
+            string topPath = "";
+            string bottomPath = "";
+
+            double distanceTraveled = 0;
+            double totalDistance = svgPathSegments.Sum(s => s.Distance);
+
+            // Start and end widthMarkers are based on the segment that they are part of
+            // As the first "segment" is just a move command, when parsing the starting widthMarker
+            // calculate the perpendicular of the tangent based on the segment after it
+
+            while(widthMarkerIndex < widthMarkers.Count)
+            {
+                SvgPathSegment currentSeg = svgPathSegments[segmentIndex];
+                WidthMarker currentMarker = widthMarkers[widthMarkerIndex];
+                double distanceToMarker = totalDistance * currentMarker.Position;
+
+                // Check if marker position is within the current segment (inclusive)
+                if(distanceTraveled <= distanceToMarker
+                    && distanceToMarker <= distanceTraveled + currentSeg.Distance)
+                {
+                    // Get WidthMarker's position ratio value (t value) relative to the segment itself
+                    double relativeT = (distanceToMarker - distanceTraveled) / currentSeg.Distance;
+                    double normalSlope = 0;
+                    double xMarkerPoint = 0;
+                    double yMarkerPoint = 0;
+
+                    if (currentSeg.CommandType == "L")
+                    {
+                        (double, double) point0 = currentSeg.ControlPoints[0];
+                        (double, double) point1 = currentSeg.ControlPoints[1];
+
+                        // Get the tangent of the segment
+                        normalSlope = BoxUtils.GetNormalSlopeOfLine(point0, point1);
+
+                        // Get point on line where marker is
+                        xMarkerPoint = (1 - relativeT) * point0.Item1 + relativeT * point1.Item1;
+                        yMarkerPoint = (1 - relativeT) * point0.Item2 + relativeT * point1.Item2;
+                    }
+
+                    // Get distance of how far left and right points are from center of widthmarker
+                    // point on center of SVG path
+                    // "left" attribute = up (negative), "right" attribute = down (positive)
+
+                    double leftDistance = currentMarker.Left * solidStroke.Weight;
+                    double rightDistance = currentMarker.Right * solidStroke.Weight;
+
+                    // Now use math to get second point for top and bottom that are left and right distance
+                    // from markerPoint
+                    double xLeftPoint = 0;
+                    double yLeftPoint = 0;
+                    double xRightPoint = 0;
+                    double yRightPoint = 0;
+
+                    if (normalSlope == double.NegativeInfinity) //Normal is a vertical slope
+                    {
+                        xLeftPoint = xMarkerPoint;
+                        yLeftPoint = yMarkerPoint - leftDistance;
+                        xRightPoint = xMarkerPoint;
+                        yRightPoint = yMarkerPoint + rightDistance;
+                    }
+                    else
+                    {
+                        double denominator = Math.Sqrt(1 + normalSlope * normalSlope);
+                        xLeftPoint = xMarkerPoint + (leftDistance / denominator);
+                        yLeftPoint = yMarkerPoint - (normalSlope * leftDistance / denominator);
+
+                        xRightPoint = xMarkerPoint + (rightDistance / denominator);
+                        yRightPoint = yMarkerPoint + (normalSlope * rightDistance / denominator);
+                    }
+
+                    if(topPath == "")
+                    {
+                        topPath += $"M {xLeftPoint} {yLeftPoint} L";
+                        bottomPath += $"M {xRightPoint} {yRightPoint} L";
+                        widthMarkerIndex++;
+                    }
+                    else
+                    {
+                        topPath += $" {xLeftPoint} {yLeftPoint}";
+                        bottomPath += $" {xRightPoint} {yRightPoint}";
+                        widthMarkerIndex++;
+                    }
+                }
+            }
+
+            return (topPath, bottomPath);
         }
     }
 }
