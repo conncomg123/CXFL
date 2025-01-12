@@ -232,13 +232,25 @@ namespace Rendering
             return Math.Sqrt(xPart + yPart);
         }
 
-        public static double GetNormalSlopeOfLine((double, double) point0, (double, double) point1)
+        public static double GetNormalOfLine((double, double) point0, (double, double) point1)
         {
             // Get slope at point by using slope formula - this is the slope of the tangent line
             double slope = (point1.Item2 - point1.Item2) / (point1.Item1 - point0.Item1);
 
             // Negative reciprocal = normal slope
             return (-1 / slope);
+        }
+
+        public static double GetNormalOfQuadBezierCurve((double, double) point0,
+            (double, double) point1, (double, double) point2, double t)
+        {
+            // Use derivative to get slope at point (t from the start of the curve)
+            double xBezierCurveDerivative = 2 * (1 - t) * (point1.Item1 - point0.Item1) +
+                    2 * t * (point2.Item1 - point1.Item1);
+            double yBezierCurveDerivative = 2 * (1 - t) * (point1.Item2 - point0.Item2) +
+                2 * t * (point2.Item2 - point1.Item2);
+
+            return -yBezierCurveDerivative / xBezierCurveDerivative;
         }
 
         public static List<SvgPathSegment> SplitSvgPathIntoSegments(string svgPathString)
