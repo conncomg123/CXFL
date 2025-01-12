@@ -3,29 +3,7 @@ using System.Xml.Linq;
 
 namespace Rendering
 {
-    internal class SvgPathSegment
-    {
-        public double Distance { get; set; } = 0;
-        public string SegmentString { get; set; } = "";
-        public string CommandType { get; set; } = "";
-        public List<(double, double)> ControlPoints { get; set; } = new List<(double, double)> ();
-
-        public void AddControlPoint((double, double) controlPoint)
-        {
-            ControlPoints.Add(controlPoint);
-        }
-
-    }
-
-    // The way that CSXFL Rectangles are stored is left = x of left side, top = y of top side, right = x of right side
-    // bottom = y of bottom side
-    // In xfl2svg code, box[0] = minx, box[1] = miny, box[2] = maxx, box[3] = maxy
-    // min x = left,  max y = top, max x = right, min y = bottom of Rectangle
-
-    /// <summary>
-    /// Utils for handling bounding boxes when converting XFL elements to SVG.
-    /// </summary>
-    internal class BoxUtils
+    internal class MathUtils
     {
         // Note that a higher number of Gauss-Legendre numbers can be used for better accuracy
         private static double[] legendreGaussWeights =
@@ -46,66 +24,20 @@ namespace Rendering
             -0.9747285559713095, 0.9747285559713095, -0.9951872199970213, 0.9951872199970213
         ];
 
-        /// <summary>
-        /// Merges two bounding boxes together.
-        /// </summary>
-        /// <param name="original">The first bounding box being merged.</param>
-        /// <param name="addition">The second bounding box being merged.</param>
-        /// <returns>A Rectangle representing the new combined bounding box.</returns>
-        public static Rectangle? MergeBoundingBoxes(Rectangle? original, Rectangle? addition)
+        public static double CalculateLineLength((double, double) point0, (double, double) point1)
         {
-            if(addition == null)
-            {
-                return original;
-            }
-            else if(original == null)
-            {
-                return addition;
-            }
-
-            // The way that rectangles are stored is left = x of left side, top = y of top side, right = x of right side
-            // bottom = y of bottom side
-            // min x = left, max y = top, max x = right, min y = bottom
-            double minX = Math.Min(original.Left, addition.Left);
-            double maxY = Math.Max(original.Top, addition.Top);
-            double maxX = Math.Max(original.Right, addition.Right);
-            double minY = Math.Min(original.Bottom, addition.Bottom);
-
-            return new Rectangle(minX, maxY, maxX, minY);
+            double xPart = Math.Pow(point1.Item1 - point0.Item1, 2);
+            double yPart = Math.Pow(point1.Item2 - point0.Item2, 2);
+            return Math.Sqrt(xPart + yPart);
         }
 
-        /// <summary>
-        /// Expands a bounding box on all four sides by width.
-        /// </summary>
-        /// <param name="rectangle">The Rectangle that is being expanded.</param>
-        /// <param name="width">The amount that this Rectangle will be expanded by on all four sides.</param>
-        /// <returns>An new expanded Rectangle.</returns>
-        public static Rectangle ExpandBoundingBox(Rectangle rectangle, double width)
+        public static double GetNormalOfLine((double, double) point0, (double, double) point1)
         {
-            // min x = left, max y = top, max x = right, min y = bottom of rectangle
+            // Get slope at point by using slope formula - this is the slope of the tangent line
+            double slope = (point1.Item2 - point1.Item2) / (point1.Item1 - point0.Item1);
 
-            // Create new object to separate Rectangle instances
-            Rectangle newRectangle = new Rectangle(rectangle.Left - width / 2,
-                rectangle.Top + width / 2, rectangle.Right + width / 2, rectangle.Bottom - width / 2);
-            return newRectangle;
-        }
-
-        /// <summary>
-        /// Gets the bounding box of a line segment.
-        /// </summary>
-        /// <param name="point1">First point of line segment.</param>
-        /// <param name="point2">Second point of line segment.</param>
-        /// <returns></returns>
-        public static Rectangle GetLineBoundingBox((double, double) point1, (double, double) point2)
-        {
-            // The way that rectangles are stored is left = x of left side, top = y of top side, right = x of right side
-            // bottom = y of bottom side
-            // min x = left, max y = top, max x = right, min y = bottom
-
-            Rectangle boundingBox = new Rectangle(Math.Min(point1.Item1, point2.Item1), Math.Max(point1.Item2, point2.Item2),
-                Math.Max(point1.Item1, point2.Item1), Math.Min(point1.Item2, point2.Item2));
-
-            return boundingBox;
+            // Negative reciprocal = normal slope
+            return (-1 / slope);
         }
 
         /// <summary>
@@ -166,190 +98,6 @@ namespace Rendering
             }
 
             return (xCritical, yCritical);
-        }
-
-        /// <summary>
-        /// Calculates the approximate arc length of part of a quadratic Bezier curve.
-        /// </summary>
-        /// <remarks>
-        /// The mathematics and logic behind this method were based on the section "Arc Length"
-        /// from Pomax's A Primer on Bezier Curves.
-        /// </remarks>
-        /// <param name="point0">Start point of Bezier curve.</param>
-        /// <param name="point1">Control point of Beizer curve.</param>
-        /// <param name="point2">End point of Bezier curve.</param>
-        /// <param name="z">The section of the curve whose length is being calculated- from [0, 1] with
-        /// 0 being the start point and 1 being the end point.</param>
-        /// <returns>An approximation of the arc length for a section of the quadratic Bezier curve.</returns>
-        /// <seealso href="https://pomax.github.io/bezierinfo/#arclength"/>
-        public static double CalculateQuadBezierLength((double, double) point0,
-            (double, double) point1, (double, double) point2, double z)
-        {
-            double arcLength = 0;
-
-            // (z/2) part of the arc length equation
-            double zConstant = z / 2;
-
-            // Note that a higher number of Gauss-Legendre numbers can be used for better accuracy
-            for(int i = 0; i < legendreGaussWeights.Length; i++)
-            {
-                //Get Ci and ti for each rectangle strip being used to approximate arc length
-                double stripThicknessCi = legendreGaussWeights[i];
-                double stripLocationTi = legendreGaussAbscissa[i];
-
-                // f(t) is from the parametric curve length equation
-                // sqrt((dx/dt)^2 + (dy/dt)^2), where dx/dt is derivative of Bezier Curve equation
-
-                double tValue = (zConstant * stripLocationTi) + zConstant;
-
-                // Alternate form of Bezier Curve derivative
-                // double xBezierCurveDerivative = 2 * (point1.Item1 - point0.Item1) + 2 * tValue
-                //    *(point2.Item1 - (2 * point1.Item1) + point0.Item1);
-                //double yBezierCurveDerivative = 2 * (point1.Item2 - point0.Item2) + 2 * tValue
-                //    * (point2.Item2 - (2 * point1.Item2) + point0.Item2);
-
-                double xBezierCurveDerivative = 2 * (1 - tValue) * (point1.Item1 - point0.Item1) +
-                    2 * tValue * (point2.Item1 - point1.Item1);
-                double yBezierCurveDerivative = 2 * (1 - tValue) * (point1.Item2 - point0.Item2) +
-                    2 * tValue * (point2.Item2 - point1.Item2);
-
-                double functionValue = Math.Sqrt(Math.Pow(xBezierCurveDerivative, 2)
-                    + Math.Pow(yBezierCurveDerivative, 2));
-
-                // Ci * f(z/2 * ti + z/2)
-                arcLength += stripThicknessCi * functionValue;
-            }
-            // z/2 * summation
-            arcLength = zConstant * arcLength;
-
-            return arcLength;
-        }
-
-        public static double CalculateLineLength((double, double) point0, (double, double) point1)
-        {
-            double xPart = Math.Pow(point1.Item1 - point0.Item1, 2);
-            double yPart = Math.Pow(point1.Item2 - point0.Item2, 2);
-            return Math.Sqrt(xPart + yPart);
-        }
-
-        public static double GetNormalOfLine((double, double) point0, (double, double) point1)
-        {
-            // Get slope at point by using slope formula - this is the slope of the tangent line
-            double slope = (point1.Item2 - point1.Item2) / (point1.Item1 - point0.Item1);
-
-            // Negative reciprocal = normal slope
-            return (-1 / slope);
-        }
-
-        public static double GetNormalOfQuadBezierCurve((double, double) point0,
-            (double, double) point1, (double, double) point2, double t)
-        {
-            // Use derivative to get slope at point (t from the start of the curve)
-            double xBezierCurveDerivative = 2 * (1 - t) * (point1.Item1 - point0.Item1) +
-                    2 * t * (point2.Item1 - point1.Item1);
-            double yBezierCurveDerivative = 2 * (1 - t) * (point1.Item2 - point0.Item2) +
-                2 * t * (point2.Item2 - point1.Item2);
-
-            return -yBezierCurveDerivative / xBezierCurveDerivative;
-        }
-
-        public static List<SvgPathSegment> SplitSvgPathIntoSegments(string svgPathString)
-        {
-            List<SvgPathSegment> segments = new List<SvgPathSegment>();
-
-            IEnumerator<string> pathStringIterator = svgPathString.Split(" ").ToList().GetEnumerator();
-            string prevCommand = "M";
-
-            Func<(double, double)> nextPoint = () =>
-            {
-                pathStringIterator.MoveNext();
-                double x = double.Parse(pathStringIterator.Current);
-                pathStringIterator.MoveNext();
-                double y = double.Parse(pathStringIterator.Current);
-                return (x, y);
-            };
-
-            // Process moveTo command at start of SVG path (required by format)
-            // by skipping command and getting starting point of SVG path
-            pathStringIterator.MoveNext();
-            (double, double) prevPoint = nextPoint();
-            (double, double) currPoint = prevPoint;
-
-            SvgPathSegment moveSegment = new SvgPathSegment();
-            moveSegment.CommandType = prevCommand;
-            moveSegment.SegmentString = $"M {currPoint.Item1} {currPoint.Item2}";
-
-            moveSegment.AddControlPoint(currPoint);
-            segments.Add(moveSegment);
-
-            // As commands are processed separately from coordinates, to ensure that each segment has the
-            // proper part of the larger SVG path string, manually reset string depending on section of it
-            // processed
-            string svgSegmentString = "";
-            while (pathStringIterator.MoveNext())
-            {
-                // The next token is either a new command or a x coordinate of the first point of a command
-                string nextToken = pathStringIterator.Current;
-
-                if (nextToken == "L" || nextToken == "Q")
-                {
-                    prevCommand = nextToken;
-                    svgSegmentString += $"{prevCommand} ";
-                }
-                else
-                {
-                    // If next token is x coord, get the associated y coord to get entire next point
-                    double x = double.Parse(pathStringIterator.Current);
-                    pathStringIterator.MoveNext();
-                    double y = double.Parse(pathStringIterator.Current);
-                    currPoint = (x, y);
-
-                    if (prevCommand == "L")
-                    {
-                        //Set values of segment
-                        SvgPathSegment newSeg = new SvgPathSegment();
-                        newSeg.CommandType = prevCommand;
-                        newSeg.SegmentString = svgSegmentString + $"{currPoint.Item1} {currPoint.Item2}";
-                        newSeg.AddControlPoint(prevPoint);
-                        newSeg.AddControlPoint(currPoint);
-
-                        double lineDistance = CalculateLineLength(prevPoint, currPoint);
-                        newSeg.Distance = lineDistance;
-                        segments.Add(newSeg);
-
-                        prevPoint = currPoint;
-                        svgSegmentString = "";
-                    }
-                    else if (prevCommand == "Q")
-                    {
-                        // The point that was before this one (either directly given via a command or
-                        // calculated) is the start of this curve
-                        // The control point is the coordinates immediately after the command
-                        // The end point is the set after that
-                        (double, double) point0 = prevPoint;
-                        (double, double) point1 = currPoint;
-                        (double, double) point2 = nextPoint();
-
-                        // Set values of segment
-                        SvgPathSegment newSeg = new SvgPathSegment();
-                        newSeg.CommandType = prevCommand;
-                        newSeg.SegmentString = svgSegmentString + $"{point1.Item1} {point1.Item2}"
-                            + $" {point2.Item1} {point2.Item2}";
-                        newSeg.AddControlPoint(point0);
-                        newSeg.AddControlPoint(point1);
-                        newSeg.AddControlPoint(point2);
-
-                        double curveDistance = CalculateQuadBezierLength(point0, point1, point2, 1);
-                        newSeg.Distance = curveDistance;
-                        segments.Add(newSeg);
-
-                        prevPoint = point2;
-                        svgSegmentString = "";
-                    }
-                }
-            }
-
-            return segments;
         }
 
         public static List<List<(double, double)>> SplitQuadBezierCurve((double, double) point0,
@@ -414,7 +162,7 @@ namespace Rendering
 
             (double, double) criticalValues = GetQuadraticCriticalPoints(point0, point1, point2);
 
-            if(criticalValues.Item1 > 0 && criticalValues.Item1 < 1)
+            if (criticalValues.Item1 > 0 && criticalValues.Item1 < 1)
             {
                 List<(double, double)> curve = subCurveList[0];
                 subCurveList.RemoveAt(0);
@@ -429,17 +177,17 @@ namespace Rendering
                 startEndValues.Add((criticalValues.Item1, 1));
             }
 
-            if(criticalValues.Item2 > 0 && criticalValues.Item2 < 1)
+            if (criticalValues.Item2 > 0 && criticalValues.Item2 < 1)
             {
                 // First check to see if curve was already split using x extreme's t value
                 // If so, see which subcurve y extreme's t value falls under, adjust it for said subcurve
                 // and then split it
-                if(subCurveList.Count > 0)
+                if (subCurveList.Count > 0)
                 {
                     // We have to get the t value from the original curve relative to the subcurve
-                    
+
                     int subCurveToSplit = 0;
-                    if(criticalValues.Item1 > criticalValues.Item2)
+                    if (criticalValues.Item1 > criticalValues.Item2)
                     {
                         subCurveToSplit = 0;
                     }
@@ -472,12 +220,155 @@ namespace Rendering
             double xGeometricCenter = (point0.Item1 + point1.Item1 + point2.Item1) / 3;
             double yGeometricCenter = (point0.Item2 + point1.Item2 + point2.Item2) / 3;
             (double, double) difference = (midpoint.Item1 - xGeometricCenter, midpoint.Item2 - yGeometricCenter);
-            if(difference.Item1 > 0.5 || difference.Item2 > 0.5)
+            if (difference.Item1 > 0.5 || difference.Item2 > 0.5)
             {
                 return false;
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Calculates the approximate arc length of part of a quadratic Bezier curve.
+        /// </summary>
+        /// <remarks>
+        /// The mathematics and logic behind this method were based on the section "Arc Length"
+        /// from Pomax's A Primer on Bezier Curves.
+        /// </remarks>
+        /// <param name="point0">Start point of Bezier curve.</param>
+        /// <param name="point1">Control point of Beizer curve.</param>
+        /// <param name="point2">End point of Bezier curve.</param>
+        /// <param name="z">The section of the curve whose length is being calculated- from [0, 1] with
+        /// 0 being the start point and 1 being the end point.</param>
+        /// <returns>An approximation of the arc length for a section of the quadratic Bezier curve.</returns>
+        /// <seealso href="https://pomax.github.io/bezierinfo/#arclength"/>
+        public static double CalculateQuadBezierLength((double, double) point0,
+            (double, double) point1, (double, double) point2, double z)
+        {
+            double arcLength = 0;
+
+            // (z/2) part of the arc length equation
+            double zConstant = z / 2;
+
+            // Note that a higher number of Gauss-Legendre numbers can be used for better accuracy
+            for (int i = 0; i < legendreGaussWeights.Length; i++)
+            {
+                //Get Ci and ti for each rectangle strip being used to approximate arc length
+                double stripThicknessCi = legendreGaussWeights[i];
+                double stripLocationTi = legendreGaussAbscissa[i];
+
+                // f(t) is from the parametric curve length equation
+                // sqrt((dx/dt)^2 + (dy/dt)^2), where dx/dt is derivative of Bezier Curve equation
+
+                double tValue = (zConstant * stripLocationTi) + zConstant;
+
+                // Alternate form of Bezier Curve derivative
+                // double xBezierCurveDerivative = 2 * (point1.Item1 - point0.Item1) + 2 * tValue
+                //    *(point2.Item1 - (2 * point1.Item1) + point0.Item1);
+                //double yBezierCurveDerivative = 2 * (point1.Item2 - point0.Item2) + 2 * tValue
+                //    * (point2.Item2 - (2 * point1.Item2) + point0.Item2);
+
+                double xBezierCurveDerivative = 2 * (1 - tValue) * (point1.Item1 - point0.Item1) +
+                    2 * tValue * (point2.Item1 - point1.Item1);
+                double yBezierCurveDerivative = 2 * (1 - tValue) * (point1.Item2 - point0.Item2) +
+                    2 * tValue * (point2.Item2 - point1.Item2);
+
+                double functionValue = Math.Sqrt(Math.Pow(xBezierCurveDerivative, 2)
+                    + Math.Pow(yBezierCurveDerivative, 2));
+
+                // Ci * f(z/2 * ti + z/2)
+                arcLength += stripThicknessCi * functionValue;
+            }
+            // z/2 * summation
+            arcLength = zConstant * arcLength;
+
+            return arcLength;
+        }
+
+        public static double GetNormalOfQuadBezierCurve((double, double) point0,
+            (double, double) point1, (double, double) point2, double t)
+        {
+            // Use derivative to get slope at point (t from the start of the curve)
+            double xBezierCurveDerivative = 2 * (1 - t) * (point1.Item1 - point0.Item1) +
+                    2 * t * (point2.Item1 - point1.Item1);
+            double yBezierCurveDerivative = 2 * (1 - t) * (point1.Item2 - point0.Item2) +
+                2 * t * (point2.Item2 - point1.Item2);
+
+            return -yBezierCurveDerivative / xBezierCurveDerivative;
+        }
+    }
+
+    // The way that CSXFL Rectangles are stored is left = x of left side, top = y of top side, right = x of right side
+    // bottom = y of bottom side
+    // In xfl2svg code, box[0] = minx, box[1] = miny, box[2] = maxx, box[3] = maxy
+    // min x = left,  max y = top, max x = right, min y = bottom of Rectangle
+
+    /// <summary>
+    /// Utils for handling bounding boxes when converting XFL elements to SVG.
+    /// </summary>
+    internal class BoxUtils
+    {
+
+        /// <summary>
+        /// Merges two bounding boxes together.
+        /// </summary>
+        /// <param name="original">The first bounding box being merged.</param>
+        /// <param name="addition">The second bounding box being merged.</param>
+        /// <returns>A Rectangle representing the new combined bounding box.</returns>
+        public static Rectangle? MergeBoundingBoxes(Rectangle? original, Rectangle? addition)
+        {
+            if(addition == null)
+            {
+                return original;
+            }
+            else if(original == null)
+            {
+                return addition;
+            }
+
+            // The way that rectangles are stored is left = x of left side, top = y of top side, right = x of right side
+            // bottom = y of bottom side
+            // min x = left, max y = top, max x = right, min y = bottom
+            double minX = Math.Min(original.Left, addition.Left);
+            double maxY = Math.Max(original.Top, addition.Top);
+            double maxX = Math.Max(original.Right, addition.Right);
+            double minY = Math.Min(original.Bottom, addition.Bottom);
+
+            return new Rectangle(minX, maxY, maxX, minY);
+        }
+
+        /// <summary>
+        /// Expands a bounding box on all four sides by width.
+        /// </summary>
+        /// <param name="rectangle">The Rectangle that is being expanded.</param>
+        /// <param name="width">The amount that this Rectangle will be expanded by on all four sides.</param>
+        /// <returns>An new expanded Rectangle.</returns>
+        public static Rectangle ExpandBoundingBox(Rectangle rectangle, double width)
+        {
+            // min x = left, max y = top, max x = right, min y = bottom of rectangle
+
+            // Create new object to separate Rectangle instances
+            Rectangle newRectangle = new Rectangle(rectangle.Left - width / 2,
+                rectangle.Top + width / 2, rectangle.Right + width / 2, rectangle.Bottom - width / 2);
+            return newRectangle;
+        }
+
+        /// <summary>
+        /// Gets the bounding box of a line segment.
+        /// </summary>
+        /// <param name="point1">First point of line segment.</param>
+        /// <param name="point2">Second point of line segment.</param>
+        /// <returns></returns>
+        public static Rectangle GetLineBoundingBox((double, double) point1, (double, double) point2)
+        {
+            // The way that rectangles are stored is left = x of left side, top = y of top side, right = x of right side
+            // bottom = y of bottom side
+            // min x = left, max y = top, max x = right, min y = bottom
+
+            Rectangle boundingBox = new Rectangle(Math.Min(point1.Item1, point2.Item1), Math.Max(point1.Item2, point2.Item2),
+                Math.Max(point1.Item1, point2.Item1), Math.Min(point1.Item2, point2.Item2));
+
+            return boundingBox;
         }
 
         /// <summary>
@@ -494,12 +385,12 @@ namespace Rendering
             // Use those values to get the local extreme x and y points
             // Compare those local extremes with start and end points to get absolute x and y extreme
 
-            (double, double) criticalPoints = GetQuadraticCriticalPoints(point1, controlPoint, point2);
+            (double, double) criticalPoints = MathUtils.GetQuadraticCriticalPoints(point1, controlPoint, point2);
             (double, double) xExtremePoint, yExtremePoint;
             
             if(criticalPoints.Item1 > 0 && criticalPoints.Item1 < 1)
             {
-                xExtremePoint = GetPointOnQuadraticBezier(point1, controlPoint, point2, criticalPoints.Item1);
+                xExtremePoint = MathUtils.GetPointOnQuadraticBezier(point1, controlPoint, point2, criticalPoints.Item1);
             }
             else
             {
@@ -510,7 +401,7 @@ namespace Rendering
 
             if(criticalPoints.Item2 > 0 && criticalPoints.Item2 < 1)
             {
-                yExtremePoint = GetPointOnQuadraticBezier(point1, controlPoint, point2, criticalPoints.Item2);
+                yExtremePoint = MathUtils.GetPointOnQuadraticBezier(point1, controlPoint, point2, criticalPoints.Item2);
             }
             else
             {

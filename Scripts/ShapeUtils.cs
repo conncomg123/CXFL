@@ -3,6 +3,20 @@ using System.Xml.Linq;
 
 namespace Rendering
 {
+    internal class SvgPathSegment
+    {
+        public double Distance { get; set; } = 0;
+        public string SegmentString { get; set; } = "";
+        public string CommandType { get; set; } = "";
+        public List<(double, double)> ControlPoints { get; set; } = new List<(double, double)>();
+
+        public void AddControlPoint((double, double) controlPoint)
+        {
+            ControlPoints.Add(controlPoint);
+        }
+
+    }
+
     /// <summary>
     /// Utils for converting a XFL DOMShape element into its equivalent SVG path elements.
     /// </summary>
@@ -281,10 +295,109 @@ namespace Rendering
             return newPathElement;
         }
 
+        private static List<SvgPathSegment> SplitSvgPathIntoSegments(string svgPathString)
+        {
+            List<SvgPathSegment> segments = new List<SvgPathSegment>();
+
+            IEnumerator<string> pathStringIterator = svgPathString.Split(" ").ToList().GetEnumerator();
+            string prevCommand = "M";
+
+            Func<(double, double)> nextPoint = () =>
+            {
+                pathStringIterator.MoveNext();
+                double x = double.Parse(pathStringIterator.Current);
+                pathStringIterator.MoveNext();
+                double y = double.Parse(pathStringIterator.Current);
+                return (x, y);
+            };
+
+            // Process moveTo command at start of SVG path (required by format)
+            // by skipping command and getting starting point of SVG path
+            pathStringIterator.MoveNext();
+            (double, double) prevPoint = nextPoint();
+            (double, double) currPoint = prevPoint;
+
+            SvgPathSegment moveSegment = new SvgPathSegment();
+            moveSegment.CommandType = prevCommand;
+            moveSegment.SegmentString = $"M {currPoint.Item1} {currPoint.Item2}";
+
+            moveSegment.AddControlPoint(currPoint);
+            segments.Add(moveSegment);
+
+            // As commands are processed separately from coordinates, to ensure that each segment has the
+            // proper part of the larger SVG path string, manually reset string depending on section of it
+            // processed
+            string svgSegmentString = "";
+            while (pathStringIterator.MoveNext())
+            {
+                // The next token is either a new command or a x coordinate of the first point of a command
+                string nextToken = pathStringIterator.Current;
+
+                if (nextToken == "L" || nextToken == "Q")
+                {
+                    prevCommand = nextToken;
+                    svgSegmentString += $"{prevCommand} ";
+                }
+                else
+                {
+                    // If next token is x coord, get the associated y coord to get entire next point
+                    double x = double.Parse(pathStringIterator.Current);
+                    pathStringIterator.MoveNext();
+                    double y = double.Parse(pathStringIterator.Current);
+                    currPoint = (x, y);
+
+                    if (prevCommand == "L")
+                    {
+                        //Set values of segment
+                        SvgPathSegment newSeg = new SvgPathSegment();
+                        newSeg.CommandType = prevCommand;
+                        newSeg.SegmentString = svgSegmentString + $"{currPoint.Item1} {currPoint.Item2}";
+                        newSeg.AddControlPoint(prevPoint);
+                        newSeg.AddControlPoint(currPoint);
+
+                        double lineDistance = MathUtils.CalculateLineLength(prevPoint, currPoint);
+                        newSeg.Distance = lineDistance;
+                        segments.Add(newSeg);
+
+                        prevPoint = currPoint;
+                        svgSegmentString = "";
+                    }
+                    else if (prevCommand == "Q")
+                    {
+                        // The point that was before this one (either directly given via a command or
+                        // calculated) is the start of this curve
+                        // The control point is the coordinates immediately after the command
+                        // The end point is the set after that
+                        (double, double) point0 = prevPoint;
+                        (double, double) point1 = currPoint;
+                        (double, double) point2 = nextPoint();
+
+                        // Set values of segment
+                        SvgPathSegment newSeg = new SvgPathSegment();
+                        newSeg.CommandType = prevCommand;
+                        newSeg.SegmentString = svgSegmentString + $"{point1.Item1} {point1.Item2}"
+                            + $" {point2.Item1} {point2.Item2}";
+                        newSeg.AddControlPoint(point0);
+                        newSeg.AddControlPoint(point1);
+                        newSeg.AddControlPoint(point2);
+
+                        double curveDistance = MathUtils.CalculateQuadBezierLength(point0, point1, point2, 1);
+                        newSeg.Distance = curveDistance;
+                        segments.Add(newSeg);
+
+                        prevPoint = point2;
+                        svgSegmentString = "";
+                    }
+                }
+            }
+
+            return segments;
+        }
+
         private static (string, string) LinearOffsetSvgPath(string svgPathString, SolidStroke solidStroke)
         {
             List<WidthMarker> widthMarkers = solidStroke.WidthMarkers!;
-            List<SvgPathSegment> svgPathSegments = BoxUtils.SplitSvgPathIntoSegments(svgPathString);
+            List<SvgPathSegment> svgPathSegments = SplitSvgPathIntoSegments(svgPathString);
             int widthMarkerIndex = 0;
             int segmentIndex = 1;
             string topPath = "";
@@ -319,16 +432,31 @@ namespace Rendering
                         (double, double) point1 = currentSeg.ControlPoints[1];
 
                         // Get the tangent of the segment
-                        normalSlope = BoxUtils.GetNormalSlopeOfLine(point0, point1);
+                        normalSlope = MathUtils.GetNormalOfLine(point0, point1);
 
                         // Get point on line where marker is
                         xMarkerPoint = (1 - relativeT) * point0.Item1 + relativeT * point1.Item1;
                         yMarkerPoint = (1 - relativeT) * point0.Item2 + relativeT * point1.Item2;
                     }
+                    else if(currentSeg.CommandType == "Q")
+                    {
+                        (double, double) point0 = currentSeg.ControlPoints[0];
+                        (double, double) point1 = currentSeg.ControlPoints[1];
+                        (double, double) point2 = currentSeg.ControlPoints[2];
+
+                        // Get the tangent of the segment
+                        normalSlope = MathUtils.GetNormalOfQuadBezierCurve(point0, point1, point2, relativeT);
+                        
+                        // Get point on quad curve where marker is
+                        (double, double) markerPoint = MathUtils.GetPointOnQuadraticBezier(point0,
+                            point1, point2, relativeT);
+                        xMarkerPoint = markerPoint.Item1;
+                        yMarkerPoint = markerPoint.Item2;
+                    }
 
                     // Get distance of how far left and right points are from center of widthmarker
                     // point on center of SVG path
-                    // "left" attribute = up (negative), "right" attribute = down (positive)
+                    // "left" attribute = up (negative), "right" attribute = down (positive), just like in SVG
 
                     double leftDistance = currentMarker.Left * solidStroke.Weight;
                     double rightDistance = currentMarker.Right * solidStroke.Weight;
@@ -340,6 +468,8 @@ namespace Rendering
                     double xRightPoint = 0;
                     double yRightPoint = 0;
 
+                    // Using markerPoint on segment, normal slope, and distance on each side, get points
+                    // extending out on either side (the ends of the vertical line going through the markerPoint)
                     if (normalSlope == double.NegativeInfinity) //Normal is a vertical slope
                     {
                         xLeftPoint = xMarkerPoint;
@@ -357,6 +487,7 @@ namespace Rendering
                         yRightPoint = yMarkerPoint + (normalSlope * rightDistance / denominator);
                     }
 
+                    // Move command at start of path
                     if(topPath == "")
                     {
                         topPath += $"M {xLeftPoint} {yLeftPoint} L";
