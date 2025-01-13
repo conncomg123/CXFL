@@ -1,5 +1,6 @@
 using CsXFL;
-using System.Xml.Linq;
+using System.Numerics;
+using System;
 
 namespace Rendering
 {
@@ -334,6 +335,70 @@ namespace Rendering
 
             Rectangle boundingBox = new Rectangle(minX, maxY, maxX, minY);
             return boundingBox;
+        }
+    }
+
+    internal class CatmullRomCurve
+    {
+        public double Alpha { get; set; }
+        public (double, double) Point0 { get; set; }
+        public (double, double) Point1 { get; set; }
+        public (double, double) Point2 { get; set; }
+        public (double, double) Point3 { get; set; }
+
+        public CatmullRomCurve((double, double) point0, (double, double) point1,
+            (double, double) point2, (double, double) point3, double alpha)
+        {
+            Alpha = alpha;
+            Point0 = point0;
+            Point1 = point1;
+            Point2 = point2;
+            Point3 = point3;
+        }
+
+        // Evaluates a point at the given t-value from 0 to 1
+        public (double, double) GetPointOnCurve(float t)
+        {
+            // calculate knots
+            const float k0 = 0;
+            double k1 = GetKnotInterval(Point0, Point1);
+            double k2 = GetKnotInterval(Point1, Point2) + k1;
+            double k3 = GetKnotInterval(Point2, Point3) + k2;
+
+            // evaluate the point
+            double u = LerpUnclamped(k1, k2, t);
+            (double, double) A1 = Remap(k0, k1, Point0, Point1, u);
+            (double, double) A2 = Remap(k1, k2, Point1, Point2, u);
+            (double, double) A3 = Remap(k2, k3, Point2, Point3, u);
+            (double, double) B1 = Remap(k0, k2, A1, A2, u);
+            (double, double) B2 = Remap(k1, k3, A2, A3, u);
+            return Remap(k1, k2, B1, B2, u);
+        }
+
+        private double LerpUnclamped(double a, double b, double t)
+        {
+            return a + t * (b - a);
+        }
+
+        private (double, double) LerpUnclamped(
+            (double, double) a, (double, double) b, double t)
+        {
+            return (a.Item1 + t * (b.Item1 - a.Item1), a.Item2 + t * (b.Item2 - a.Item2));
+        }
+
+        private double SquareMagnitude(double a, double b)
+        {
+            return a * a + b * b;
+        }
+
+        private double GetKnotInterval((double, double) a, (double, double) b)
+        {
+            return Math.Pow(SquareMagnitude(a.Item1 - b.Item1, a.Item2 - b.Item2), 0.5f * Alpha);
+        }
+
+        private (double, double) Remap(double a, double b, (double, double) c, (double, double) d, double u)
+        {
+            return LerpUnclamped(c, d, (u - a) / (b - a));
         }
     }
 }
