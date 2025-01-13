@@ -357,7 +357,7 @@ namespace Rendering
         }
 
         // Evaluates a point at the given t-value from 0 to 1
-        public (double, double) GetPointOnCurve(float t)
+        public (double, double) GetPointOnCurve(double t)
         {
             // calculate knots
             const float k0 = 0;

@@ -398,10 +398,11 @@ namespace Rendering
         {
             List<WidthMarker> widthMarkers = solidStroke.WidthMarkers!;
             List<SvgPathSegment> svgPathSegments = SplitSvgPathIntoSegments(svgPathString);
+            List<(double, double)> topControlPoints = new List<(double, double)>();
+            List<(double, double)> bottomControlPoints = new List<(double, double)>();
             int widthMarkerIndex = 0;
             int segmentIndex = 1;
-            string topPath = "";
-            string bottomPath = "";
+
 
             double distanceTraveled = 0;
             double totalDistance = svgPathSegments.Sum(s => s.Distance);
@@ -487,23 +488,35 @@ namespace Rendering
                         yRightPoint = yMarkerPoint + (normalSlope * rightDistance / denominator);
                     }
 
-                    // Move command at start of path
-                    if(topPath == "")
-                    {
-                        topPath += $"M {xLeftPoint} {yLeftPoint} L";
-                        bottomPath += $"M {xRightPoint} {yRightPoint} L";
-                        widthMarkerIndex++;
-                    }
-                    else
-                    {
-                        topPath += $" {xLeftPoint} {yLeftPoint}";
-                        bottomPath += $" {xRightPoint} {yRightPoint}";
-                        widthMarkerIndex++;
-                    }
+                    topControlPoints.Add((xLeftPoint, yLeftPoint));
+                    bottomControlPoints.Add((xRightPoint, yRightPoint));
+                    widthMarkerIndex++;
+                }
+                else
+                {
+                    segmentIndex++;
                 }
             }
 
-            return (topPath, bottomPath);
+            string topString = $"M {topControlPoints[3].Item1} {topControlPoints[3].Item2} L";
+            string bottomString = $"M {bottomControlPoints[3].Item1} {bottomControlPoints[3].Item2} L";
+
+            CatmullRomCurve topCurve = new CatmullRomCurve(topControlPoints[2], topControlPoints[3],
+                topControlPoints[4], topControlPoints[5], 1);
+            CatmullRomCurve bottomCurve = new CatmullRomCurve(bottomControlPoints[2], bottomControlPoints[3],
+                bottomControlPoints[4], bottomControlPoints[5], 1);
+
+            double detail = 32;
+            for(int i = 0; i < detail; i++)
+            {
+                double t = (i / (detail - 1));
+                (double, double) topPoint = topCurve.GetPointOnCurve(t);
+                (double, double) bottomPoint = bottomCurve.GetPointOnCurve(t);
+                topString += $" {topPoint.Item1} {topPoint.Item2}";
+                bottomString += $" {bottomPoint.Item1} {bottomPoint.Item2}";
+            }
+
+            return (topString, bottomString);
         }
     }
 }
