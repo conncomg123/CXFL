@@ -1,6 +1,7 @@
 ﻿using CsXFL;
 using Svg;
 using System;
+using System.IO;
 using System.Xml.Linq;
 
 namespace Rendering
@@ -215,14 +216,33 @@ namespace Rendering
                 List<string> testing = pointLists.Select(ConvertPointListToPathString).ToList();
 
                 // TEST CODE- DELETE IF NEEDED
+                XNamespace xlink = "http://www.w3.org/1999/xlink";
+                XNamespace svgNs = "http://www.w3.org/2000/svg";
+                XElement svg = new XElement(svgNs + "svg",
+                new XAttribute("version", "1.1"),
+                new XAttribute("preserveAspectRatio", "none"),
+                new XAttribute("x", "0px"),
+                new XAttribute("y", "0px"),
+                new XAttribute("width", $"{1920}px"),
+                new XAttribute("height", $"{1080}px"),
+                new XAttribute("viewBox", $"0 0 {1920} {1080}"),
+                new XAttribute(XNamespace.Xmlns + "xlink", xlink.ToString())
+                );
+
                 SolidStroke solidStroke = (SolidStroke)style.Stroke;
                 if(solidStroke != null && solidStroke.WidthMarkers != null && solidStroke.WidthMarkers.Count != 0)
                 {
                     foreach(string pointListString in testing)
                     {
-                        LinearOffsetSvgPath(pointListString, solidStroke);
+                        List<XElement> test = LinearOffsetSvgPath(pointListString, solidStroke);
+                        foreach(XElement testElement in test)
+                        {
+                            svg.Add(testElement);
+                        }
                     }
                 }
+
+                svg.Save(@"D:\Documents\EOJAssets\TestFolder\TestingCurve.svg");
 
                 // Create XML path element with its proper attributes
                 var pathElement = CreatePathElement(styleSVGAttributes);
@@ -396,31 +416,20 @@ namespace Rendering
             return segments;
         }
 
-        private static void LinearOffsetSvgPath(string svgPathString, SolidStroke solidStroke)
+        private static List<XElement> LinearOffsetSvgPath(string svgPathString, SolidStroke solidStroke)
         {
             List<WidthMarker> widthMarkers = solidStroke.WidthMarkers!;
             List<SvgPathSegment> svgPathSegments = SplitSvgPathIntoSegments(svgPathString);
             List<(double, double)> topControlPoints = new List<(double, double)>();
             List<(double, double)> bottomControlPoints = new List<(double, double)>();
+            List<XElement> pathElements = new List<XElement>();
+
             int widthMarkerIndex = 0;
             int segmentIndex = 1;
 
 
             double distanceTraveled = 0;
             double totalDistance = svgPathSegments.Sum(s => s.Distance);
-
-            XNamespace xlink = "http://www.w3.org/1999/xlink";
-            XNamespace svgNs = "http://www.w3.org/2000/svg";
-            XElement svg = new XElement(svgNs + "svg",
-            new XAttribute("version", "1.1"),
-            new XAttribute("preserveAspectRatio", "none"),
-            new XAttribute("x", "0px"),
-            new XAttribute("y", "0px"),
-            new XAttribute("width", $"{1920}px"),
-            new XAttribute("height", $"{1080}px"),
-            new XAttribute("viewBox", $"0 0 {1920} {1080}"),
-            new XAttribute(XNamespace.Xmlns + "xlink", xlink.ToString())
-            );
 
             // Start and end widthMarkers are based on the segment that they are part of
             // As the first "segment" is just a move command, when parsing the starting widthMarker
@@ -554,7 +563,7 @@ namespace Rendering
 
                 string outlineString = $"M {curvePoints[1].Item1} {curvePoints[1].Item2} L";
                 CatmullRomCurve romCurve = new CatmullRomCurve(curvePoints[0], curvePoints[1],
-                    curvePoints[2], curvePoints[3], 0.5);
+                    curvePoints[2], curvePoints[3], 1);
 
                 double detail = 32;
                 for (int j = 0; j < detail; j++)
@@ -570,11 +579,12 @@ namespace Rendering
                 int green = random.Next(0, 256);
                 int blue = random.Next(0, 256);
 
+                XNamespace svgNs = "http://www.w3.org/2000/svg";
                 XElement path = new XElement(svgNs + "path");
                 path.SetAttributeValue("stroke", $"#{red:X2}{green:X2}{blue:X2}");
                 path.SetAttributeValue("fill", "none");
                 path.SetAttributeValue("d", outlineString);
-                svg.Add(path);
+                pathElements.Add(path);
             }
 
             /*string outlineString = $"M {joinedList[0].Item1} {joinedList[0].Item2} L";
@@ -588,8 +598,7 @@ namespace Rendering
                 (double, double) topPoint = romCurve.GetPointOnCurve(t);
                 outlineString += $" {topPoint.Item1} {topPoint.Item2}";
             }*/
-
-            svg.Save(@"D:\Documents\EOJAssets\TestFolder\TestingCurve.svg");
+            return pathElements;
         }
     }
 }
