@@ -2,6 +2,7 @@
 using Svg;
 using System;
 using System.IO;
+using System.Numerics;
 using System.Xml.Linq;
 
 namespace Rendering
@@ -229,6 +230,15 @@ namespace Rendering
                 new XAttribute(XNamespace.Xmlns + "xlink", xlink.ToString())
                 );
 
+                XElement rect = new XElement(svgNs + "rect",
+                    new XAttribute("width", "100%"),
+                    new XAttribute("height", "100%"),
+                    new XAttribute("fill", "black")
+                );
+
+                svg.Add(rect);
+
+                Random random = new Random();
                 SolidStroke solidStroke = (SolidStroke)style.Stroke;
                 if(solidStroke != null && solidStroke.WidthMarkers != null && solidStroke.WidthMarkers.Count != 0)
                 {
@@ -240,10 +250,9 @@ namespace Rendering
                             svg.Add(testElement);
                         }
                     }
+
+                    svg.Save(@"D:\Documents\EOJAssets\TestFolder\TestingCurve_"+ random.Next()+ ".svg");
                 }
-
-                svg.Save(@"D:\Documents\EOJAssets\TestFolder\TestingCurve.svg");
-
                 // Create XML path element with its proper attributes
                 var pathElement = CreatePathElement(styleSVGAttributes);
                 pathElement.SetAttributeValue("d", string.Join(" ", pointLists.Select(pl => ConvertPointListToPathString(pl))));
@@ -447,8 +456,8 @@ namespace Rendering
                     // Get WidthMarker's position ratio value (t value) relative to the segment itself
                     double relativeT = (distanceToMarker - distanceTraveled) / currentSeg.Distance;
                     double normalSlope = 0;
-                    double xMarkerPoint = 0;
-                    double yMarkerPoint = 0;
+                    (double, double) tangentVector = (0, 0);
+                    (double, double) markerPoint = (0, 0);
 
                     if (currentSeg.CommandType == "L")
                     {
@@ -457,25 +466,15 @@ namespace Rendering
 
                         // Get the tangent of the segment
                         normalSlope = MathUtils.GetNormalOfLine(point0, point1);
+                        tangentVector = MathUtils.GetUnitTangentVectorOfLine(point0, point1);
 
                         // Get point on line where marker is
-                        xMarkerPoint = (1 - relativeT) * point0.Item1 + relativeT * point1.Item1;
-                        yMarkerPoint = (1 - relativeT) * point0.Item2 + relativeT * point1.Item2;
+                        markerPoint.Item1 = (1 - relativeT) * point0.Item1 + relativeT * point1.Item1;
+                        markerPoint.Item2 = (1 - relativeT) * point0.Item2 + relativeT * point1.Item2;
                     }
                     else if(currentSeg.CommandType == "Q")
                     {
-                        (double, double) point0 = currentSeg.ControlPoints[0];
-                        (double, double) point1 = currentSeg.ControlPoints[1];
-                        (double, double) point2 = currentSeg.ControlPoints[2];
-
-                        // Get the tangent of the segment
-                        normalSlope = MathUtils.GetNormalOfQuadBezierCurve(point0, point1, point2, relativeT);
                         
-                        // Get point on quad curve where marker is
-                        (double, double) markerPoint = MathUtils.GetPointOnQuadraticBezier(point0,
-                            point1, point2, relativeT);
-                        xMarkerPoint = markerPoint.Item1;
-                        yMarkerPoint = markerPoint.Item2;
                     }
 
                     // Get distance of how far left and right marker points are from center widthmarker
@@ -487,34 +486,42 @@ namespace Rendering
 
                     // Now use math to get second point for top and bottom that are left and right distance
                     // from center marker point
-                    double xLeftPoint = 0;
-                    double yLeftPoint = 0;
-                    double xRightPoint = 0;
-                    double yRightPoint = 0;
+                    (double, double) leftPoint = (0, 0);
+                    (double, double) rightPoint = (0, 0);
 
                     // Using markerPoint on segment, normal slope, and distance on each side, get marker points
                     // extending out on either side (the ends of the vertical line going through center marker point)
                     
                     //Normal is a vertical slope
-                    if (normalSlope == double.NegativeInfinity || normalSlope == double.PositiveInfinity)
+                    /*if (normalSlope == double.NegativeInfinity || normalSlope == double.PositiveInfinity)
                     {
-                        xLeftPoint = xMarkerPoint;
-                        yLeftPoint = yMarkerPoint - leftDistance;
-                        xRightPoint = xMarkerPoint;
-                        yRightPoint = yMarkerPoint + rightDistance;
+                        leftPoint.Item1 = markerPoint.Item1;
+                        leftPoint.Item2 = markerPoint.Item2 - leftDistance;
+                        rightPoint.Item1 = markerPoint.Item1;
+                        rightPoint.Item2 = markerPoint.Item2 + rightDistance;
                     }
                     else
                     {
                         double denominator = Math.Sqrt(1 + normalSlope * normalSlope);
-                        xLeftPoint = xMarkerPoint + (leftDistance / denominator);
-                        yLeftPoint = yMarkerPoint - (normalSlope * leftDistance / denominator);
+                        leftPoint.Item1 = markerPoint.Item1 + (leftDistance / denominator);
+                        leftPoint.Item2 = markerPoint.Item2 - (normalSlope * leftDistance / denominator);
 
-                        xRightPoint = xMarkerPoint + (rightDistance / denominator);
-                        yRightPoint = yMarkerPoint + (normalSlope * rightDistance / denominator);
+                        rightPoint.Item1 = markerPoint.Item1 + (rightDistance / denominator);
+                        rightPoint.Item2 = markerPoint.Item2 + (normalSlope * rightDistance / denominator);
                     }
 
-                    topControlPoints.Add((xLeftPoint, yLeftPoint));
-                    bottomControlPoints.Add((xRightPoint, yRightPoint));
+                    topControlPoints.Add(leftPoint);
+                    bottomControlPoints.Add(rightPoint);
+                    widthMarkerIndex++;*/
+                    (double, double) rotatedCounter = (-tangentVector.Item2, tangentVector.Item1);
+                    (double, double) rotatedClock = (tangentVector.Item2, -tangentVector.Item1);
+
+                    leftPoint.Item1 = markerPoint.Item1 + rotatedClock.Item1 * leftDistance;
+                    leftPoint.Item2 = markerPoint.Item2 + rotatedClock.Item2 * leftDistance;
+                    rightPoint.Item1 = markerPoint.Item1 + rotatedCounter.Item1 * rightDistance;
+                    rightPoint.Item2 = markerPoint.Item2 + rotatedCounter.Item2 * rightDistance;
+                    topControlPoints.Add(leftPoint);
+                    bottomControlPoints.Add(rightPoint);
                     widthMarkerIndex++;
                 }
                 else
@@ -540,11 +547,44 @@ namespace Rendering
             bottomControlPoints.Reverse();
 
             List<(double, double)> joinedList = [.. topControlPoints, .. bottomControlPoints];
-            (double, double)[] curvePoints = new (double, double)[4];
+            XNamespace svgNs = "http://www.w3.org/2000/svg";
+            foreach (var point in joinedList)
+            {
+                XElement circle = new XElement(svgNs + "circle");
+                //circle.SetAttributeValue("fill", $"#{red:X2}{green:X2}{blue:X2}");
+                circle.SetAttributeValue("fill", "#FFFFFF");
+                circle.SetAttributeValue("r", "1");
+                circle.SetAttributeValue("cx", $"{point.Item1}");
+                circle.SetAttributeValue("cy", $"{point.Item2}");
+                pathElements.Add(circle);
+            }
+
+            string outlineString = $"M {joinedList[0].Item1} {joinedList[0].Item2} L";
+            CatmullRomCurve romCurve = new CatmullRomCurve(joinedList[3], joinedList[0],
+                joinedList[1], joinedList[2], 1);
+
+            double detail = 32;
+            for (int j = 0; j < detail; j++)
+            {
+                double t = (j / (detail - 1));
+                (double, double) topPoint = romCurve.GetPointOnCurve(t);
+                outlineString += $" {topPoint.Item1} {topPoint.Item2}";
+            }
+
+            Random random = new Random();
+            int red = random.Next(0, 256);
+            int green = random.Next(0, 256);
+            int blue = random.Next(0, 256);
+            XElement path = new XElement(svgNs + "path");
+            path.SetAttributeValue("stroke", $"#{red:X2}{green:X2}{blue:X2}");
+            path.SetAttributeValue("fill", "none");
+            path.SetAttributeValue("d", outlineString);
+            pathElements.Add(path);
 
             // i is the start of the segment that is being drawn for Catmull Rom spline (i = Point 1)
             // To get the proper range of points needed for curve, need to go back one space
-            // as well as wrap around if needed 
+            // as well as wrap around if needed
+            /*(double, double)[] curvePoints = new (double, double)[4];
             for(int i = 0; i < joinedList.Count; i++)
             {
                 for(int j = 0; j < 4; j++)
@@ -579,24 +619,11 @@ namespace Rendering
                 int green = random.Next(0, 256);
                 int blue = random.Next(0, 256);
 
-                XNamespace svgNs = "http://www.w3.org/2000/svg";
                 XElement path = new XElement(svgNs + "path");
                 path.SetAttributeValue("stroke", $"#{red:X2}{green:X2}{blue:X2}");
                 path.SetAttributeValue("fill", "none");
                 path.SetAttributeValue("d", outlineString);
                 pathElements.Add(path);
-            }
-
-            /*string outlineString = $"M {joinedList[0].Item1} {joinedList[0].Item2} L";
-            CatmullRomCurve romCurve = new CatmullRomCurve(joinedList[0], joinedList[1],
-                joinedList[2], joinedList[3], 1);
-
-            double detail = 32;
-            for (int j = 0; j < detail; j++)
-            {
-                double t = (j / (detail - 1));
-                (double, double) topPoint = romCurve.GetPointOnCurve(t);
-                outlineString += $" {topPoint.Item1} {topPoint.Item2}";
             }*/
             return pathElements;
         }

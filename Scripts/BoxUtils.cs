@@ -41,6 +41,15 @@ namespace Rendering
             return (-1 / slope);
         }
 
+        public static (double, double) GetUnitTangentVectorOfLine((double, double) point0, (double, double) point1)
+        {
+            (double, double) tangentVector = (point1.Item1 - point0.Item1, point1.Item2 - point0.Item2);
+            double vectorMagnitude = Math.Sqrt(tangentVector.Item1 * tangentVector.Item1 +
+                tangentVector.Item2 * tangentVector.Item2);
+
+            return (tangentVector.Item1/ vectorMagnitude, tangentVector.Item2 / vectorMagnitude);
+        }
+
         /// <summary>
         /// Gets a point on a quadratic Bezier curve.
         /// </summary>
