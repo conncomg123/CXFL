@@ -152,16 +152,18 @@ namespace Rendering
                 if (command == "!")
                 {
                     // If a move command doesn't change the current point, ignore it.
-                    if (currPoint != prevPoint)
-                    {
-                        // Otherwise, a new pointList is starting, so we must yield the
-                        // current (pointList, boundingBox) and begin a new one.
-                        yield return (pointList, boundingBox);
+                    // if (currPoint != prevPoint)
+                    // {
+                    // Otherwise, a new pointList is starting, so we must yield the
+                    // current (pointList, boundingBox) and begin a new one.
+                    // Always yield to a new pointList in order to break the segments into
+                    // a closer number that Adobe Animate does
+                    yield return (pointList, boundingBox);
 
-                        pointList = new List<string>();
-                        prevPoint = currPoint;
-                        boundingBox = null;
-                    }
+                    pointList = new List<string>();
+                    prevPoint = currPoint;
+                    boundingBox = null;
+                    //}
                 }
                 // "lineto" command
                 else if (command == "|" || command == "/")
