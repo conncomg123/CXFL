@@ -31,19 +31,27 @@ namespace Rendering
             double yPart = Math.Pow(point1.Item2 - point0.Item2, 2);
             return Math.Sqrt(xPart + yPart);
         }
-
-        public static double GetNormalOfLine((double, double) point0, (double, double) point1)
+        public static (double, double) GetUnitTangentVectorOfQuadraticBezier((double, double) point0,
+            (double, double) point1, (double, double) point2, double t)
         {
-            // Get slope at point by using slope formula - this is the slope of the tangent line
-            double slope = (point1.Item2 - point1.Item2) / (point1.Item1 - point0.Item1);
+            // First use derivative to get tangent vector at specific point on curve
+            double xTangent = 2 * (1 - t) * (point1.Item1 - point0.Item1) + 2 * t * (point2.Item1 - point0.Item1);
+            double yTangent = 2 * (1 - t) * (point1.Item2 - point0.Item2) + 2 * t * (point2.Item2 - point0.Item2);
 
-            // Negative reciprocal = normal slope
-            return (-1 / slope);
+            (double, double) tangentVector = (xTangent, yTangent);
+
+            // Then calculate the magnitude of the vector so we can use that to get the unit tangent vector
+            double vectorMagnitude = Math.Sqrt(tangentVector.Item1 * tangentVector.Item1 +
+                tangentVector.Item2 * tangentVector.Item2);
+
+            return (tangentVector.Item1 / vectorMagnitude, tangentVector.Item2 / vectorMagnitude);
         }
 
         public static (double, double) GetUnitTangentVectorOfLine((double, double) point0, (double, double) point1)
         {
             (double, double) tangentVector = (point1.Item1 - point0.Item1, point1.Item2 - point0.Item2);
+
+            // Then calculate the magnitude of the vector so we can use that to get the unit tangent vector
             double vectorMagnitude = Math.Sqrt(tangentVector.Item1 * tangentVector.Item1 +
                 tangentVector.Item2 * tangentVector.Item2);
 

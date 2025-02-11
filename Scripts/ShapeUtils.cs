@@ -404,7 +404,7 @@ namespace Rendering
                         newSeg.AddControlPoint(point1);
                         newSeg.AddControlPoint(point2);
 
-                        double curveDistance = MathUtils.CalculateQuadBezierLength(point0, point1, point2, 0);
+                        double curveDistance = MathUtils.CalculateQuadBezierLength(point0, point1, point2, 1);
                         newSeg.Distance = curveDistance;
                         segments.Add(newSeg);
 
@@ -458,13 +458,20 @@ namespace Rendering
                         // Get the tangent vector of the segment
                         tangentVector = MathUtils.GetUnitTangentVectorOfLine(point0, point1);
 
-                        // Get point on line where marker is
+                        // Get point on line where marker is using linear interpolation formula
                         markerPoint.Item1 = (1 - relativeT) * point0.Item1 + relativeT * point1.Item1;
                         markerPoint.Item2 = (1 - relativeT) * point0.Item2 + relativeT * point1.Item2;
                     }
                     else if (currentSeg.CommandType == "Q")
                     {
+                        (double, double) point0 = currentSeg.ControlPoints[0];
+                        (double, double) point1 = currentSeg.ControlPoints[1];
+                        (double, double) point2 = currentSeg.ControlPoints[2];
 
+                        // Get the tangent vector at point on curve
+                        tangentVector = MathUtils.GetUnitTangentVectorOfQuadraticBezier(point0, point1, point2, relativeT);
+
+                        markerPoint = MathUtils.GetPointOnQuadraticBezier(point0, point1, point2, relativeT);
                     }
 
                     // Get distance of how far left and right marker points are from center widthmarker
@@ -534,7 +541,7 @@ namespace Rendering
                 pathElements.Add(circle);
             }
 
-            if(topMarkerPoints.Count > 2)
+            /*if(topMarkerPoints.Count > 2)
             {
                 string totalShape = "";
 
@@ -623,7 +630,7 @@ namespace Rendering
                 dummyPath.SetAttributeValue("stroke", "black");
                 dummyPath.SetAttributeValue("d", totalShape);
                 pathElements.Add(dummyPath);
-            }
+            }*/
             return pathElements;
         }
     }
