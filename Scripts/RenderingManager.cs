@@ -1,6 +1,8 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.IO.Pipes;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Xml.Linq;
 using CsXFL;
@@ -69,20 +71,21 @@ public class RenderingManager
         int framesPerCore = numFrames / numCores;
         int framesLeftover = numFrames % numCores;
         List<Task> renderTasks = new();
-        ConcurrentBag<List<XDocument>> svgDataLists = new();
+        ConcurrentBag<(int index, List<XDocument> svgs)> svgDataLists = new();
         for (int i = 0; i < numCores; i++)
         {
             List<XDocument> svgDataList = new();
-            svgDataLists.Add(svgDataList);
+            svgDataLists.Add((i, svgDataList));
             int folderIndex = i;
-            int frameIndex = i * framesPerCore + (i < framesLeftover ? 1 : 0);
+            int frameIndex = i * framesPerCore + (i >= framesLeftover ? framesLeftover : i);
             renderTasks.Add(Task.Run(() =>
             {
+                int curFrameIndex = frameIndex;
                 for (int j = 0; j < (folderIndex < framesLeftover ? framesPerCore + 1 : framesPerCore); j++)
                 {
-                    var rendered = RenderFrame(frameIndex) ?? throw new InvalidDataException("Unable to render frame " + frameIndex);
+                    var rendered = RenderFrame(curFrameIndex) ?? throw new InvalidDataException("Unable to render frame " + curFrameIndex);
                     svgDataList.Add(rendered);
-                    frameIndex++;
+                    curFrameIndex++;
                 }
             }));
         }
@@ -90,16 +93,17 @@ public class RenderingManager
         renderTasks.Add(audioTask);
         Task.WaitAll(renderTasks.ToArray());
         MemoryStream audio = audioTask.Result;
-        List<(List<MemoryStream> streams, long maxSize)> svgsAsStreams = new();
-        List<(List<MemoryStream> data, long svgSize)> chunks = new();
-        ConcurrentBag<MemoryStream> mp4Streams = new();
+        ConcurrentBag<(List<MemoryStream> streams, long maxSize)> svgsAsStreams = new();
+        ConcurrentBag<(int index, List<MemoryStream> data, long svgSize)> chunks = new();
+        ConcurrentBag<(MemoryStream, int)> mp4Streams = [];
         const int BOM_SIZE = 3;
         try
         {
             try
             {
-                Parallel.ForEach(svgDataLists, svgDataList =>
+                Parallel.For(0, svgDataLists.Count, index =>
                 {
+                    List<XDocument> svgDataList = svgDataLists.Where(x => x.index == index).First().svgs;
                     int maxSize = 0;
                     List<MemoryStream> svgStreams = new();
                     for (int i = 0; i < svgDataList.Count; i++)
@@ -132,14 +136,14 @@ public class RenderingManager
                             chunkStream.WriteByte(PADDING_CHARACTER);
                         }
                     }
-                    chunks.Add((chunk, maxSize));
+                    chunks.Add((index, chunk, maxSize));
                     svgsAsStreams.Add((svgStreams, maxSize));
                 });
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine(ex.Message);
-                foreach ((List<MemoryStream> data, long svgSize) in chunks)
+                foreach ((int _, List<MemoryStream> data, long _) in chunks)
                 {
                     foreach (MemoryStream stream in data)
                     {
@@ -158,38 +162,42 @@ public class RenderingManager
                     }
                 }
             }
-            Parallel.ForEach(chunks, chunk =>
+            Parallel.For(0, chunks.Count, (i) =>
             {
+                (int index, List<MemoryStream> data, long svgSize) chunk = chunks.Where(x => x.index == i).First();
                 MemoryStream mp4Stream = new(framesPerCore * (int)chunk.svgSize);
                 List<MemoryStream> data = chunk.data;
                 long svgSize = chunk.svgSize;
-                ProcessStartInfo startInfo = new ProcessStartInfo(ffmpegPath, $"{ffmpegArgsBeforeinput} -frame_size {svgSize} -f svg_pipe -i - {ffmpegArgsAfterinput} -f mpegts pipe:1");
-                startInfo.UseShellExecute = false;
-                startInfo.RedirectStandardInput = true;
-                startInfo.RedirectStandardOutput = true;
-                Process? process = Process.Start(startInfo) ?? throw new InvalidOperationException("Unable to start ffmpeg process");
+
+                // Setup FFmpeg process
+                ProcessStartInfo startInfo = new(ffmpegPath, $"{ffmpegArgsBeforeinput} -frame_size {svgSize} -f svg_pipe -i - {ffmpegArgsAfterinput} -f mpegts pipe:1")
+                {
+                    UseShellExecute = false,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true
+                };
+
+                using Process process = Process.Start(startInfo) ?? throw new InvalidOperationException("Unable to start ffmpeg process");
+                Task outputTask = Task.Run(() =>
+                {
+                    process.StandardOutput.BaseStream.CopyTo(mp4Stream);
+                });
                 foreach (MemoryStream stream in data)
                 {
                     stream.Position = 0;
-                    process.OutputDataReceived += delegate (object sender, DataReceivedEventArgs e)
-                    {
-                        // put data into mp4Stream
-                        if (e.Data is null) return;
-                        byte[] data = Encoding.UTF8.GetBytes(e.Data);
-                        mp4Stream.Write(data, 0, data.Length);
-                    };
-                    process.BeginOutputReadLine();
-                    stream.WriteTo(process!.StandardInput.BaseStream);
+                    stream.CopyTo(process.StandardInput.BaseStream);
                 }
                 process.StandardInput.Close();
                 process.WaitForExit();
-                mp4Streams.Add(mp4Stream);
+                outputTask.Wait();
+                mp4Streams.Add((mp4Stream, i));
             });
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine(ex.Message);
-            foreach (MemoryStream stream in mp4Streams)
+            foreach ((MemoryStream stream, int _) in mp4Streams)
             {
                 stream.Dispose();
             }
@@ -197,7 +205,7 @@ public class RenderingManager
         }
         finally
         {
-            foreach ((List<MemoryStream> data, long svgSize) in chunks)
+            foreach ((int _, List<MemoryStream> data, long svgSize) in chunks)
             {
                 foreach (MemoryStream stream in data)
                 {
@@ -205,8 +213,48 @@ public class RenderingManager
                 }
             }
         }
-
+        // TODO: used named pipes to concatenate the parts
+        string pipePathPrefix;
+        const string pipePrefix = "RenderingManagerPipe";
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            pipePathPrefix = @"\\.\pipe\";
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            pipePathPrefix = @"/tmp/";
+        }
+        else throw new NotImplementedException("OS not supported");
+        string fullPipePrefix = pipePathPrefix + pipePrefix;
+        string ffmpegArgs = $" -y -f mpegts -i \"concat:";
+        for (int i = 0; i < mp4Streams.Count; i++)
+        {
+            ffmpegArgs += fullPipePrefix + i.ToString() + (i < mp4Streams.Count - 1 ? "|" : "\" ");
+        }
+        ffmpegArgs += $"\"{Path.Combine(outputPath, name)}\"";
+        // create the pipes
+        List<Task> pipeTasks = new(mp4Streams.Count);
+        for (int i = 0; i < mp4Streams.Count; i++)
+        {
+            string pipeName = pipePrefix + i.ToString();
+            MemoryStream data = mp4Streams.Where(x => x.Item2 == i).First().Item1;
+            data.Position = 0;
+            pipeTasks.Add(CreateNamedPipeAndWriteData(pipeName, data));
+        }
+        // TODO: add audio
+        ProcessStartInfo startInfo = new ProcessStartInfo(ffmpegPath, ffmpegArgs);
+        startInfo.UseShellExecute = false;
+        startInfo.RedirectStandardOutput = false; // no need since we're finally writing to disk
+        Process? process = Process.Start(startInfo) ?? throw new InvalidOperationException("Unable to start ffmpeg process");
+        Task.WaitAll(pipeTasks);
+        process.WaitForExit();
         return false;
+    }
+    static async Task CreateNamedPipeAndWriteData(string pipeName, MemoryStream data)
+    {
+        using NamedPipeServerStream pipeServer = new NamedPipeServerStream(pipeName, PipeDirection.Out);
+        await Task.Run(pipeServer.WaitForConnection);
+        await data.CopyToAsync(pipeServer);
     }
     public bool RenderDocumentWithTmpFiles(string name, string ffmpegArgsBeforeinput = DEFAULT_FFMEPG_ARGS_BEFORE_INPUT, string ffmpegArgsAfterinput = DEFAULT_FFMEPG_ARGS_AFTER_INPUT)
     {
