@@ -1,13 +1,14 @@
 ﻿using CsXFL;
-using Svg;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Numerics;
 using System.Xml.Linq;
 
 namespace Rendering
 {
+
+    // A path is made up of multiple segments, and every command, either explicit or implicit,
+    // other than moveTo (M) or closepath (Z), defines one path segment.
+    // For the sake of consistency, the moveTo command will be the first "segment" of the path
+    // even though it is only used to set up the official first segment of a path
+
     internal class SvgPathSegment
     {
         public double Distance { get; set; } = 0;
@@ -541,7 +542,9 @@ namespace Rendering
                 pathElements.Add(circle);
             }
 
-            /*if(topMarkerPoints.Count > 2)
+            // We are drawing the fill shape that represents the greater VPW stroke clockwise
+
+            if (topMarkerPoints.Count > 2)
             {
                 string totalShape = "";
 
@@ -571,6 +574,9 @@ namespace Rendering
                         controlPoints[3] = topMarkerPoints[i + 2];
                     }
 
+                    // In order to make the outline one entire path, only save the first move command
+                    // and then use line and quad commands to draw the outline clockwise
+
                     string outlineString = $"M {controlPoints[1].Item1} {controlPoints[1].Item2} L";
                     CatmullRomCurve romCurve = new CatmullRomCurve(controlPoints[0], controlPoints[1],
                         controlPoints[2], controlPoints[3], 0.5);
@@ -585,6 +591,13 @@ namespace Rendering
 
                     totalShape += outlineString;
                 }
+
+                // As we want to draw the shape going clockwise, for the bottom part, we
+                // are drawing it going from right to left
+                // This is so the VPW stroke is an enclosed shape
+
+                bottomMarkerPoints.Reverse();
+                topMarkerPoints.Reverse();
 
                 for (int i = 0; i < bottomMarkerPoints.Count - 1; i++)
                 {
@@ -630,8 +643,98 @@ namespace Rendering
                 dummyPath.SetAttributeValue("stroke", "black");
                 dummyPath.SetAttributeValue("d", totalShape);
                 pathElements.Add(dummyPath);
-            }*/
+            }
             return pathElements;
+        }
+
+        public static (double, double) GetDirectionAtStartOfSegment(List<SvgPathSegment> entirePath, int segmentIndex)
+        {
+            double totalLength = entirePath.Sum(s => s.Distance);
+            SvgPathSegment currentSegment = entirePath[segmentIndex];
+
+            // If the segment is part of path of zero length, just default to positive x axis direction
+            if (totalLength == 0)
+            {
+                return (1, 0);
+            }
+            else if (currentSegment.Distance == 0)
+            {
+                // Go backwards in path until we reach first non-zero non-moveTo segment. If we find one,
+                // use the direction at the end of that segment
+                int startingPosition = segmentIndex - 1;
+                while (startingPosition > 0)
+                {
+                    SvgPathSegment previous = entirePath[startingPosition];
+                    if (previous.Distance != 0)
+                    {
+                        return GetDirectionAtEndOfSegment(entirePath, startingPosition);
+                    }
+                    startingPosition--;
+                }
+
+                // If there is no previous segment that has a non-zero length, use end direction of
+                // segment as the start direction
+                return GetDirectionAtEndOfSegment(entirePath, segmentIndex);
+            }
+            else
+            {
+                // Segment is non-zero in length, direction is just one coming out of start point
+                if (currentSegment.CommandType == "L")
+                {
+                    (double, double) point0 = currentSegment.ControlPoints[0];
+                    (double, double) point1 = currentSegment.ControlPoints[1];
+
+                    // Get the tangent vector of the segment
+                    (double, double) tangentVector = MathUtils.GetUnitTangentVectorOfLine(point0, point1);
+                    return tangentVector;
+                }
+            }
+            return (1, 0);
+        }
+
+        public static (double, double) GetDirectionAtEndOfSegment(List<SvgPathSegment> entirePath, int segmentIndex)
+        {
+            double totalLength = entirePath.Sum(s => s.Distance);
+            SvgPathSegment currentSegment = entirePath[segmentIndex];
+
+            // If the segment is part of path of zero length, just default to positive x axis direction
+            if (totalLength == 0)
+            {
+                return (1, 0);
+            }
+            else if (currentSegment.Distance == 0)
+            {
+                // Go forwards in path until we reach first non-zero non-moveTo segment. If we find one,
+                // use the direction at the start of that segment
+                int startingPosition = segmentIndex + 1;
+                while (startingPosition < entirePath.Count)
+                {
+                    SvgPathSegment previous = entirePath[startingPosition];
+                    if (previous.Distance != 0)
+                    {
+                        return GetDirectionAtStartOfSegment(entirePath, startingPosition);
+                    }
+                    startingPosition++;
+                }
+
+                // If there is no suceeding segment that has a non-zero length, use start direction of
+                // segment as the end direction
+                return GetDirectionAtEndOfSegment(entirePath, segmentIndex);
+            }
+            else
+            {
+                // Segment is non-zero in length, direction is just one coming out of end point
+                if (currentSegment.CommandType == "L")
+                {
+                    (double, double) point0 = currentSegment.ControlPoints[0];
+                    (double, double) point1 = currentSegment.ControlPoints[1];
+
+                    // Get the tangent vector of the segment
+                    (double, double) tangentVector = MathUtils.GetUnitTangentVectorOfLine(point0, point1);
+                    return tangentVector;
+                }
+            }
+            return (1, 0);
         }
     }
 }
