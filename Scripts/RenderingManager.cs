@@ -216,6 +216,7 @@ public class RenderingManager
         // TODO: used named pipes to concatenate the parts
         string pipePathPrefix;
         const string pipePrefix = "RenderingManagerPipe";
+        const string audioPipe = "RenderingManagerAudioPipe";
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             pipePathPrefix = @"\\.\pipe\";
@@ -231,6 +232,7 @@ public class RenderingManager
         {
             ffmpegArgs += fullPipePrefix + i.ToString() + (i < mp4Streams.Count - 1 ? "|" : "\" ");
         }
+        ffmpegArgs += $"-i \"{pipePathPrefix + audioPipe}\" -c:a aac "; 
         ffmpegArgs += $"\"{Path.Combine(outputPath, name)}\"";
         // create the pipes
         List<Task> pipeTasks = new(mp4Streams.Count);
@@ -241,7 +243,7 @@ public class RenderingManager
             data.Position = 0;
             pipeTasks.Add(CreateNamedPipeAndWriteData(pipeName, data));
         }
-        // TODO: add audio
+        pipeTasks.Add(CreateNamedPipeAndWriteData(audioPipe, audio));
         ProcessStartInfo startInfo = new ProcessStartInfo(ffmpegPath, ffmpegArgs);
         startInfo.UseShellExecute = false;
         startInfo.RedirectStandardOutput = false; // no need since we're finally writing to disk
