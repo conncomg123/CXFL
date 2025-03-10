@@ -295,7 +295,7 @@ public class SVGRenderer
                 defs[maskId] = mask;
                 continue;
             }
-            else if (layerType == "folder" || layerType == null)
+            else if (layerType == "folder" || layerType == null || layerType == "camera")
             {
                 continue;
             }
