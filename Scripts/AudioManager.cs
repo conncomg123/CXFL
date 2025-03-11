@@ -1,9 +1,10 @@
 using System.IO.Compression;
 using CsXFL;
 using NAudio.Wave;
-using NAudio.Flac;
 using NAudio.Wave.SampleProviders;
 using WaveWriter = CSCore.Codecs.WAV.WaveWriter;
+using CSCore.Codecs.FLAC;
+using CSCore;
 
 namespace Rendering;
 
@@ -90,8 +91,8 @@ public class AudioManager
     public MemoryStream GetMixedAudio()
     {
         // TODO: create file, write to it to create a file containing all the sounds at the correct timestamps
-        List<WaveStream> readers = new();
         List<ISampleProvider> sampleProviders = new();
+        List<IDisposable> disposables = new();
         int approximateSize = 0;
         try
         {
@@ -102,14 +103,28 @@ public class AudioManager
                 {
                     TimeSpan offset = TimeSpan.FromSeconds(frameOffset / ConvertFramerate(document.FrameRate));
                     TimeSpan splitAudioOffset = TimeSpan.FromSeconds(sound.offset / FORTY_FOUR_THOUSAND);
-                    WaveStream reader = sound.type switch
+                    WaveStream reader;
+                    switch (sound.type)
                     {
-                        SoundType.FLAC => new FlacReader(sound.data),
-                        SoundType.WAV => new WaveFileReader(sound.data),
-                        SoundType.MP3 => new Mp3FileReader(sound.data),
-                        _ => throw new NotImplementedException(),
-                    };
-                    readers.Add(reader);
+                        case SoundType.FLAC:
+                            var file = new FlacFile(sound.data);
+                            disposables.Add(file);
+                            MemoryStream flacData = new();
+                            disposables.Add(flacData);
+                            file.WriteToWaveStream(flacData);
+                            flacData.Position = 0;
+                            reader = new WaveFileReader(flacData);
+                            break;
+                        case SoundType.WAV:
+                            reader = new WaveFileReader(sound.data);
+                            break;
+                        case SoundType.MP3:
+                            reader = new Mp3FileReader(sound.data);
+                            break;
+                        default:
+                            throw new InvalidOperationException("Invalid sound type.");
+                    }
+                    disposables.Add(reader);
                     ISampleProvider resampler = new WdlResamplingSampleProvider(reader.ToSampleProvider(), 44100);
                     if (resampler.WaveFormat.Channels == 1)
                     {
@@ -124,7 +139,7 @@ public class AudioManager
                     sampleProviders.Add(offsetProvider);
                 }
             }
-            var waveFormatNaudio = WaveFormat.CreateIeeeFloatWaveFormat(44100, 2);
+            var waveFormatNaudio = NAudio.Wave.WaveFormat.CreateIeeeFloatWaveFormat(44100, 2);
             var waveFormatCSCore = new CSCore.WaveFormat(44100, 32, 2);
             var mixer = new MixingSampleProvider(waveFormatNaudio);
             foreach (var provider in sampleProviders)
@@ -146,9 +161,9 @@ public class AudioManager
         }
         finally
         {
-            foreach(var reader in readers)
+            foreach (var disposable in disposables)
             {
-                reader.Dispose();
+                disposable.Dispose();
             }
         }
     }
