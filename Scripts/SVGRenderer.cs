@@ -23,7 +23,7 @@ public class SVGRenderer
     XmlNamespaceManager nsmgr = new XmlNamespaceManager(new NameTable());
     Document Document { get; set; }
     public bool RepalceMasksWithClipPaths { get; set; }
-    ConcurrentDictionary<Shape, (XElement?, XElement?, Dictionary<string, XElement>?)> ShapeCache = new(),
+    ConcurrentDictionary<Shape, (XElement?, XElement?, Dictionary<string, XElement>?, Rectangle?)> ShapeCache = new(),
     MaskCache = new();
     private ConcurrentDictionary<BitmapItem, string> ImageCache = new();
     public string? ImageFolder;
@@ -327,7 +327,8 @@ public class SVGRenderer
                 {
                     string[] standardBlendModes = { "multiply", "screen", "overlay", "darken", "lighten", "hard-light", "difference" };
 
-                    if (standardBlendModes.Contains(frame.BlendMode)) { g.SetAttributeValue("style", $"mix-blend-mode: {frame.BlendMode};"); };
+                    if (standardBlendModes.Contains(frame.BlendMode)) { g.SetAttributeValue("style", $"mix-blend-mode: {frame.BlendMode};"); }
+                    ;
                     if (frame.BlendMode == "hardlight") g.SetAttributeValue("style", $"mix-blend-mode: hard-light;");
                     if (frame.BlendMode == "add") g.SetAttributeValue("style", $"mix-blend-mode: color-dodge;");
 
@@ -364,7 +365,8 @@ public class SVGRenderer
                         (var fDefs, g) = FilterUtils.ApplyFilter(g, f_InvertColors);
                         defs[filterName] = fDefs;
                         g.SetAttributeValue("style", $"mix-blend-mode: multiply;");
-                    };
+                    }
+                    ;
 
                     // This is Difference, but flooded white
                     if (frame.BlendMode == "invert")
@@ -379,7 +381,8 @@ public class SVGRenderer
                         (var fDefs, g) = FilterUtils.ApplyFilter(g, f_FloodWhite);
                         defs[filterName] = fDefs;
                         g.SetAttributeValue("style", $"mix-blend-mode: difference;");
-                    };
+                    }
+                    ;
 
                     // SWF documentation for BlendMode logic
                     // https://www.m2osw.com/mo_references_view/libsswf/classsswf_1_1BlendMode
@@ -398,7 +401,8 @@ public class SVGRenderer
                     if (frame.BlendMode == "erase")
                     {
 
-                    };
+                    }
+                    ;
 
                     if (frame.BlendMode == "alpha")
                     {
@@ -456,7 +460,8 @@ public class SVGRenderer
                                 // Process GlowFilter
                                 var anGlow = new FilterUtils.AnDropShadow(glowFilter.BlurX, glowFilter.BlurY, 0, 0, glowFilter.Strength, glowFilter.Color, glowFilter.Knockout, glowFilter.Inner, false);
                                 foreach (var _filter in anGlow.Filters)
-                                { masterFilter.Filters.Add(_filter); };
+                                { masterFilter.Filters.Add(_filter); }
+                                ;
                                 break;
                             default:
                                 throw new ArgumentException($"Unknown filter type {filter}");
@@ -695,26 +700,30 @@ public class SVGRenderer
         double startX = cx + (rx * Math.Cos(t1) * rotX - ry * Math.Sin(t1) * rotY);
         double startY = cy + (rx * Math.Cos(t1) * rotY + ry * Math.Sin(t1) * rotX);
 
-        if (delta == 0) {
+        if (delta == 0)
+        {
             return new XElement(svgNs + "path",
-                new XAttribute("d", $"M {cx} {cy - ry} " + 
-                                $"C {cx + rx * 0.55} {cy - ry} {cx + rx} {cy - ry * 0.55} {cx + rx} {cy} " + 
-                                $"C {cx + rx} {cy + ry * 0.55} {cx + rx * 0.55} {cy + ry} {cx} {cy + ry} " + 
-                                $"C {cx - rx * 0.55} {cy + ry} {cx - rx} {cy + ry * 0.55} {cx - rx} {cy} " + 
+                new XAttribute("d", $"M {cx} {cy - ry} " +
+                                $"C {cx + rx * 0.55} {cy - ry} {cx + rx} {cy - ry * 0.55} {cx + rx} {cy} " +
+                                $"C {cx + rx} {cy + ry * 0.55} {cx + rx * 0.55} {cy + ry} {cx} {cy + ry} " +
+                                $"C {cx - rx * 0.55} {cy + ry} {cx - rx} {cy + ry * 0.55} {cx - rx} {cy} " +
                                 $"C {cx - rx} {cy - ry * 0.55} {cx - rx * 0.55} {cy - ry} {cx} {cy - ry}"));
-        } else {
+        }
+        else
+        {
             double endX = cx + (rx * Math.Cos(t1 + delta) * rotX - ry * Math.Sin(t1 + delta) * rotY);
             double endY = cy + (rx * Math.Cos(t1 + delta) * rotY + ry * Math.Sin(t1 + delta) * rotX);
             int fA = (delta > pi) ? 1 : 0;
             int fS = (delta > 0) ? 1 : 0;
 
-        if (reverse) {
-            (startX, startY, endX, endY) = (endX, endY, startX, startY);
-            fS = ~fS & 1;
-        }
+            if (reverse)
+            {
+                (startX, startY, endX, endY) = (endX, endY, startX, startY);
+                fS = ~fS & 1;
+            }
 
-        return new XElement(svgNs + "path",
-            new XAttribute("d", $"M {startX} {startY} A {rx} {ry} {phi / (2 * pi) * 360} {fA} {fS} {endX} {endY}"));
+            return new XElement(svgNs + "path",
+                new XAttribute("d", $"M {startX} {startY} A {rx} {ry} {phi / (2 * pi) * 360} {fA} {fS} {endX} {endY}"));
         }
     }
 
@@ -772,14 +781,16 @@ public class SVGRenderer
             pathValue += (svgAnulus.Attribute("d")?.Value ?? "").Replace("M", "") + " Z";
             newPath.Add(new XAttribute("d", pathValue));
             svgEllipse = newPath;
-        } else if (!simpleEllipse && (startRads == endRads)) {
+        }
+        else if (!simpleEllipse && (startRads == endRads))
+        {
             XElement newPath = new XElement(svgNs + "path");
             string pathValue = (svgEllipse.Attribute("d")?.Value ?? "") + (svgAnulus.Attribute("d")?.Value ?? "");
             newPath.Add(new XAttribute("d", pathValue));
             newPath.Add(new XAttribute("fill-rule", "evenodd"));
             svgEllipse = newPath;
         }
- 
+
         if (primitiveOval.Stroke != null)
         {
             var (strokeStyleAttributes, extraDefElements) = StyleUtils.ParseStrokeStyle(primitiveOval.Stroke);
@@ -810,19 +821,24 @@ public class SVGRenderer
                     defs.Add(gradientElement.Attribute("id")?.Value ?? string.Empty, gradientElement);
                 }
             }
-        } else {
+        }
+        else
+        {
             svgEllipse.Add(new XAttribute("fill", "none"));
         }
         svgAnulus.Add(new XAttribute("fill", "none"));
 
-        if (!primitiveOval.ClosePath) {
-        XElement svgGroup = new XElement(svgNs + "g");
-        svgGroup.Add(svgEllipse);
+        if (!primitiveOval.ClosePath)
+        {
+            XElement svgGroup = new XElement(svgNs + "g");
+            svgGroup.Add(svgEllipse);
 
-        if (primitiveOval.InnerRadius > 0) { svgGroup.Add(svgAnulus); }
+            if (primitiveOval.InnerRadius > 0) { svgGroup.Add(svgAnulus); }
 
-        body.Add(svgGroup);
-        } else {
+            body.Add(svgGroup);
+        }
+        else
+        {
             body.Add(svgEllipse);
         }
 
@@ -900,7 +916,7 @@ public class SVGRenderer
             // iterate over the words and insert newlines once the next word would fill the box
             string[] words = textString.Split(' ');
             StringBuilder sb = new StringBuilder();
-            for(int i = 0; i < words.Length; i++)
+            for (int i = 0; i < words.Length; i++)
             {
                 string word = words[i];
                 int indexBefore = sb.Length;
@@ -943,8 +959,10 @@ public class SVGRenderer
                 );
 
                 // ???
-                if (textRun.TextAttrs.Bold) { new XAttribute("font-weight", "bold"); };
-                if (textRun.TextAttrs.Italic) { new XAttribute("font-style", "italic"); };
+                if (textRun.TextAttrs.Bold) { new XAttribute("font-weight", "bold"); }
+                ;
+                if (textRun.TextAttrs.Italic) { new XAttribute("font-style", "italic"); }
+                ;
 
                 if (textRun.TextAttrs.Face.IndexOf("Bold", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
@@ -987,26 +1005,27 @@ public class SVGRenderer
         List<XElement> body = new List<XElement>();
         XElement? fill_g, stroke_g;
         Dictionary<string, XElement>? extra_defs;
-        if (!isMaskShape && ShapeCache.TryGetValue(shape, out (XElement?, XElement?, Dictionary<string, XElement>?) shapeVal))
+        Rectangle? boundingBox;
+        if (!isMaskShape && ShapeCache.TryGetValue(shape, out (XElement?, XElement?, Dictionary<string, XElement>?, Rectangle?) shapeVal))
         {
-            (fill_g, stroke_g, extra_defs) = shapeVal;
+            (fill_g, stroke_g, extra_defs, boundingBox) = shapeVal;
             fill_g = fill_g is null ? null : new XElement(fill_g);
             stroke_g = stroke_g is null ? null : new XElement(stroke_g);
             extra_defs = extra_defs is null ? null : new Dictionary<string, XElement>(extra_defs);
         }
-        else if (isMaskShape && MaskCache.TryGetValue(shape, out (XElement?, XElement?, Dictionary<string, XElement>?) maskVal))
+        else if (isMaskShape && MaskCache.TryGetValue(shape, out (XElement?, XElement?, Dictionary<string, XElement>?, Rectangle?) maskVal))
         {
-            (fill_g, stroke_g, extra_defs) = maskVal;
+            (fill_g, stroke_g, extra_defs, boundingBox) = maskVal;
             fill_g = fill_g is null ? null : new XElement(fill_g);
             stroke_g = stroke_g is null ? null : new XElement(stroke_g);
             extra_defs = extra_defs is null ? null : new Dictionary<string, XElement>(extra_defs);
         }
         else
         {
-            (fill_g, stroke_g, extra_defs, _) = ShapeUtils.ConvertShapeToSVG(shape, isMaskShape);
+            (fill_g, stroke_g, extra_defs, boundingBox) = ShapeUtils.ConvertShapeToSVG(shape, isMaskShape);
 
-            if (!isMaskShape) ShapeCache[shape] = (fill_g, stroke_g, extra_defs);
-            else MaskCache[shape] = (fill_g, stroke_g, extra_defs);
+            if (!isMaskShape) ShapeCache[shape] = (fill_g, stroke_g, extra_defs, boundingBox);
+            else MaskCache[shape] = (fill_g, stroke_g, extra_defs, boundingBox);
         }
         if (fill_g is not null)
         {
@@ -1230,5 +1249,100 @@ public class SVGRenderer
         }
         int loopFrame = (curFrameIndex - high) % loopLength;
         return loopFrame;
+    }
+    /// <summary>
+    /// Returns the bounding box of an element.
+    /// </summary>
+    /// <param name="element">The element to get the bounding box of</param>
+    /// <param name="frameIndex">The frame the element appears on the timeline (only used for symbols; default is 0)</param>
+    /// <returns>A Rectangle that encloses the element</returns>
+    /// <exception cref="NotImplementedException">Thrown when the element type is not supported</exception>
+    public Rectangle GetElementBoundingBox(Element element, int frameIndex = 0)
+    {
+        Rectangle elementBoundingBox;
+        if (element is BitmapInstance bitmapInstance)
+        {
+            int width = bitmapInstance.HPixels;
+            int height = bitmapInstance.VPixels;
+            elementBoundingBox = new Rectangle(0, 0, width, height);
+        }
+        else if (element is Shape shape)
+        {
+            // try finding bounding box in caches
+            if (ShapeCache.TryGetValue(shape, out (XElement?, XElement?, Dictionary<string, XElement>?, Rectangle?) shapeVal))
+            {
+                elementBoundingBox = shapeVal.Item4 ?? new Rectangle(0, 0, 0, 0);
+            }
+            else
+            {
+                (XElement? fill_g, XElement? stroke_g, Dictionary<string, XElement>? extra_defs, Rectangle? boundingBox) = ShapeUtils.ConvertShapeToSVG(shape, false);
+                elementBoundingBox = boundingBox ?? new Rectangle(0, 0, 0, 0);
+                ShapeCache[shape] = (fill_g, stroke_g, extra_defs, elementBoundingBox);
+            }
+        }
+        else if (element is SymbolInstance symbolInstance)
+        {
+            elementBoundingBox = GetTimelineBoundingBox((symbolInstance.CorrespondingItem as SymbolItem)!.Timeline, GetLoopFrame(symbolInstance, frameIndex));
+        }
+        else if (element is Text text)
+        {
+            elementBoundingBox = new Rectangle(0, 0, text.Width, text.Height);
+        }
+        else if (element is CsXFL.Group group)
+        {
+            List<Element> children = group.Members;
+            List<Rectangle> childBoundingBoxes = new List<Rectangle>();
+            foreach (Element child in children)
+            {
+                Rectangle childBoundingBox = GetElementBoundingBox(child, frameIndex);
+                childBoundingBoxes.Add(childBoundingBox);
+            }
+            elementBoundingBox = BoxUtils.MergeBoundingBoxes(childBoundingBoxes);
+        }
+        else
+        {
+            throw new NotImplementedException($"Unknown element type: {element.GetType()}");
+        }
+        // TODO: apply matrix + transformationpoint
+        
+        return elementBoundingBox;
+    }
+
+    /// <summary>
+    /// Returns the smallest box that encloses all the content of a timeline at a given frame
+    /// </summary>
+    /// <param name="timeline">The timeline to get the bounding box of</param>
+    /// <param name="frameIndex">The frame to get the bounding box of</param>
+    /// <returns>A Rectangle that encloses all the content of a timeline at a given frame</returns>
+    public Rectangle GetTimelineBoundingBox(Timeline timeline, int frameIndex)
+    {
+        List<Rectangle> layerBoundingBoxes = new List<Rectangle>();
+        foreach (Layer layer in timeline.Layers)
+        {
+            Frame frame = layer.GetFrame(frameIndex);
+            List<Rectangle> frameBoundingBoxes = new List<Rectangle>();
+            foreach (Element element in frame.Elements)
+            {
+                Rectangle elementBoundingBox = GetElementBoundingBox(element, frameIndex - frame.StartFrame);
+                frameBoundingBoxes.Add(elementBoundingBox);
+            }
+            Rectangle layerBoundingBox = BoxUtils.MergeBoundingBoxes(frameBoundingBoxes);
+            layerBoundingBoxes.Add(layerBoundingBox);
+        }
+        Rectangle timelineBoundingBox = BoxUtils.MergeBoundingBoxes(layerBoundingBoxes);
+        return timelineBoundingBox;
+    }
+    public double GetSymbolItemAspectRatio(SymbolItem symbolItem)
+    {
+        // TODO: Get aspect ratio of the first frame of a symbolItem
+        // by taking the union of all the bounding boxes of the shapes in all the
+        // layers of the first frame
+        Timeline symbolTimeline = symbolItem.Timeline;
+        double maxLeft = 0, maxRight = 0, maxUp = 0, maxDown = 0;
+        foreach (var layer in symbolTimeline.Layers)
+        {
+            Frame firstFrame = layer.GetFrame(0);
+        }
+        return 0.0;
     }
 }

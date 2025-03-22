@@ -13,6 +13,19 @@ namespace Rendering
     internal class BoxUtils
     {
         /// <summary>
+        /// Merges a list of bounding boxes together.
+        /// </summary>
+        /// <param name="boundingBoxes">List of bounding boxes to merge.</param>
+        /// <returns>A Rectangle representing the new combined bounding box.</returns>
+        public static Rectangle MergeBoundingBoxes(List<Rectangle> boundingBoxes)
+        {
+            double minLeft = boundingBoxes.Min(box => box.Left);
+            double maxTop = boundingBoxes.Max(box => box.Top);
+            double maxRight = boundingBoxes.Max(box => box.Right);
+            double minBottom = boundingBoxes.Min(box => box.Bottom);
+            return new Rectangle(minLeft, maxTop, maxRight, minBottom);
+        }
+        /// <summary>
         /// Merges two bounding boxes together.
         /// </summary>
         /// <param name="original">The first bounding box being merged.</param>
@@ -20,11 +33,11 @@ namespace Rendering
         /// <returns>A Rectangle representing the new combined bounding box.</returns>
         public static Rectangle? MergeBoundingBoxes(Rectangle? original, Rectangle? addition)
         {
-            if(addition == null)
+            if (addition == null)
             {
                 return original;
             }
-            else if(original == null)
+            else if (original == null)
             {
                 return addition;
             }
@@ -139,15 +152,15 @@ namespace Rendering
         /// <param name="controlPoint">Control point of Beizer curve.</param>
         /// <param name="point2">End point of Bezier curve.</param>
         /// <returns>Bounding box assoicated with a quadratic Bezier curve.</returns>
-        public static Rectangle GetQuadraticBoundingBox ((double, double) point1,
+        public static Rectangle GetQuadraticBoundingBox((double, double) point1,
             (double, double) controlPoint, (double, double) point2)
         {
             // t values of where derivative is = 0, which indicates a potential min or max
             // Use those values to get the extreme points relative to the x and y axis
             (double, double) criticalPoints = GetQuadraticCriticalPoints(point1, controlPoint, point2);
             (double, double) xExtremePoint, yExtremePoint;
-            
-            if(criticalPoints.Item1 > 0 && criticalPoints.Item1 < 1)
+
+            if (criticalPoints.Item1 > 0 && criticalPoints.Item1 < 1)
             {
                 xExtremePoint = GetPointOnQuadraticBezier(point1, controlPoint, point2, criticalPoints.Item1);
             }
@@ -158,7 +171,7 @@ namespace Rendering
                 xExtremePoint = point1;
             }
 
-            if(criticalPoints.Item2 > 0 && criticalPoints.Item2 < 1)
+            if (criticalPoints.Item2 > 0 && criticalPoints.Item2 < 1)
             {
                 yExtremePoint = GetPointOnQuadraticBezier(point1, controlPoint, point2, criticalPoints.Item2);
             }
