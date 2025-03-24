@@ -44,5 +44,40 @@ namespace CsXFL
             byte[] array = ms.ToArray();
             return array;
         }
+        public static Image<Rgba32> ConvertDatToRawImage(byte[] datImage)
+        {
+            using MemoryStream ms = new MemoryStream(datImage);
+            using BinaryReader br = new BinaryReader(ms);
+
+            // Read the header
+            short header1 = br.ReadInt16(); // 0
+            short header2 = br.ReadInt16(); // 2
+            short width = br.ReadInt16(); // 4
+            short height = br.ReadInt16(); // 6
+            int unknown1 = br.ReadInt32(); // 8
+            int unknown2 = br.ReadInt32(); // 12
+            int unknown3 = br.ReadInt32(); // 16
+            int unknown4 = br.ReadInt32(); // 20
+            byte unknown5 = br.ReadByte(); // 24
+            byte unknown6 = br.ReadByte(); // 25
+
+            // Create a new image with the specified width and height
+            using Image<Rgba32> image = new Image<Rgba32>(width, height);
+
+            // Iterate over each pixel and set the pixel color in the image
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    byte a = br.ReadByte();
+                    byte r = br.ReadByte();
+                    byte g = br.ReadByte();
+                    byte b = br.ReadByte();
+
+                    image[x, y] = new Rgba32(r, g, b, a);
+                }
+            }
+            return image;
+        }
     }
 }

@@ -31,6 +31,11 @@ public static class An
     {
         return activeDocument ?? throw new InvalidOperationException("No active document");
     }
+    public static void SetActiveDocument(Document doc)
+    {
+        if (!_documents.Contains(doc)) throw new ArgumentException("Document is not in the document list");
+        activeDocument = doc;
+    }
     public static void CloseDocument(int index)
     {
         _documents.RemoveAt(index);
