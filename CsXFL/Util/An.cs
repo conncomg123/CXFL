@@ -23,6 +23,10 @@ public static class An
     {
         return _documents[index];
     }
+    public static List<Document> GetDocumentList()
+    {
+        return _documents;
+    }
     public static Document GetActiveDocument()
     {
         return activeDocument ?? throw new InvalidOperationException("No active document");
