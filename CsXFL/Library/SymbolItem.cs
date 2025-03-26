@@ -20,6 +20,7 @@ public class SymbolItem : Item
         {
             if (!AcceptableSymbolTypes.Contains(value)) throw new ArgumentException("Invalid symbol type: " + value);
             symbolType = value;
+            ItemType = value;
             Root?.SetOrRemoveAttribute("symbolType", value, DefaultValues.SymbolType);
         }
     }

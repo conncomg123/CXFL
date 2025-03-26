@@ -8,10 +8,10 @@ public abstract class Item
     "screen", "video"};
     protected XElement? root;
     protected XNamespace ns;
-    private readonly string itemType;
+    private string itemType;
     private string name;
     private int useCount;
-    public string ItemType { get { return itemType; } }
+    public string ItemType { get { return itemType; } protected set { itemType = value; } }
     public string Name { get { return name; } set { name = value; root?.SetAttributeValue("name", value); } }
     public int UseCount { get { return useCount; } set { useCount = value; } }
     public XNamespace Namespace { get { return ns; } }
