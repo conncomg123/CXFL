@@ -11,7 +11,7 @@ public class SymbolItem : Item
     }
     private static readonly HashSet<string> AcceptableSymbolTypes = new HashSet<string> { "graphic", "button", "movie clip", "puppet", "puppetBase", "ik container" };
     private readonly Include include;
-    private readonly string symbolType;
+    private string symbolType;
     private readonly Lazy<Timeline> timeline;
     public string SymbolType
     {
@@ -19,6 +19,7 @@ public class SymbolItem : Item
         set
         {
             if (!AcceptableSymbolTypes.Contains(value)) throw new ArgumentException("Invalid symbol type: " + value);
+            symbolType = value;
             Root?.SetOrRemoveAttribute("symbolType", value, DefaultValues.SymbolType);
         }
     }
