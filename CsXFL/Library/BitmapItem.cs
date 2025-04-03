@@ -27,7 +27,7 @@ public class BitmapItem : Item
     private string compressionType;
     private readonly string originalCompressionType, sourceFilePath;
     public string Href { get { return href; } set { href = value; Root?.SetAttributeValue("href", value); } }
-    internal string BitmapDataHRef { get { return bitmapDataHRef; } set { bitmapDataHRef = value; Root?.SetAttributeValue("bitmapDataHRef", value); } }
+    public string BitmapDataHRef { get { return bitmapDataHRef; } internal set { bitmapDataHRef = value; Root?.SetAttributeValue("bitmapDataHRef", value); } }
     public bool AllowSmoothing { get { return allowSmoothing; } set { allowSmoothing = value; Root?.SetOrRemoveAttribute("allowSmoothing", value, DefaultValues.AllowSmoothing); } }
     public bool UseDeblocking { get { return useDeblocking; } set { useDeblocking = value; Root?.SetOrRemoveAttribute("useDeblocking", value, DefaultValues.UseDeblocking); } }
     public bool UseImportedJPEGQuality { get { return useImportedJPEGQuality; } set { useImportedJPEGQuality = value; Root?.SetOrRemoveAttribute("useImportedJPEGQuality", value, DefaultValues.UseImportedJPEGQuality); } }
