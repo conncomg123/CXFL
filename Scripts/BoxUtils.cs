@@ -19,6 +19,10 @@ namespace Rendering
         /// <returns>A Rectangle representing the new combined bounding box.</returns>
         public static Rectangle MergeBoundingBoxes(List<Rectangle> boundingBoxes)
         {
+            if(boundingBoxes.Count == 0)
+            {
+                return new Rectangle(0, 0, 0, 0);
+            }
             double minLeft = boundingBoxes.Min(box => box.Left);
             double maxTop = boundingBoxes.Max(box => box.Top);
             double maxRight = boundingBoxes.Max(box => box.Right);

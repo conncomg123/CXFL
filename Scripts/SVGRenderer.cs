@@ -1319,10 +1319,12 @@ public class SVGRenderer
         List<Rectangle> layerBoundingBoxes = new List<Rectangle>();
         foreach (Layer layer in timeline.Layers)
         {
+            if(layer.LayerType == "folder" || layer.LayerType == "camera") continue; // skip folders and cameras
             Frame frame = layer.GetFrame(frameIndex);
             List<Rectangle> frameBoundingBoxes = new List<Rectangle>();
             foreach (Element element in frame.Elements)
             {
+                if(element.Name == "___camera___instance") continue; // skip the camera instance
                 Rectangle elementBoundingBox = GetElementBoundingBox(element, frameIndex - frame.StartFrame);
                 frameBoundingBoxes.Add(elementBoundingBox);
             }
