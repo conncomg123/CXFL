@@ -145,7 +145,8 @@ public class Library
             try
             {
                 symbolTree = XDocument.Load(symbolEntry!.Open());
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
                 continue;
@@ -352,20 +353,54 @@ public class Library
         {
             bitmap.Href = newName;
         }
-        item.Name = newName;
-        items.Remove(oldName);
-        items.Add(newName, item);
-        itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Rename, oldName + (isSymbol ? ".xml" : ""), null, newName + (isSymbol ? ".xml" : "")));
-        LibraryEventMessenger.Instance.NotifyItemRenamed(oldName, newName, item);
+        if (item is FolderItem folder)
+        {
+            // need to rename all items in the folder
+            Dictionary<string, string> itemsToRename = new();
+            foreach (Item itemToRename in items.Values)
+            {
+                if (itemToRename.Name.StartsWith(folder.Name + "/"))
+                {
+                    itemsToRename.Add(itemToRename.Name, string.Concat(newName, "/", itemToRename.Name.AsSpan(itemToRename.Name.LastIndexOf('/') + 1)));
+                }
+            }
+            item.Name = newName;
+            items.Remove(oldName);
+            items.Add(newName, item);
+            itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Rename, oldName + (isSymbol ? ".xml" : ""), null, newName + (isSymbol ? ".xml" : "")));
+            LibraryEventMessenger.Instance.NotifyItemRenamed(oldName, newName, item);
+            foreach (KeyValuePair<string, string> itemToRename in itemsToRename)
+            {
+                RenameItem(itemToRename.Key, itemToRename.Value);
+            }
+        }
+        if (item is not FolderItem)
+        {
+            item.Name = newName;
+            items.Remove(oldName);
+            items.Add(newName, item);
+            itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Rename, oldName + (isSymbol ? ".xml" : ""), null, newName + (isSymbol ? ".xml" : "")));
+            LibraryEventMessenger.Instance.NotifyItemRenamed(oldName, newName, item);
+        }
         return true;
     }
-    public bool RemoveItem(string itemPath)
+    public bool RemoveItem(string itemPath, List<Item>? itemsInFolder = null)
     {
         if (!ItemExists(itemPath)) return false;
         Item item = items[itemPath];
         if (item is SymbolItem symbolItem)
         {
             symbolItem.Include.Root?.Remove();
+        }
+        if (item is FolderItem)
+        {
+            foreach (Item itemToRemove in items.Values)
+            {
+                if (itemToRemove.Name.StartsWith(itemPath + "/"))
+                {
+                    RemoveItem(itemToRemove.Name);
+                }
+            }
         }
         item.Root?.Remove();
         LibraryEventMessenger.Instance.NotifyItemRemoved(item);
@@ -577,16 +612,24 @@ public class Library
         {
             File.Delete(Path.Combine(Path.GetDirectoryName(filename)!, BINARY_PATH, soundItem.SoundDataHRef));
         }
-        File.Delete(targetPath);
+        if (Directory.Exists(targetPath))
+            Directory.Delete(targetPath, true);
+        else if (File.Exists(targetPath))
+            File.Delete(targetPath);
     }
 
     private void ProcessRenameOperation(ItemOperation operation, string targetPath, string filename)
     {
         string renamedPath = Path.Combine(Path.GetDirectoryName(filename)!, LIBRARY_PATH, operation.NewItemName!);
         if (Directory.Exists(targetPath))
+        {
+            // Directory.CreateDirectory(Path.GetDirectoryName(renamedPath)!);
             Directory.Move(targetPath, renamedPath);
+        }
         else if (File.Exists(targetPath))
+        {
             File.Move(targetPath, renamedPath);
+        }
         if (operation.item is SymbolItem symbol)
         {
             symbol.Include.Href = operation.NewItemName!;
