@@ -262,7 +262,10 @@ public class Library
             case "movie clip":
             case "graphic":
             case "button":
-                newItem = new SymbolItem(ns, name, this);
+                newItem = new SymbolItem(ns, name, this)
+                {
+                    SymbolType = itemType
+                };
                 newItem.Root!.Add(new XElement(ns + SymbolItem.SYMBOLITEM_TIMELINE_NODE_IDENTIFIER, (newItem as SymbolItem)!.Timeline.Root));
                 if (containingDocument.Root!.Element(ns + SYMBOLS_NODEGROUP_IDENTIFIER) is null) containingDocument.Root!.AddFirst(new XElement(ns + SYMBOLS_NODEGROUP_IDENTIFIER));
                 containingDocument.Root!.Element(ns + SYMBOLS_NODEGROUP_IDENTIFIER)!.Add((newItem as SymbolItem)!.Include.Root);
@@ -382,7 +385,7 @@ public class Library
             items.Remove(oldName);
             items.Add(newName, item);
             LibraryEventMessenger.Instance.NotifyItemRenamed(oldName, newName, item);
-            if(item is SoundItem soundItem)
+            if (item is SoundItem soundItem)
             {
                 newName = soundItem.Href;
             }
@@ -394,8 +397,10 @@ public class Library
     {
         if (!ItemExists(itemPath)) return false;
         Item item = items[itemPath];
+        bool isSymbol = false;
         if (item is SymbolItem symbolItem)
         {
+            isSymbol = true;
             symbolItem.Include.Root?.Remove();
         }
         if (item is FolderItem)
@@ -408,12 +413,15 @@ public class Library
                 }
             }
         }
-        item.Root?.Remove();
+        if (!isSymbol)
+            item.Root?.Remove();
         LibraryEventMessenger.Instance.NotifyItemRemoved(item);
         items.Remove(itemPath);
-        itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Remove, itemPath));
+        itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Remove, itemPath + (isSymbol ? ".xml" : "")));
         return true;
     }
+
+
     private void MoveSingleItemToFolder(string folderName, Item itemToMove)
     {
         string itemName = itemToMove.Name.Substring(itemToMove.Name.LastIndexOf('/') + 1);
