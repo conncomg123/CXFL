@@ -347,7 +347,9 @@ public class Library
         }
         if (item is SoundItem sound)
         {
-            sound.Href = newName;
+            string newNameWithoutExt = newName[..newName.LastIndexOf('.')];
+            string? originalExt = Path.GetExtension(sound.Href) ?? Path.GetExtension(sound.Name);
+            sound.Href = newNameWithoutExt + originalExt;
         }
         if (item is BitmapItem bitmap)
         {
@@ -379,8 +381,12 @@ public class Library
             item.Name = newName;
             items.Remove(oldName);
             items.Add(newName, item);
-            itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Rename, oldName + (isSymbol ? ".xml" : ""), null, newName + (isSymbol ? ".xml" : "")));
             LibraryEventMessenger.Instance.NotifyItemRenamed(oldName, newName, item);
+            if(item is SoundItem soundItem)
+            {
+                newName = soundItem.Href;
+            }
+            itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Rename, oldName + (isSymbol ? ".xml" : ""), null, newName + (isSymbol ? ".xml" : "")));
         }
         return true;
     }
