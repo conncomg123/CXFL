@@ -356,7 +356,9 @@ public class Library
         }
         if (item is BitmapItem bitmap)
         {
-            bitmap.Href = newName;
+            string newNameWithoutExt = newName[..newName.LastIndexOf('.')];
+            string? originalExt = Path.GetExtension(bitmap.Href) ?? Path.GetExtension(bitmap.Name);
+            bitmap.Href = newNameWithoutExt + originalExt;
         }
         if (item is FolderItem folder)
         {
@@ -420,8 +422,7 @@ public class Library
         itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Remove, itemPath + (isSymbol ? ".xml" : "")));
         return true;
     }
-
-
+    
     private void MoveSingleItemToFolder(string folderName, Item itemToMove)
     {
         string itemName = itemToMove.Name.Substring(itemToMove.Name.LastIndexOf('/') + 1);
