@@ -300,19 +300,19 @@ public class Library
             targetPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH, itemName);
         }
         Item? imported = null;
-        if (SYMBOL_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
+        if (SYMBOL_FILE_EXTENSIONS.Contains(Path.GetExtension(path).ToLower()))
         {
             imported = SymbolItem.FromFile(path, this, Path.GetFileNameWithoutExtension(itemName));
             if (containingDocument.Root!.Element(ns + SYMBOLS_NODEGROUP_IDENTIFIER) is null) containingDocument.Root!.AddFirst(new XElement(ns + SYMBOLS_NODEGROUP_IDENTIFIER));
             containingDocument.Root!.Element(ns + SYMBOLS_NODEGROUP_IDENTIFIER)!.Add((imported as SymbolItem)!.Include.Root);
         }
-        else if (AUDIO_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
+        else if (AUDIO_FILE_EXTENSIONS.Contains(Path.GetExtension(path).ToLower()))
         {
             imported = SoundItem.FromFile(path, ns);
             if (containingDocument.Root!.Element(ns + MEDIA_NODEGROUP_IDENTIFIER) is null) containingDocument.Root!.AddFirst(new XElement(ns + MEDIA_NODEGROUP_IDENTIFIER));
             containingDocument.Root!.Element(ns + MEDIA_NODEGROUP_IDENTIFIER)!.Add(imported.Root);
         }
-        else if (IMAGE_FILE_EXTENSIONS.Contains(Path.GetExtension(path)))
+        else if (IMAGE_FILE_EXTENSIONS.Contains(Path.GetExtension(path).ToLower()))
         {
             imported = BitmapItem.FromFile(path, ns);
             if (containingDocument.Root!.Element(ns + MEDIA_NODEGROUP_IDENTIFIER) is null) containingDocument.Root!.AddFirst(new XElement(ns + MEDIA_NODEGROUP_IDENTIFIER));
