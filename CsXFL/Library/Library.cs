@@ -342,6 +342,9 @@ public class Library
         if (ItemExists(newName)) return false;
         Item item = items[oldName];
         bool isSymbol = false;
+        string oldNameWithoutExt = oldName.Contains('.') ? oldName[..oldName.LastIndexOf('.')] : oldName;
+        string newNameWithoutExt = newName.Contains('.') ? newName[..newName.LastIndexOf('.')] : newName;
+        string originalExt = string.Empty;
         if (item is SymbolItem symbol)
         {
             symbol.Include.Href = newName;
@@ -350,14 +353,12 @@ public class Library
         }
         if (item is SoundItem sound)
         {
-            string newNameWithoutExt = newName[..newName.LastIndexOf('.')];
-            string? originalExt = Path.GetExtension(sound.Href) ?? Path.GetExtension(sound.Name);
+            originalExt = Path.GetExtension(sound.Href) ?? Path.GetExtension(sound.Name);
             sound.Href = newNameWithoutExt + originalExt;
         }
         if (item is BitmapItem bitmap)
         {
-            string newNameWithoutExt = newName[..newName.LastIndexOf('.')];
-            string? originalExt = Path.GetExtension(bitmap.Href) ?? Path.GetExtension(bitmap.Name);
+            originalExt = Path.GetExtension(bitmap.Href) ?? Path.GetExtension(bitmap.Name);
             bitmap.Href = newNameWithoutExt + originalExt;
         }
         if (item is FolderItem folder)
@@ -374,7 +375,7 @@ public class Library
             item.Name = newName;
             items.Remove(oldName);
             items.Add(newName, item);
-            itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Rename, oldName + (isSymbol ? ".xml" : ""), null, newName + (isSymbol ? ".xml" : "")));
+            itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Rename, oldNameWithoutExt + (isSymbol ? ".xml" : originalExt), null, newNameWithoutExt + (isSymbol ? ".xml" : originalExt)));
             LibraryEventMessenger.Instance.NotifyItemRenamed(oldName, newName, item);
             foreach (KeyValuePair<string, string> itemToRename in itemsToRename)
             {
@@ -391,7 +392,7 @@ public class Library
             {
                 newName = soundItem.Href;
             }
-            itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Rename, oldName + (isSymbol ? ".xml" : ""), null, newName + (isSymbol ? ".xml" : "")));
+            itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Rename, oldNameWithoutExt + (isSymbol ? ".xml" : originalExt), null, newNameWithoutExt + (isSymbol ? ".xml" : originalExt)));
         }
         return true;
     }
@@ -422,7 +423,83 @@ public class Library
         itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Remove, itemPath + (isSymbol ? ".xml" : "")));
         return true;
     }
-    
+    public bool DuplicateItem(string itemPath)
+    {
+        if (!ItemExists(itemPath)) return false;
+        Item item = items[itemPath];
+        string newItemName = itemPath;
+        while (ItemExists(newItemName))
+        {
+            newItemName = Path.Combine(Path.GetDirectoryName(newItemName)!, Path.GetFileNameWithoutExtension(newItemName) + " copy" + Path.GetExtension(newItemName)).Replace('\\', '/');
+        }
+        string newItemNameWithoutExt = newItemName.Contains('.') ? newItemName[..newItemName.LastIndexOf('.')] : newItemName;
+        string libraryPath = Path.Combine(Path.GetDirectoryName(containingDocument.Filename)!, LIBRARY_PATH);
+        if (item is SymbolItem symbol)
+        {
+            SymbolItem newSymbol = new(symbol);
+            newSymbol.Name = newItemName;
+            newSymbol.Timeline.Name = newItemName.Substring(newItemName.LastIndexOf('/') + 1);
+            newSymbol.Include.Href = newItemName + ".xml";
+            items.Add(newItemName, newSymbol);
+            if (containingDocument.Root!.Element(ns + SYMBOLS_NODEGROUP_IDENTIFIER) is null) containingDocument.Root!.AddFirst(new XElement(ns + SYMBOLS_NODEGROUP_IDENTIFIER));
+            containingDocument.Root!.Element(ns + SYMBOLS_NODEGROUP_IDENTIFIER)!.Add(newSymbol.Include.Root);
+            itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Add, Path.Combine(libraryPath, newItemName + ".xml"), Path.Combine(libraryPath, item.Name + ".xml")));
+        }
+        else if (item is SoundItem sound)
+        {
+            SoundItem newSound = new(sound);
+            string extension = Path.GetExtension(sound.Href) ?? Path.GetExtension(sound.Name);
+            string soundNameWithoutExt = sound.Name.Contains('.') ? sound.Name[..sound.Name.LastIndexOf('.')] : sound.Name;
+            newSound.Name = newItemName;
+            newSound.Href = newItemNameWithoutExt + extension;
+            items.Add(newItemName, newSound);
+            if (containingDocument.Root!.Element(ns + MEDIA_NODEGROUP_IDENTIFIER) is null) containingDocument.Root!.AddFirst(new XElement(ns + MEDIA_NODEGROUP_IDENTIFIER));
+            containingDocument.Root!.Element(ns + MEDIA_NODEGROUP_IDENTIFIER)!.Add(newSound.Root);
+            itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Add, Path.Combine(libraryPath, newItemNameWithoutExt + extension), Path.Combine(libraryPath, soundNameWithoutExt + extension)));
+        }
+        else if (item is BitmapItem bitmap)
+        {
+            BitmapItem newBitmap = new(bitmap);
+            string extension = Path.GetExtension(bitmap.Href) ?? Path.GetExtension(bitmap.Name);
+            string bitmapNameWithoutExt = bitmap.Name.Contains('.') ? bitmap.Name[..bitmap.Name.LastIndexOf('.')] : bitmap.Name;
+            newBitmap.Name = newItemName;
+            newBitmap.Href = newItemNameWithoutExt + extension;
+            items.Add(newItemName, newBitmap);
+            if (containingDocument.Root!.Element(ns + MEDIA_NODEGROUP_IDENTIFIER) is null) containingDocument.Root!.AddFirst(new XElement(ns + MEDIA_NODEGROUP_IDENTIFIER));
+            containingDocument.Root!.Element(ns + MEDIA_NODEGROUP_IDENTIFIER)!.Add(newBitmap.Root);
+            itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Add, Path.Combine(libraryPath, newItemNameWithoutExt + extension), Path.Combine(libraryPath, bitmapNameWithoutExt + extension)));
+        }
+        else if (item is FolderItem folder)
+        {
+            FolderItem newFolder = new(ns)
+            {
+                Name = newItemName
+            };
+            items.Add(newItemName, newFolder);
+            if (containingDocument.Root!.Element(ns + FOLDERS_NODEGROUP_IDENTIFIER) is null) containingDocument.Root!.AddFirst(new XElement(ns + FOLDERS_NODEGROUP_IDENTIFIER));
+            containingDocument.Root!.Element(ns + FOLDERS_NODEGROUP_IDENTIFIER)!.Add(newFolder.Root);
+            itemOperations.Enqueue(new ItemOperation(item, ItemOperation.OperationType.Add, Path.Combine(libraryPath, newItemName), Path.Combine(libraryPath, item.Name)));
+            Dictionary<string, string> itemsToDuplicate = new();
+            foreach (Item itemInFolder in items.Values)
+            {
+                if (itemInFolder.Name.StartsWith(folder.Name + "/"))
+                {
+                    string itemInFolderRelativeName = itemInFolder.Name[(itemInFolder.Name.LastIndexOf('/') + 1)..];
+                    string itemInFolderRelativeNamWithoutExt = Path.GetFileNameWithoutExtension(itemInFolderRelativeName);
+                    string itemInFolderExtension = Path.GetExtension(itemInFolderRelativeName);
+                    string newItemPath = folder.Name + "/" + itemInFolderRelativeNamWithoutExt + " copy" + itemInFolderExtension;
+                    itemsToDuplicate.Add(itemInFolder.Name, newItemPath);
+                }
+            }
+            foreach (KeyValuePair<string, string> itemToDuplicate in itemsToDuplicate)
+            {
+                DuplicateItem(itemToDuplicate.Key);
+                MoveToFolder(newItemName, items[itemToDuplicate.Value]);
+            }
+        }
+        return true;
+    }
+
     private void MoveSingleItemToFolder(string folderName, Item itemToMove)
     {
         string itemName = itemToMove.Name.Substring(itemToMove.Name.LastIndexOf('/') + 1);
@@ -547,7 +624,10 @@ public class Library
 
         Item item = operation.item;
         if (item is SymbolItem) targetPath += targetPath.EndsWith(".xml") ? "" : ".xml";
-        File.Copy(operation.NewItemPath!, targetPath);
+        if (File.Exists(operation.NewItemPath!))
+            File.Copy(operation.NewItemPath!, targetPath);
+        else if (Directory.Exists(operation.NewItemPath!))
+            Directory.CreateDirectory(targetPath);
         // update item's href
         if (item is SymbolItem symbol)
         {
