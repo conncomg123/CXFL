@@ -21,7 +21,7 @@ public static class TweenUtils
             M44 = 1
         };
     }
-    private static Matrix4x4 DeserializeMatrix(Matrix? matrix)
+    public static Matrix4x4 DeserializeMatrix(Matrix? matrix)
     {
         if (matrix is null)
         {
@@ -31,7 +31,7 @@ public static class TweenUtils
         return CreateAffine(matrix.A, matrix.B, matrix.C, matrix.D, matrix.Tx, matrix.Ty);
     }
 
-    private static Matrix SerializeMatrix(Matrix4x4 matrix)
+    public static Matrix SerializeMatrix(Matrix4x4 matrix)
     {
         return new Matrix
         {
