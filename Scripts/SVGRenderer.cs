@@ -610,7 +610,7 @@ public class SVGRenderer
         }
         return (defs, body);
     }
-    private (Dictionary<string, XElement>, List<XElement>) RenderElement(Element element, string id, int frameOffset, Color colorEffect, bool insideMask, bool isMaskShape = false, Matrix? interpMat = null, Shape? interpShape = null, List<(SymbolInstance, int)>? symbolHierarchy = null)
+    public (Dictionary<string, XElement>, List<XElement>) RenderElement(Element element, string id, int frameOffset, Color colorEffect, bool insideMask, bool isMaskShape = false, Matrix? interpMat = null, Shape? interpShape = null, List<(SymbolInstance, int)>? symbolHierarchy = null)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
         List<XElement> body = new List<XElement>();
@@ -729,7 +729,7 @@ public class SVGRenderer
 
     // <!> I got busy and could only get this far. Stroke and fill are not split in this object
     // <!> Doesn't support gradients on strokes, incorrect line weight when shearing
-    private (Dictionary<string, XElement>, List<XElement>) HandleOval(PrimitiveOval primitiveOval)
+    public (Dictionary<string, XElement>, List<XElement>) HandleOval(PrimitiveOval primitiveOval)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
         List<XElement> body = new List<XElement>();
@@ -845,7 +845,7 @@ public class SVGRenderer
         return (defs, body);
     }
 
-    private XElement HandleBitmap(BitmapInstance bitmap)
+    public XElement HandleBitmap(BitmapInstance bitmap)
     {
         BitmapItem correspondingItem = (BitmapItem)bitmap.CorrespondingItem!;
         string dataUrl;
@@ -897,7 +897,7 @@ public class SVGRenderer
 
     // Intended approach for Animate is to create a mask of text bounding box dimensions, and mask the text to the bounding box.
     // This logic is not present at the moment, so text will never cut off if it goes out of bounds
-    private XElement HandleText(Text TextElement)
+    public XElement HandleText(Text TextElement)
     {
         XElement textElement = new XElement(svgNs + "text",
             new XAttribute("writing-mode", "lr") // Force writing mode to left-right. Circle back to this later.
@@ -999,7 +999,7 @@ public class SVGRenderer
         return textElement;
     }
 
-    private (Dictionary<string, XElement>, List<XElement>) HandleDomShape(Shape shape, string id, Color colorEffect, bool insideMask, bool isMaskShape = false)
+    public (Dictionary<string, XElement>, List<XElement>) HandleDomShape(Shape shape, string id, Color colorEffect, bool insideMask, bool isMaskShape = false)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
         List<XElement> body = new List<XElement>();
@@ -1304,7 +1304,6 @@ public class SVGRenderer
             throw new NotImplementedException($"Unknown element type: {element.GetType()}");
         }
         // TODO: apply matrix + transformationpoint
-        
         return elementBoundingBox;
     }
 
@@ -1320,6 +1319,7 @@ public class SVGRenderer
         foreach (Layer layer in timeline.Layers)
         {
             if(layer.LayerType == "folder" || layer.LayerType == "camera") continue; // skip folders and cameras
+            if(frameIndex >= layer.GetFrameCount()) continue; // skip frames that are out of bounds
             Frame frame = layer.GetFrame(frameIndex);
             List<Rectangle> frameBoundingBoxes = new List<Rectangle>();
             foreach (Element element in frame.Elements)
