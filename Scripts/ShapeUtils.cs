@@ -197,7 +197,8 @@ namespace Rendering
                 pathElement.SetAttributeValue("d", string.Join(" ", pointLists.Select(pl => ConvertPointListToPathString(pl))));
 
                 strokedPaths.Add(pathElement);
-                boundingBox = BoxUtils.MergeBoundingBoxes(boundingBox, currentBoundingBox);
+                var boxList = new List<Rectangle?> { boundingBox, currentBoundingBox };
+                boundingBox = BoxUtils.MergeBoundingBoxes(boxList);
             }
 
             XElement? fillsG = null;

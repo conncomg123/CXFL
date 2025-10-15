@@ -255,7 +255,7 @@ public class SVGRenderer
         maskElement.Add(paths);
         return maskElement;
     }
-    private (Dictionary<string, XElement>, List<XElement>) RenderTimeline(Timeline timeline, int frameIndex, Color colorEffect, bool insideMask, string type = "symbol", bool isMaskLayer = false, List<(SymbolInstance, int)>? symbolHierarchy = null)
+    public (Dictionary<string, XElement>, List<XElement>) RenderTimeline(Timeline timeline, int frameIndex, Color colorEffect, bool insideMask, string type = "symbol", bool isMaskLayer = false, List<(SymbolInstance, int)>? symbolHierarchy = null)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
         List<XElement> body = new List<XElement>();
@@ -1257,7 +1257,7 @@ public class SVGRenderer
     /// <param name="frameIndex">The frame the element appears on the timeline (only used for symbols; default is 0)</param>
     /// <returns>A Rectangle that encloses the element</returns>
     /// <exception cref="NotImplementedException">Thrown when the element type is not supported</exception>
-    public Rectangle GetElementBoundingBox(Element element, int frameIndex = 0)
+    public Rectangle GetElementBoundingBox(Element element, int frameIndex = 0, bool TransformBoundingBoxByMatrix = true)
     {
         Rectangle elementBoundingBox;
         if (element is BitmapInstance bitmapInstance)
@@ -1303,8 +1303,59 @@ public class SVGRenderer
         {
             throw new NotImplementedException($"Unknown element type: {element.GetType()}");
         }
-        // TODO: apply matrix + transformationpoint
+        if (TransformBoundingBoxByMatrix) {
+            elementBoundingBox = TransformBoundingBox(elementBoundingBox, element.Matrix, element.TransformationPoint);
+        }
         return elementBoundingBox;
+    }
+
+    /// <summary>
+    /// Transforms a bounding box by a matrix, considering the transformation point as pivot
+    /// </summary>
+    /// <param name="boundingBox">The original bounding box (left, top, right, bottom)</param>
+    /// <param name="matrix">The transformation matrix</param>
+    /// <param name="transformationPoint">The pivot point for the transformation</param>
+    /// <returns>The transformed bounding box (left, top, right, bottom)</returns>
+    private static Rectangle TransformBoundingBox(Rectangle boundingBox, Matrix matrix, Point? transformationPoint = null)
+    {
+        // Get the four corners of the original bounding box
+        double left = boundingBox.Left;
+        double top = boundingBox.Top;
+        double right = boundingBox.Right;
+        double bottom = boundingBox.Bottom;
+        
+        // Default transformation point is origin if not specified
+        double pivotX = transformationPoint?.X ?? 0;
+        double pivotY = transformationPoint?.Y ?? 0;
+        
+        // Transform each corner
+        double[] transformedX = new double[4];
+        double[] transformedY = new double[4];
+        
+        // Helper function to transform a point around the pivot
+        void TransformPoint(double x, double y, int index)
+        {
+            // Apply full matrix transformation including translation
+            double transformedTX = matrix.A * x + matrix.C * y + matrix.Tx;
+            double transformedTY = matrix.B * x + matrix.D * y + matrix.Ty;
+            
+            transformedX[index] = transformedTX;
+            transformedY[index] = transformedTY;
+        }
+        
+        // Transform all four corners
+        TransformPoint(left, top, 0);     // Top-left
+        TransformPoint(right, top, 1);    // Top-right
+        TransformPoint(left, bottom, 2);  // Bottom-left
+        TransformPoint(right, bottom, 3); // Bottom-right
+        
+        // Find the min/max bounds of the transformed corners
+        double minX = Math.Min(Math.Min(transformedX[0], transformedX[1]), Math.Min(transformedX[2], transformedX[3]));
+        double maxX = Math.Max(Math.Max(transformedX[0], transformedX[1]), Math.Max(transformedX[2], transformedX[3]));
+        double minY = Math.Min(Math.Min(transformedY[0], transformedY[1]), Math.Min(transformedY[2], transformedY[3]));
+        double maxY = Math.Max(Math.Max(transformedY[0], transformedY[1]), Math.Max(transformedY[2], transformedY[3]));
+        
+        return new Rectangle(minX, minY, maxX, maxY);
     }
 
     /// <summary>
@@ -1318,14 +1369,16 @@ public class SVGRenderer
         List<Rectangle> layerBoundingBoxes = new List<Rectangle>();
         foreach (Layer layer in timeline.Layers)
         {
-            if(layer.LayerType == "folder" || layer.LayerType == "camera") continue; // skip folders and cameras
-            if(frameIndex >= layer.GetFrameCount()) continue; // skip frames that are out of bounds
+            // We should skip guide layers
+            if (layer.LayerType == "folder" || layer.LayerType == "camera" || layer.LayerType == "masked") continue; // skip folders and cameras
+            if (frameIndex >= layer.GetFrameCount()) continue; // skip frames that are out of bounds
+            if (layer.Visible == false) continue; // skip invisible layers
             Frame frame = layer.GetFrame(frameIndex);
             List<Rectangle> frameBoundingBoxes = new List<Rectangle>();
             foreach (Element element in frame.Elements)
             {
-                if(element.Name == "___camera___instance") continue; // skip the camera instance
-                Rectangle elementBoundingBox = GetElementBoundingBox(element, frameIndex - frame.StartFrame);
+                if (element.Name == "___camera___instance") continue; // skip the camera instance
+                Rectangle elementBoundingBox = GetElementBoundingBox(element, frameIndex - frame.StartFrame, true);
                 frameBoundingBoxes.Add(elementBoundingBox);
             }
             Rectangle layerBoundingBox = BoxUtils.MergeBoundingBoxes(frameBoundingBoxes);
@@ -1334,6 +1387,7 @@ public class SVGRenderer
         Rectangle timelineBoundingBox = BoxUtils.MergeBoundingBoxes(layerBoundingBoxes);
         return timelineBoundingBox;
     }
+
     public double GetSymbolItemAspectRatio(SymbolItem symbolItem)
     {
         // TODO: Get aspect ratio of the first frame of a symbolItem
