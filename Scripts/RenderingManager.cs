@@ -255,8 +255,8 @@ public class RenderingManager
     static async Task CreateNamedPipeAndWriteData(string pipeName, MemoryStream data)
     {
         using NamedPipeServerStream pipeServer = new NamedPipeServerStream(pipeName, PipeDirection.Out);
-        await Task.Run(pipeServer.WaitForConnection);
-        await data.CopyToAsync(pipeServer);
+        await pipeServer.WaitForConnectionAsync().ConfigureAwait(false);
+        await data.CopyToAsync(pipeServer).ConfigureAwait(false);
     }
     public bool RenderDocumentWithTmpFiles(string name, string ffmpegArgsBeforeinput = DEFAULT_FFMEPG_ARGS_BEFORE_INPUT, string ffmpegArgsAfterinput = DEFAULT_FFMEPG_ARGS_AFTER_INPUT)
     {
