@@ -1250,6 +1250,28 @@ public class SVGRenderer
         int loopFrame = (curFrameIndex - high) % loopLength;
         return loopFrame;
     }
+
+    /// <summary>
+    /// Returns the bounding box of an element normalized to start from origin (0,0).
+    /// This function wraps GetElementBoundingBox and adjusts the rectangle so that
+    /// left and top are always 0, while preserving the original width and height.
+    /// </summary>
+    /// <param name="element">The element to get the bounding box of</param>
+    /// <param name="frameIndex">The frame the element appears on the timeline (only used for symbols; default is 0)</param>
+    /// <param name="TransformBoundingBoxByMatrix">Whether to apply matrix transformations to the bounding box</param>
+    /// <returns>A Rectangle starting from (0,0) with the correct width and height</returns>
+    public Rectangle GetNormalizedElementBoundingBox(Element element, int frameIndex = 0, bool TransformBoundingBoxByMatrix = true)
+    {
+        Rectangle originalBoundingBox = GetElementBoundingBox(element, frameIndex, TransformBoundingBoxByMatrix);
+        
+        // Calculate the width and height from the original bounding box
+        double width = originalBoundingBox.Right - originalBoundingBox.Left;
+        double height = originalBoundingBox.Bottom - originalBoundingBox.Top;
+        
+        // Return a new rectangle starting from (0,0) with the preserved dimensions
+        return new Rectangle(0, 0, width, height);
+    }
+
     /// <summary>
     /// Returns the bounding box of an element.
     /// </summary>
