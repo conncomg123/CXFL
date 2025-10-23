@@ -610,7 +610,7 @@ public class SVGRenderer
         }
         return (defs, body);
     }
-    public (Dictionary<string, XElement>, List<XElement>) RenderElement(Element element, string id, int frameOffset, Color colorEffect, bool insideMask, bool isMaskShape = false, Matrix? interpMat = null, Shape? interpShape = null, List<(SymbolInstance, int)>? symbolHierarchy = null)
+    public (Dictionary<string, XElement>, List<XElement>) RenderElement(Element element, string id, int frameOffset, Color colorEffect, bool insideMask, bool isMaskShape = false, Matrix? interpMat = null, Shape? interpShape = null, List<(SymbolInstance, int)>? symbolHierarchy = null, bool returnIdentityTransformation = false)
     {
         Dictionary<string, XElement> defs = new Dictionary<string, XElement>();
         List<XElement> body = new List<XElement>();
@@ -662,7 +662,7 @@ public class SVGRenderer
         {
             throw new NotImplementedException($"Unknown element type: {element.GetType()}");
         }
-        if (element is not CsXFL.Group)
+        if (element is not CsXFL.Group && !returnIdentityTransformation)
         {
             Matrix mat = interpMat ?? element.Matrix;
             if (!Matrix.IsDefaultMatrix(mat) || !IsColorIdentity(colorEffect))
