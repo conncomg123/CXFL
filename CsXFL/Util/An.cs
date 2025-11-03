@@ -244,12 +244,12 @@ public static class An
         }
         extractedFlas.Clear();
     }
-    public static Document NewDocument(string path, int width = 1920, int height = 1080, double frameRate = 23.976)
+    public static void NewDocument(string path, int width = 1920, int height = 1080, double frameRate = 23.976)
     {
         if(!Path.GetExtension(path).Equals(".fla", StringComparison.OrdinalIgnoreCase) &&
-           !Path.GetExtension(path).Equals(".xml", StringComparison.OrdinalIgnoreCase))
+           !Path.GetExtension(path).Equals(".xfl", StringComparison.OrdinalIgnoreCase))
         {
-            throw new ArgumentException("Invalid file extension. Only .fla and .xml are supported.");
+            throw new ArgumentException("Invalid file extension. Only .fla and .xfl are supported.");
         }
         using MemoryStream memoryStream = new MemoryStream();
         ZipArchive zipArchive = ZipArchiveBuilder.CreateNewDocument(width, height, frameRate, memoryStream);
@@ -258,8 +258,6 @@ public static class An
         using FileStream fileStream = new FileStream(path, FileMode.Create, FileAccess.Write);
         memoryStream.Position = 0;
         memoryStream.CopyTo(fileStream);
-
-        return new Document(path);
     }
 }
 
