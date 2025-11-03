@@ -339,30 +339,30 @@ file class XDocumentGenerator
                 new XAttribute("fileGUID", "66D37584D244CF4CAC1E9E4DD43A0229"),
                 new XAttribute("forceSimple", "true"),
                 new XAttribute("hasAccessibleData", "true"),
-                new XElement("timelines",
-                    new XElement("DOMTimeline",
+                new XElement(ns + "timelines",
+                    new XElement(ns + "DOMTimeline",
                         new XAttribute("name", "Scene 1"),
                         new XAttribute("layerDepthEnabled", "true"),
-                        new XElement("layers",
-                            new XElement("DOMLayer",
+                        new XElement(ns + "layers",
+                            new XElement(ns + "DOMLayer",
                                 new XAttribute("name", "Layer_1"),
                                 new XAttribute("color", "#00FFFF"),
                                 new XAttribute("current", "true"),
                                 new XAttribute("isSelected", "true"),
-                                new XElement("frames",
-                                    new XElement("DOMFrame",
+                                new XElement(ns + "frames",
+                                    new XElement(ns + "DOMFrame",
                                         new XAttribute("index", "0"),
                                         new XAttribute("keyMode", "9728"),
-                                        new XElement("elements")
+                                        new XElement(ns + "elements")
                                     )
                                 )
                             )
                         )
                     )
                 ),
-                new XElement("scripts"),
-                new XElement("PrinterSettings"),
-                new XElement("publishHistory")
+                new XElement(ns + "scripts"),
+                new XElement(ns + "PrinterSettings"),
+                new XElement(ns + "publishHistory")
             )
         );
 
